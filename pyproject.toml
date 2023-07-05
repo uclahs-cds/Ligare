@@ -10,6 +10,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "BL_Python"
 version = "0.0.1"
+dependencies = [
+    "injector ~= 0.20"
+]
 
 [tool.setuptools.package-dir]
 BL_Python = "BL_Python"
@@ -22,4 +25,8 @@ dev = [
 
 aws = [
     "boto3 ~= 1.27"
+]
+
+database = [
+    "sqlalchemy ~= 2.0"
 ]
