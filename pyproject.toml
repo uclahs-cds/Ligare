@@ -7,11 +7,13 @@ requires = [
 
 build-backend = "setuptools.build_meta"
 
-packages=['BL-python']
-
 [project]
-name = "BL-python"
+name = "BL-Python"
 version = "0.0.1"
 dependencies = [
     "pyright == 1.1.316"
 ]
+
+[tool.setuptools]
+platforms = ["any"]
+packages=['BL_Python']
