@@ -7,8 +7,10 @@ requires = [
 
 build-backend = "setuptools.build_meta"
 
+packages=['BL-python']
+
 [project]
-name = "private-BL-python-libraries"
+name = "BL-python"
 version = "0.0.1"
 dependencies = [
     "pyright == 1.1.316"
