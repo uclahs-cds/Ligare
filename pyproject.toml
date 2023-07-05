@@ -6,3 +6,10 @@ requires = [
 ]
 
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "private-BL-python-libraries"
+version = "0.0.1"
+dependencies = [
+    "pyright == 1.1.316"
+]
