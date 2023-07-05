@@ -23,6 +23,7 @@ venv
 
 # VScode
 .vscode
+*.code-workspace
 
 # Nextflow
 work/
