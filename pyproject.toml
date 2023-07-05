@@ -8,12 +8,11 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "BL-Python"
+name = "BL_Python"
 version = "0.0.1"
 dependencies = [
     "pyright == 1.1.316"
 ]
 
-[tool.setuptools]
-platforms = ["any"]
-packages=['BL_Python']
+[tool.setuptools.package-dir]
+BL_Python = "BL_Python"

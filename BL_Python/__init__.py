@@ -7,6 +7,6 @@ try:
 except:
     from pip._vendor import tomli
 
-    with open("pyproject.toml") as f:
+    with open("../pyproject.toml") as f:
         t = tomli.loads(f.read())
         __version__ = t["project"]["version"]
