@@ -320,7 +320,10 @@ class EnvironmentContext(util.ModuleClsProxy):
         tag: Optional[str] = ...,
         template_args: Optional[Dict[str, Any]] = ...,
         render_as_batch: bool = ...,
-        target_metadata: Optional[MetaData] = ...,
+        # Alembic documents and supports list[MetaData]
+        # despite the typehint not including it in the
+        # library
+        target_metadata: Optional[MetaData | list[MetaData]] = ...,
         include_name: Optional[IncludeNameFn] = ...,
         include_object: Optional[IncludeObjectFn] = ...,
         include_schemas: bool = ...,
