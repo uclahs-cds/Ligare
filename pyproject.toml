@@ -73,3 +73,39 @@ dev-compiled = [
 all = [
     "BL_Python[aws,database,web,dev-static,dev-dependencies]"
 ]
+
+[tool.pyright]
+pythonVersion = "3.10"
+
+include = [
+    "*.py",
+    "."
+]
+
+exclude = [
+    ".venv",
+    ".pytest_cache",
+    ".github",
+    ".git",
+    "typings",
+    "**/node_modules",
+    "**/__pycache__"
+]
+
+stubPath = "./typings"
+
+useLibraryCodeForTypes = true
+
+typeCheckingMode = "strict"
+
+reportImportCycles = "information"
+reportCallInDefaultInitializer = "warning"
+reportImplicitOverride = "information"
+reportImplicitStringConcatenation = "warning"
+reportMissingSuperCall = "information"
+reportPropertyTypeMismatch = "error"
+reportShadowedImports = "information"
+reportUninitializedInstanceVariable = "information"
+reportUnnecessaryTypeIgnoreComment = "information"
+reportUnusedCallResult = "information"
+reportMissingTypeStubs = "information"
