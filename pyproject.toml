@@ -18,15 +18,58 @@ dependencies = [
 BL_Python = "BL_Python"
 
 [project.optional-dependencies]
-dev = [
-    "pyright == 1.1.316",
-    "pytest == 7.4.0"
-]
-
 aws = [
     "boto3 ~= 1.27"
 ]
 
 database = [
-    "sqlalchemy ~= 2.0"
+    "sqlalchemy ~= 2.0",
+    "alembic ~= 1.8"
+]
+
+database-postgres = [
+    "psycopg2 ~= 2.9"
+]
+
+database-postgres-binary = [
+    "psycopg2-binary ~= 2.9"
+]
+
+web = [
+    "Flask == 1.1.4",
+    "flask-injector == 0.13.0",
+    "flask-login == 0.6.2",
+    "types-flask == 1.1.6",
+    "connexion == 2.14.2"
+]
+
+
+dev-dependencies = [
+    # testing automation. use specific versions so behavior does not change.
+    "pytest == 7.4.0",
+    "pytest-mock == 3.11.1",
+
+    # code quality. allow minor version updates.
+    # this can possibly change behavior of quality checks,
+    # which allows us to catch new types of problems.
+    "pyright ~= 1.1",
+    "isort ~= 5.12",
+    # specific version is necessary due to Flask dependency
+    # version conflict with `click`
+    # flask 1.1.4 depends on click<8.0 and >=5.1
+    # black 22.1.0 depends on click>=8.0.0
+    "black == 21.12b0",
+]
+
+dev-static = [
+    "BL_Python[database-postgres-binary]"
+]
+
+dev-compiled = [
+    "BL_Python[database-postgres]"
+]
+
+# use `all` for development
+all = [
+    "BL_Python[aws,database,web,dev-static,dev-dependencies]"
 ]
