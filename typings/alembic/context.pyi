@@ -20,6 +20,7 @@ from typing import (
     overload,
 )
 
+from sqlalchemy import Table
 from sqlalchemy.engine.base import Connection
 from sqlalchemy.engine.url import URL
 from sqlalchemy.sql.elements import ClauseElement
@@ -123,8 +124,8 @@ def configure(
     include_object: Optional[
         Callable[
             [
-                SchemaItem,
-                Optional[str],
+                Table,
+                str,
                 Literal[
                     "schema",
                     "table",
