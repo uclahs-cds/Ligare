@@ -88,7 +88,7 @@ class Config:
     config_file_name: Union[str, os.PathLike[str], None] = ...
     config_ini_section: str = ...
     @util.memoized_property
-    def attributes(self): # -> dict[Unknown, Unknown]:
+    def attributes(self): -> dict[Any, Any]:
         """A Python dictionary for storage of additional state.
 
 
