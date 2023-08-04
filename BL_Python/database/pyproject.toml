@@ -23,7 +23,7 @@ classifiers = [
 dependencies = [
     "sqlalchemy ~= 1.4",
     "alembic ~= 1.8",
-    "sqlalchemy2-stubs ~= 0.0"
+    "sqlalchemy2-stubs ~= 0.0.2a34"
 ]
 
 dynamic = ["version", "readme"]
