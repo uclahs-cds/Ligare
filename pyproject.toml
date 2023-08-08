@@ -1,7 +1,3 @@
-# this should not actually be a package that gets built or installed
-# in any other projects. only the sub packages should be.
-
-
 [build-system]
 
 requires = [
@@ -28,11 +24,17 @@ dependencies = []
 
 dynamic = ["version", "readme"]
 [tool.setuptools.dynamic]
-version = {attr = "BL_Python.__version__"}
+version = {attr = "src.__version__"}
 readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools.package-dir]
-BL_Python = "BL_Python"
+"BL_Python.AWS" = "src/AWS/BL_Python/AWS"
+"BL_Python.database" = "src/database/BL_Python/database"
+"BL_Python.development" = "src/development/BL_Python/development"
+"BL_Python.platform" = "src/platform/BL_Python/platform"
+"BL_Python.programming" = "src/programming/BL_Python/programming"
+"BL_Python.testing" = "src/testing/BL_Python/testing"
+"BL_Python.web" = "src/web/BL_Python/web"
 
 [tool.setuptools]
 packages = [
@@ -45,28 +47,8 @@ packages = [
     "BL_Python.web"
 ]
 
+#
 [project.optional-dependencies]
-AWS = [
-    "BL_Python.AWS"
-]
-database = [
-    "BL_Python.database"
-]
-development = [
-    "BL_Python.development"
-]
-platform = [
-    "BL_Python.platform"
-]
-programming = [
-    "BL_Python.programming"
-]
-testing = [
-    "BL_Python.testing"
-]
-web = [
-    "BL_Python.web"
-]
 dev-dependencies = [
     # testing automation. use specific versions so behavior does not change.
     "pytest == 7.4.0",
@@ -82,27 +64,6 @@ dev-dependencies = [
     # flask 1.1.4 depends on click<8.0 and >=5.1
     # black 22.1.0 depends on click>=8.0.0
     "black == 21.12b0",
-]
-
-dev-static = [
-    "BL_Python.database[database-postgres-binary]"
-]
-dev-compiled = [
-    "BL_Python.database[database-postgres]"
-]
-## use `all` for development
-all = [
-    # libraries
-    "BL_Python.AWS",
-    "BL_Python.database",
-    "BL_Python.development",
-    "BL_Python.platform",
-    "BL_Python.programming",
-    "BL_Python.testing",
-    "BL_Python.web",
-    # development tools
-    "BL_Python.dev-dependencies",
-    "BL_Python.dev-static"
 ]
 
 [tool.pyright]
