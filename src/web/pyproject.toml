@@ -36,11 +36,11 @@ dependencies = [
 
 dynamic = ["version", "readme"]
 [tool.setuptools.dynamic]
-version = {attr = ".__version__"}
+version = {attr = "BL_Python.web.__version__"}
 readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools.package-dir]
-"BL_Python.web" = "."
+"BL_Python.web" = "BL_Python/web"
 
-[tool.setuptools]
-packages = ["BL_Python.web"]
+[tool.setuptools.packages]
+find = {}

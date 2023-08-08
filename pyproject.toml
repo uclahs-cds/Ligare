@@ -1,3 +1,7 @@
+# this should not actually be a package that gets built or installed
+# in any other projects. only the sub packages should be.
+
+
 [build-system]
 
 requires = [

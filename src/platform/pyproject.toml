@@ -8,27 +8,29 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "BL_Python.testing"
+name = "BL_Python.platform"
 requires-python = ">=3.10"
 authors = [
     {name = 'Aaron Holmes', email = 'aholmes@mednet.ucla.edu'}
 ]
-description = 'Libraries for writing automated tests in Boutros Lab.'
+description = 'Libraries for developing platform software in Boutros Lab.'
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License (GPL)",
     "Operating System :: OS Independent"
 ]
 
-dependencies = []
+dependencies = [
+    "BL_Python.database"
+]
 
 dynamic = ["version", "readme"]
 [tool.setuptools.dynamic]
-version = {attr = ".__version__"}
+version = {attr = "BL_Python.platform.__version__"}
 readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools.package-dir]
-"BL_Python.testing" = "."
+"BL_Python.platform" = "BL_Python/platform"
 
-[tool.setuptools]
-packages = ["BL_Python.testing"]
+[tool.setuptools.packages]
+find = {}

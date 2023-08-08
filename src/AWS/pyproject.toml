@@ -8,31 +8,29 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "BL_Python.programming"
+name = "BL_Python.AWS"
 requires-python = ">=3.10"
 authors = [
     {name = 'Aaron Holmes', email = 'aholmes@mednet.ucla.edu'}
 ]
-description = 'Libraries for writing software in Boutros Lab.'
+description = 'Libraries for working with AWS services in Boutros Lab.'
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License (GPL)",
     "Operating System :: OS Independent"
 ]
 
-dependencies = []
+dependencies = [
+    "boto3 ~= 1.27"
+]
 
 dynamic = ["version", "readme"]
 [tool.setuptools.dynamic]
-version = {attr = "BL_Python.programming.__version__"}
+version = {attr = "BL_Python.AWS.__version__"}
 readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools.package-dir]
-"BL_Python.programming" = "BL_Python/programming"
+"BL_Python.AWS" = "BL_Python/AWS"
 
-#[tool.setuptools]
-#packages = ["BL_Python.programming"]
-#[tool.setuptools.packages.find]
-#where=["."]
 [tool.setuptools.packages]
 find = {}
