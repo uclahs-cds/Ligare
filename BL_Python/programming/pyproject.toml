@@ -24,11 +24,15 @@ dependencies = []
 
 dynamic = ["version", "readme"]
 [tool.setuptools.dynamic]
-version = {attr = ".__version__"}
+version = {attr = "BL_Python.programming.__version__"}
 readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools.package-dir]
-"BL_Python.programming" = "."
+"BL_Python.programming" = "BL_Python/programming"
 
-[tool.setuptools]
-packages = ["BL_Python.programming"]
+#[tool.setuptools]
+#packages = ["BL_Python.programming"]
+#[tool.setuptools.packages.find]
+#where=["."]
+[tool.setuptools.packages]
+find = {}
