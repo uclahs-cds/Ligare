@@ -21,6 +21,7 @@ venv
 .venv
 .env
 *.egg*
+*.whl
 
 # VScode
 .vscode

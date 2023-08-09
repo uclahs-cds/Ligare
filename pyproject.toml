@@ -7,44 +7,48 @@ requires = [
 
 build-backend = "setuptools.build_meta"
 
+
 [project]
 name = "BL_Python"
-version = "0.0.1"
-dependencies = [
-    "injector ~= 0.20"
+requires-python = ">=3.10"
+authors = [
+    {name = 'Aaron Holmes', email = 'aholmes@mednet.ucla.edu'}
 ]
+description = 'Python libraries for use in Boutros Lab.'
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License (GPL)",
+    "Operating System :: OS Independent"
+]
+dependencies = []
+
+dynamic = ["version", "readme"]
+[tool.setuptools.dynamic]
+version = {attr = "src.__version__"}
+readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools.package-dir]
-BL_Python = "BL_Python"
+"BL_Python.AWS" = "src/AWS/BL_Python/AWS"
+"BL_Python.database" = "src/database/BL_Python/database"
+"BL_Python.development" = "src/development/BL_Python/development"
+"BL_Python.platform" = "src/platform/BL_Python/platform"
+"BL_Python.programming" = "src/programming/BL_Python/programming"
+"BL_Python.testing" = "src/testing/BL_Python/testing"
+"BL_Python.web" = "src/web/BL_Python/web"
 
+[tool.setuptools]
+packages = [
+    "BL_Python.AWS",
+    "BL_Python.database",
+    "BL_Python.development",
+    "BL_Python.platform",
+    "BL_Python.programming",
+    "BL_Python.testing",
+    "BL_Python.web"
+]
+
+#
 [project.optional-dependencies]
-aws = [
-    "boto3 ~= 1.27"
-]
-
-database = [
-    "sqlalchemy ~= 1.4",
-    "alembic ~= 1.8",
-    "sqlalchemy2-stubs ~= 0.0"
-]
-
-database-postgres = [
-    "psycopg2 ~= 2.9"
-]
-
-database-postgres-binary = [
-    "psycopg2-binary ~= 2.9"
-]
-
-web = [
-    "Flask == 1.1.4",
-    "flask-injector == 0.13.0",
-    "flask-login == 0.6.2",
-    "types-flask == 1.1.6",
-    "connexion == 2.14.2"
-]
-
-
 dev-dependencies = [
     # testing automation. use specific versions so behavior does not change.
     "pytest == 7.4.0",
@@ -55,24 +59,11 @@ dev-dependencies = [
     # which allows us to catch new types of problems.
     "pyright ~= 1.1",
     "isort ~= 5.12",
-    # specific version is necessary due to Flask dependency
+    # specific version is nnecessary due to Flask dependency
     # version conflict with `click`
     # flask 1.1.4 depends on click<8.0 and >=5.1
     # black 22.1.0 depends on click>=8.0.0
     "black == 21.12b0",
-]
-
-dev-static = [
-    "BL_Python[database-postgres-binary]"
-]
-
-dev-compiled = [
-    "BL_Python[database-postgres]"
-]
-
-# use `all` for development
-all = [
-    "BL_Python[aws,database,web,dev-static,dev-dependencies]"
 ]
 
 [tool.pyright]
