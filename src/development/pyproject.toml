@@ -13,7 +13,7 @@ requires-python = ">=3.10"
 authors = [
     {name = 'Aaron Holmes', email = 'aholmes@mednet.ucla.edu'}
 ]
-description = 'Utilities for assisting in development of software in Boutros Lab.'
+description = 'Utilities and tools for assisting in development of software.'
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License (GPL)",
