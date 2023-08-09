@@ -25,7 +25,7 @@ Review the `BL_Python.database` [readme](src/database/README.md)
 `bl-python-database@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/database`
 
 ## Development [ `bl-python.development` ]
-Libraries used to aid the development process.
+Utilities and tools for assisting in development of software.
 
 Review the `BL_Python.development` [readme](src/development/README.md)
 
@@ -41,7 +41,7 @@ Review the `BL_Python.platform` [readme](src/platform/README.md)
 `bl-python-platform@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/platform`
 
 ## Programming [ `bl-python.programming` ]
-Libraries used to extend the functionality of your code, such as pattern implementations so wheels don't need to be reinvented.
+Libraries used for writing software, such as pattern implementations so wheels don't need to be reinvented.
 
 Review the `BL_Python.programming` [readme](src/programming/README.md)
 
@@ -57,7 +57,7 @@ Review the `BL_Python.testing` [readme](src/testing/README.md)
 `bl-python-testing@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/testing`
 
 ## Web [ `bl-python.web` ]
-Libraries used to develop web applications.
+Libraries used to building web applications.
 
 Review the `BL_Python.web` [readme](src/web/README.md)
 
