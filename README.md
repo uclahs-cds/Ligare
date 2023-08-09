@@ -75,7 +75,7 @@ As an example, include the `BL_Python.programming` library like this within `pyp
 ```toml
 [project]
 dependencies = [
-    bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming
+    "bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming"
 ]
 ```
 
