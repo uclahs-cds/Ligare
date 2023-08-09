@@ -1,4 +1,4 @@
-# Boutros Lab Python Libraries [ BL_Python ]
+# Boutros Lab Python Libraries [ `BL_Python` ]
 
 A collection of Python libraries for creating web applications, working with databases, writing tests, and supporting utilities.
 
@@ -64,7 +64,7 @@ Review the `BL_Python.web` [readme](src/web/README.md)
 #### Git VCS URL
 `bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web`
 
-# Using BL_Python in your projects
+# Using `BL_Python` in your projects
 
 Currently these libraries are not available in any package repository, and so much be imported via other means.
 
@@ -82,7 +82,7 @@ dependencies = [
 Make note of the following:
 * The library name is prefixed with `bl-python-` followed by the library name, which is `programming` in this example. This is due to how Python namespaces packages, and the pattern is necessary for the other libraries as well.
 * The Git URL is followed by `@`, then `main`. Use this if you want the _unstable_ features in the `main` Git branch. Any Git [ref](https://git-scm.com/book/en/v2/Git-Internals-Git-References) can be used, which is helpful to lock the dependency to a specific version. The `@` is always needed when specifying a ref.
-* The Git URL ends with `#subdirectory=BL_Python/programming`. This is necessary to specify that the dependency `bl-python-programming` exists at `src/programming`.
+* The Git URL ends with `#subdirectory=src/programming`. This is necessary to specify that the dependency `bl-python-programming` exists at `src/programming`.
 
 ## Important requirement!
 
