@@ -31,7 +31,8 @@ dependencies = [
     # does not specify an upper bound for MarkupSafe,
     # and it pulls in a breaking change that prevents
     # Flask from running.
-    "MarkupSafe == 1.1.1"
+    "MarkupSafe == 1.1.1",
+    "json-logging == 1.3.0"
 ]
 
 dynamic = ["version", "readme"]
