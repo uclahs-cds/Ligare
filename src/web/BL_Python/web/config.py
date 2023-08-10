@@ -80,11 +80,13 @@ class Config(dict[str, Any]):
             )
 
     @staticmethod
-    def get_env_config(environment_name: str = "production"):
+    def get_env_config(environment_name: str | None = "production"):
         """
         Get the correct config object based on the environment name.
         Can be either "development," "test," or "production"
         """
+        if environment_name is None:
+            environment_name = "production"
         # fmt: off
         if environment_name == "development": return DevelopmentConfig({})
         if environment_name == "test": return TestConfig({})

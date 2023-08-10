@@ -47,7 +47,7 @@ def create_app(name: Optional[str] = None, environment: Optional[str] = None):
     if environment is not None:
         environ.update({"FLASK_ENV": environment})
 
-    config = Config.get_env_config(environ["FLASK_ENV"])
+    config = Config.get_env_config(environ.get("FLASK_ENV"))
 
     configure_logging()
 
