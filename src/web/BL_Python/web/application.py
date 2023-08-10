@@ -25,8 +25,6 @@ from connexion.apps.flask_app import FlaskApp
 from flask import Flask
 from flask_injector import FlaskInjector
 
-from .config import Config as C
-
 # from sqlalchemy.orm.scoping import ScopedSession
 
 
