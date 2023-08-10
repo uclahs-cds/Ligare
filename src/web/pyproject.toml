@@ -33,7 +33,8 @@ dependencies = [
     # Flask from running.
     "MarkupSafe == 1.1.1",
     "python-dotenv == 1.0.0",
-    "json-logging == 1.3.0"
+    "json-logging == 1.3.0",
+    "lib_programname == 2.0.9"
 ]
 
 dynamic = ["version", "readme"]

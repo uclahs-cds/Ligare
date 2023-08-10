@@ -5,7 +5,7 @@ Flask entry point.
 """
 
 import logging
-from os import environ
+from os import environ, path
 from typing import Optional
 
 import json_logging
@@ -24,6 +24,7 @@ from BL_Python.web.config import Config
 from connexion.apps.flask_app import FlaskApp
 from flask import Flask
 from flask_injector import FlaskInjector
+from lib_programname import get_path_executed_script
 
 # from sqlalchemy.orm.scoping import ScopedSession
 
@@ -50,7 +51,7 @@ def create_app(name: Optional[str] = None, environment: Optional[str] = None):
     configure_logging()
 
     if config.OPENAPI_SPEC_PATH:
-        openapi = configure_openapi(name)
+        openapi = configure_openapi(name, config.OPENAPI_SPEC_PATH)
 
     app = openapi.app
     # configure_routes(app)
@@ -73,7 +74,7 @@ def configure_logging():
 
 
 def configure_openapi(
-    name: Optional[str] = None, openapi_spec_path: Optional[str] = None
+    name: Optional[str] = None, openapi_spec_path: str = "openapi.yaml"
 ):
     """
     Instantiate Connexion and set Flask logging options
@@ -92,9 +93,12 @@ def configure_openapi(
     # if environ.get("OPENAPI_SPEC_DIR"):
     #    openapi_spec_dir = environ["OPENAPI_SPEC_DIR"]
 
+    program_dir = path.dirname(get_path_executed_script())
+
     connexion_app = FlaskApp(
         __name__ if name is None else name,
-        specification_dir="./",
+        # TODO support relative OPENAPI_SPEC_DIR and prepend program_dir?
+        specification_dir=program_dir,
         host=host,
         port=port,
     )
