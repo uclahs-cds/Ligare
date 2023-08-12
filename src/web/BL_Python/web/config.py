@@ -110,6 +110,10 @@ class Config(dict[str, Any]):
     TESTING: bool = False
 
     @property
+    def FLASK_APP(self) -> Optional[str]:
+        return environ.get("FLASK_APP")
+
+    @property
     def OPENAPI_SPEC_PATH(self) -> Optional[str]:
         return environ.get("OPENAPI_SPEC_PATH")
 

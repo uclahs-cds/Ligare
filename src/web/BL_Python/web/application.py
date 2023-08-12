@@ -28,6 +28,8 @@ from lib_programname import get_path_executed_script
 
 # from sqlalchemy.orm.scoping import ScopedSession
 
+_get_program_dir = lambda: path.dirname(get_path_executed_script())
+
 
 def create_app(name: Optional[str] = None, environment: Optional[str] = None):
     """
@@ -37,8 +39,6 @@ def create_app(name: Optional[str] = None, environment: Optional[str] = None):
         name: The name of the application. Replaces the value of `FLASK_APP` if not None.
         environment: The environment in which to run Flask. Can be one of `development`, `test`, or `production`. Replaces `FLASK_ENV` if not None.
     """
-    Config.initialize_env()
-
     # basic environment set up
     if name is not None:
         environ.update({"FLASK_APP": name})
@@ -46,15 +46,21 @@ def create_app(name: Optional[str] = None, environment: Optional[str] = None):
     if environment is not None:
         environ.update({"FLASK_ENV": environment})
 
-    config = Config.get_env_config(environ.get("FLASK_ENV"))
+    config = Config.from_env()
+
+    if config.FLASK_APP is None:
+        raise Exception("You must set FLASK_APP.")
 
     configure_logging()
 
+    app: Flask
     if config.OPENAPI_SPEC_PATH:
         openapi = configure_openapi(name, config.OPENAPI_SPEC_PATH)
-
-    app = openapi.app
-    # configure_routes(app)
+        app = openapi.app
+        return openapi
+    else:
+        app = Flask(config.FLASK_APP)
+        configure_routes(app)
     # register_error_handlers(app)
     # register_api_request_handlers(app)
     # register_api_response_handlers(app)
@@ -62,7 +68,6 @@ def create_app(name: Optional[str] = None, environment: Optional[str] = None):
     # flask_injector = configure_dependencies(app)
 
     # return (openapi, flask_injector)
-    return openapi
 
 
 def configure_logging():
@@ -114,12 +119,6 @@ def configure_openapi(
     app.logger.setLevel(environ.get("LOGLEVEL", "INFO").upper())
 
     validate_responses = app.config["VALIDATE_API_RESPONSES"]
-    #    connexion_app.add_api(
-    #        "server.yaml",
-    #        base_path="/",
-    #        validate_responses=validate_responses,
-    #        options={"swagger_ui": True},
-    #    )
     connexion_app.add_api(
         openapi_spec_path,
         base_path="/v1",
@@ -142,29 +141,46 @@ def configure_routes(app: Flask):
     """
     Register Flask blueprints and API routes
     """
-    from CAP.app.blueprints import server
+    from importlib import import_module
+    from os.path import basename, isfile
+    from pathlib import Path
 
-    app.register_blueprint(server.server_blueprint)
+    program_dir = _get_program_dir()
+    blueprint_import_dir = Path(program_dir, "blueprints")
 
-    from CAP.app.blueprints.v1 import technician
+    module_paths = blueprint_import_dir.glob("*.py")
 
-    app.register_blueprint(technician.technician_blueprint)
+    for path in module_paths:
+        if path.is_file() and path.name != "__init__.py":
+            import_module(path.name.rstrip(".py"), str(path))
+    # = [
+    #    Path(blueprint_import_dir, path.name)
+    #    for path in module_paths
+    #    if path.is_file() and path.name != "__init__.py"
+    # ]
+    # from CAP.app.blueprints import server
 
-    from CAP.app.blueprints.sso import sso_blueprint
+    # app.register_blueprint(server.server_blueprint)
 
-    app.register_blueprint(sso_blueprint)
+    # from CAP.app.blueprints.v1 import technician
 
-    from CAP.app.blueprints.v1.admin import admin_blueprint
+    # app.register_blueprint(technician.technician_blueprint)
 
-    app.register_blueprint(admin_blueprint)
+    # from CAP.app.blueprints.sso import sso_blueprint
 
-    from CAP.app.blueprints.v1.analyst import analyst_blueprint
+    # app.register_blueprint(sso_blueprint)
 
-    app.register_blueprint(analyst_blueprint)
+    # from CAP.app.blueprints.v1.admin import admin_blueprint
 
-    from CAP.app.blueprints.v1.user import user_blueprint
+    # app.register_blueprint(admin_blueprint)
 
-    app.register_blueprint(user_blueprint)
+    # from CAP.app.blueprints.v1.analyst import analyst_blueprint
+
+    # app.register_blueprint(analyst_blueprint)
+
+    # from CAP.app.blueprints.v1.user import user_blueprint
+
+    # app.register_blueprint(user_blueprint)
 
 
 def configure_dependencies(app: Flask):
