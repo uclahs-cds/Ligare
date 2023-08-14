@@ -49,3 +49,10 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools.packages]
 find = {}
+
+[project.optional-dependencies]
+dev-dependencies = [
+    "pytest == 7.4.0",
+    "pytest-mock == 3.11.1",
+    "mock == 5.1.0"
+]
