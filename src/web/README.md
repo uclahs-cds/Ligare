@@ -6,5 +6,12 @@ Libraries for building web applications in Boutros Lab.
 
 - set the envvar FLASK_APP
 - set the envvar FLASK_SECRET_KEY
-- If using Connexion and OpenAPI, set the envvar OPENAPI_SPEC_PATH to the location of the OpenAPI YAML
-- If not using Connexion, store Flask Blueprints under blueprints/
+
+### With Connexion
+If using Connexion and OpenAPI
+
+- set the envvar OPENAPI_SPEC_PATH to the location of the OpenAPI YAML
+
+### Without Connexion
+- store Flask Blueprints under blueprints/
+- postfix your blueprint variable name with `_blueprint`

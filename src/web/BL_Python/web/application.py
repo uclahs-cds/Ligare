@@ -6,7 +6,7 @@ Flask entry point.
 
 import logging
 from os import environ, path
-from typing import Optional
+from typing import Optional, cast
 
 import json_logging
 from BL_Python.web.config import Config
@@ -60,7 +60,8 @@ def create_app(name: Optional[str] = None, environment: Optional[str] = None):
         return openapi
     else:
         app = Flask(config.FLASK_APP)
-        configure_routes(app)
+        configure_blueprint_routes(app)
+        return app
     # register_error_handlers(app)
     # register_api_request_handlers(app)
     # register_api_response_handlers(app)
@@ -137,50 +138,38 @@ def configure_flask_config(app: Flask):
     app.config.from_object(config)
 
 
-def configure_routes(app: Flask):
+def configure_blueprint_routes(app: Flask, blueprint_import_subdir: str = "blueprints"):
     """
     Register Flask blueprints and API routes
     """
-    from importlib import import_module
-    from os.path import basename, isfile
+    from importlib.util import module_from_spec, spec_from_file_location
     from pathlib import Path
 
+    from flask import Blueprint
+
     program_dir = _get_program_dir()
-    blueprint_import_dir = Path(program_dir, "blueprints")
+    blueprint_import_dir = Path(program_dir, blueprint_import_subdir)
 
     module_paths = blueprint_import_dir.glob("*.py")
 
     for path in module_paths:
-        if path.is_file() and path.name != "__init__.py":
-            import_module(path.name.rstrip(".py"), str(path))
-    # = [
-    #    Path(blueprint_import_dir, path.name)
-    #    for path in module_paths
-    #    if path.is_file() and path.name != "__init__.py"
-    # ]
-    # from CAP.app.blueprints import server
-
-    # app.register_blueprint(server.server_blueprint)
-
-    # from CAP.app.blueprints.v1 import technician
-
-    # app.register_blueprint(technician.technician_blueprint)
-
-    # from CAP.app.blueprints.sso import sso_blueprint
-
-    # app.register_blueprint(sso_blueprint)
-
-    # from CAP.app.blueprints.v1.admin import admin_blueprint
-
-    # app.register_blueprint(admin_blueprint)
-
-    # from CAP.app.blueprints.v1.analyst import analyst_blueprint
-
-    # app.register_blueprint(analyst_blueprint)
-
-    # from CAP.app.blueprints.v1.user import user_blueprint
-
-    # app.register_blueprint(user_blueprint)
+        if not (path.is_file() or path.name == "__init__.py"):
+            continue
+        # load the module from its path
+        # and execute it
+        spec = spec_from_file_location(path.name.rstrip(".py"), str(path))
+        if spec is None or spec.loader is None:
+            raise Exception(f"Module cannot be created from path {path}")
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # find all Flask blueprints in
+        # the module and register them
+        for module_name, module_var in vars(module).items():
+            if not (
+                module_name.endswith("_blueprint") or isinstance(module_var, Blueprint)
+            ):
+                continue
+            app.register_blueprint(cast(Blueprint, module_var))
 
 
 def configure_dependencies(app: Flask):
