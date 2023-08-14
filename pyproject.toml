@@ -53,6 +53,7 @@ dev-dependencies = [
     # testing automation. use specific versions so behavior does not change.
     "pytest == 7.4.0",
     "pytest-mock == 3.11.1",
+    "mock == 5.1.0",
 
     # code quality. allow minor version updates.
     # this can possibly change behavior of quality checks,
@@ -63,7 +64,7 @@ dev-dependencies = [
     # version conflict with `click`
     # flask 1.1.4 depends on click<8.0 and >=5.1
     # black 22.1.0 depends on click>=8.0.0
-    "black == 21.12b0",
+    "black == 21.12b0"
 ]
 
 [tool.pyright]
@@ -101,3 +102,18 @@ reportUninitializedInstanceVariable = "information"
 reportUnnecessaryTypeIgnoreComment = "information"
 reportUnusedCallResult = "information"
 reportMissingTypeStubs = "information"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "src/AWS/test",
+    "src/database/test",
+    "src/development/test",
+    "src/platform/test",
+    "src/programming/test",
+    "src/testing/test",
+    "src/web/test"
+]
+
+python_files = "test_*.py"
+
+norecursedirs = "__pycache__ build .pytest_cache *.egg-info"
