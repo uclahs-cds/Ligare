@@ -35,6 +35,8 @@ class FlaskSessionConfig:
 class FlaskConfig:
     app_name: str = "app"
     env: str = "Development"
+    host: Optional[str] = None
+    port: Optional[str] = None
     openapi: Optional[FlaskOpenApiConfig] = None
     session: Optional[FlaskSessionConfig] = None
 

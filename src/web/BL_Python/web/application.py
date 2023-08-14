@@ -64,7 +64,7 @@ def create_app(
             raise Exception(
                 "When using OpenAPI with Flask, you must set spec_path in the config."
             )
-        openapi: FlaskApp = configure_openapi(name, config.flask.openapi.spec_path)
+        openapi: FlaskApp = configure_openapi(config, name)
         app = cast(Flask, openapi.app)
         return openapi
     else:
@@ -88,17 +88,20 @@ def configure_logging():
     logging.basicConfig(level=LOGLEVEL)
 
 
-def configure_openapi(
-    name: Optional[str] = None, openapi_spec_path: str = "openapi.yaml"
-):
+def configure_openapi(config: Config, name: Optional[str] = None):
     """
     Instantiate Connexion and set Flask logging options
     """
+
+    if config.flask is None or config.flask.openapi is None:
+        raise Exception("OpenAPI configuration is empty.")
+
     # host configuration set up
     # TODO host/port setup should move into application initialization
     # and not be tied to connexion configuration
     host = "127.0.0.1"
     port = 5000
+    # TODO replace SERVER_NAME with host/port in config
     if environ.get("SERVER_NAME") is not None:
         (host, port_str) = environ["SERVER_NAME"].split(":")
         port = int(port_str)
@@ -128,11 +131,10 @@ def configure_openapi(
         json_logging.config_root_logger()
     app.logger.setLevel(environ.get("LOGLEVEL", "INFO").upper())
 
-    validate_responses = app.config["VALIDATE_API_RESPONSES"]
     connexion_app.add_api(
-        openapi_spec_path,
+        config.flask.openapi.spec_path,
         base_path="/v1",
-        validate_responses=validate_responses,
+        validate_responses=config.flask.openapi.validate_responses,
         options={"swagger_ui": True},
     )
 
