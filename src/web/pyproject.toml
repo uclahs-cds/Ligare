@@ -23,7 +23,7 @@ classifiers = [
 dependencies = [
     "injector ~= 0.20",
     "Flask == 1.1.4",
-    "flask-injector == 0.13.0",
+    "flask-injector ~= 0.13.0",
     "flask-login == 0.6.2",
     "types-flask == 1.1.6",
     "connexion == 2.14.2",
@@ -34,7 +34,9 @@ dependencies = [
     "MarkupSafe == 1.1.1",
     "python-dotenv == 1.0.0",
     "json-logging == 1.3.0",
-    "lib_programname == 2.0.9"
+    "lib_programname == 2.0.9",
+    "toml == 0.10.2",
+    "pydantic ~= 2.1.1"
 ]
 
 dynamic = ["version", "readme"]

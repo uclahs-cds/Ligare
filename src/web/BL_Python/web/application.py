@@ -9,7 +9,7 @@ from os import environ, path
 from typing import Optional, cast
 
 import json_logging
-from BL_Python.web.config import Config
+from BL_Python.web.config import Config, load_config
 
 # from CAP.app.blueprints.sso import *
 # from CAP.app.dependencies import AppModule, AppSamlModule
@@ -31,7 +31,11 @@ from lib_programname import get_path_executed_script
 _get_program_dir = lambda: path.dirname(get_path_executed_script())
 
 
-def create_app(name: Optional[str] = None, environment: Optional[str] = None):
+def create_app(
+    name: Optional[str] = None,
+    environment: Optional[str] = None,
+    config_filename: str = "config.toml",
+):
     """
     Bootstrap the Flask applcation.
 
@@ -39,27 +43,32 @@ def create_app(name: Optional[str] = None, environment: Optional[str] = None):
         name: The name of the application. Replaces the value of `FLASK_APP` if not None.
         environment: The environment in which to run Flask. Can be one of `development`, `test`, or `production`. Replaces `FLASK_ENV` if not None.
     """
+
+    config = load_config(config_filename)
+
+    if config.flask is None:
+        raise Exception("You must set [flask] in the application configuration.")
+
     # basic environment set up
     if name is not None:
-        environ.update({"FLASK_APP": name})
+        environ.update({"FLASK_APP": config.flask.app_name})
 
     if environment is not None:
-        environ.update({"FLASK_ENV": environment})
-
-    config = Config.from_env()
-
-    if config.FLASK_APP is None:
-        raise Exception("You must set FLASK_APP.")
+        environ.update({"FLASK_ENV": config.flask.env})
 
     configure_logging()
 
     app: Flask
-    if config.OPENAPI_SPEC_PATH:
-        openapi = configure_openapi(name, config.OPENAPI_SPEC_PATH)
-        app = openapi.app
+    if config.flask.openapi is not None:
+        if config.flask.openapi.spec_path is None:
+            raise Exception(
+                "When using OpenAPI with Flask, you must set spec_path in the config."
+            )
+        openapi: FlaskApp = configure_openapi(name, config.flask.openapi.spec_path)
+        app = cast(Flask, openapi.app)
         return openapi
     else:
-        app = Flask(config.FLASK_APP)
+        app = Flask(config.flask.app_name)
         configure_blueprint_routes(app)
         return app
     # register_error_handlers(app)
@@ -109,7 +118,7 @@ def configure_openapi(
         port=port,
     )
     app = connexion_app.app
-    configure_flask_config(app)
+    # configure_flask_config(app)
 
     # flask request log handler
     enable_json = not environ.get("PLAINTEXT_LOG_OUTPUT")
@@ -135,6 +144,7 @@ def configure_flask_config(app: Flask):
     Load the Config instance and set it in the Flask app
     """
     config = Config.get_env_config(app.config["ENV"])
+    # FIXME this will not work with the new config classes
     app.config.from_object(config)
 
 

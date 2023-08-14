@@ -1,0 +1,34 @@
+[logging]
+log_level = 'INFO'
+
+[flask]
+app_name = 'app'
+env = 'debug'
+
+[flask.openapi]
+spec_path = '.'
+validate_responses = false
+
+
+[flask.session]
+permanent = true
+lifetime = 86400
+refresh_each_request = true
+
+[flask.session.cookie]
+httponly = true
+secure = true
+samesite = 'None'
+secret_key = 'abc123'
+
+
+[database]
+connection_string = 'sqlite:///:memory:'
+sqlalchemy_echo = false
+
+
+[saml2]
+metadata = '...'
+metadata_url = 'https://example.org'
+relay_state = 'https://example.org'
+logging = {'foo'='bar'}
