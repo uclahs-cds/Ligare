@@ -42,18 +42,21 @@ def create_app(
         environment: The environment in which to run Flask. Can be one of `development`, `test`, or `production`. Replaces `FLASK_ENV` if not None.
     """
 
-    config = load_config(config_filename)
+    config_overrides = {}
+    if environ.get("FLASK_APP") is not None:
+        config_overrides["app_name"] = environ["FLASK_APP"]
+
+    if environ.get("FLASK_ENV") is not None:
+        config_overrides["env"] = environ["FLASK_ENV"]
+
+    config: Config
+    if config_overrides:
+        config = load_config(config_filename, {"flask": config_overrides})
+    else:
+        config = load_config(config_filename)
 
     if config.flask is None:
         raise Exception("You must set [flask] in the application configuration.")
-
-    # env vars trump config
-    if environ.get("FLASK_APP") is not None:
-        # TODO replace these with some accessor on the class itself
-        object.__setattr__(config.flask, "app_name", environ["FLASK_APP"])
-
-    if environ.get("FLASK_ENV") is not None:
-        object.__setattr__(config.flask, "env", environ["FLASK_ENV"])
 
     configure_logging()
 

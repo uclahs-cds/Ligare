@@ -1,6 +1,7 @@
 from typing import Any, Optional
 
 import toml
+from BL_Python.programming.collections.dict import AnyDict, merge
 from pydantic.dataclasses import dataclass
 
 
@@ -65,6 +66,10 @@ class Config:
     saml2: Optional[SAML2Config] = None
 
 
-def load_config(toml_file_path: str):
-    config_dict = toml.load(toml_file_path)
+def load_config(toml_file_path: str, config_overrides: Optional[AnyDict] = None):
+    config_dict: dict[str, Any] = toml.load(toml_file_path)
+
+    if config_overrides is not None:
+        config_dict = merge(config_dict, config_overrides)
+
     return Config(**config_dict)
