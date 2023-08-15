@@ -32,8 +32,6 @@ _get_program_dir = lambda: path.dirname(get_path_executed_script())
 
 
 def create_app(
-    name: Optional[str] = None,
-    environment: Optional[str] = None,
     config_filename: str = "config.toml",
 ):
     """
@@ -49,12 +47,13 @@ def create_app(
     if config.flask is None:
         raise Exception("You must set [flask] in the application configuration.")
 
-    # basic environment set up
-    if name is not None:
-        environ.update({"FLASK_APP": config.flask.app_name})
+    # env vars trump config
+    if environ.get("FLASK_APP") is not None:
+        # TODO replace these with some accessor on the class itself
+        object.__setattr__(config.flask, "app_name", environ["FLASK_APP"])
 
-    if environment is not None:
-        environ.update({"FLASK_ENV": config.flask.env})
+    if environ.get("FLASK_ENV") is not None:
+        object.__setattr__(config.flask, "env", environ["FLASK_ENV"])
 
     configure_logging()
 
@@ -64,7 +63,7 @@ def create_app(
             raise Exception(
                 "When using OpenAPI with Flask, you must set spec_path in the config."
             )
-        openapi: FlaskApp = configure_openapi(config, name)
+        openapi: FlaskApp = configure_openapi(config, config.flask.app_name)
         app = cast(Flask, openapi.app)
         return openapi
     else:
@@ -111,7 +110,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     # if environ.get("OPENAPI_SPEC_DIR"):
     #    openapi_spec_dir = environ["OPENAPI_SPEC_DIR"]
 
-    program_dir = path.dirname(get_path_executed_script())
+    program_dir = _get_program_dir()
 
     connexion_app = FlaskApp(
         __name__ if name is None else name,
