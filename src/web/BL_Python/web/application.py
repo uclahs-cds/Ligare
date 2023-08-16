@@ -43,10 +43,10 @@ def create_app(
     """
 
     config_overrides = {}
-    if environ.get("FLASK_APP") is not None:
+    if environ.get("FLASK_APP"):
         config_overrides["app_name"] = environ["FLASK_APP"]
 
-    if environ.get("FLASK_ENV") is not None:
+    if environ.get("FLASK_ENV"):
         config_overrides["env"] = environ["FLASK_ENV"]
 
     config: Config
@@ -57,6 +57,11 @@ def create_app(
 
     if config.flask is None:
         raise Exception("You must set [flask] in the application configuration.")
+
+    if not config.flask.app_name:
+        raise Exception(
+            "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar."
+        )
 
     configure_logging()
 
