@@ -20,7 +20,9 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 
-dependencies = []
+dependencies = [
+    "injector == 0.21.0"
+]
 
 dynamic = ["version", "readme"]
 [tool.setuptools.dynamic]
