@@ -1,5 +1,6 @@
+from dataclasses import field
 from os import environ
-from typing import Any, Optional
+from typing import Any, Literal
 
 import toml
 from BL_Python.programming.collections.dict import AnyDict, merge
@@ -13,9 +14,40 @@ class LoggingConfig:
 
 
 @dataclass(frozen=True)
+class WebSecurityCorsConfig:
+    origin: str | None = None
+    allow_credentials: bool = True
+    allow_methods: list[
+        Literal[
+            "GET",
+            "POST",
+            "PATCH",
+            "PUT",
+            "DELETE",
+            "OPTIONS",
+            "HEAD",
+            "CONNECT",
+            "TRACE",
+        ]
+    ] = field(default_factory=lambda: ["GET", "POST", "OPTIONS"])
+
+
+@dataclass(frozen=True)
+class WebSecurityConfig:
+    cors: WebSecurityCorsConfig = WebSecurityCorsConfig()
+    csp: str | None = None
+
+
+@dataclass(frozen=True)
+class WebConfig:
+    security: WebSecurityConfig = WebSecurityConfig()
+
+
+@dataclass(frozen=True)
 class FlaskOpenApiConfig:
     spec_path: str | None = None
     validate_responses: bool = False
+    use_swagger: bool = True
 
 
 @dataclass(frozen=True)
@@ -124,6 +156,7 @@ class SAML2Config:
 @dataclass(frozen=True)
 class Config:
     logging: LoggingConfig = LoggingConfig()
+    web: WebConfig = WebConfig()
     flask: FlaskConfig | None = None
     database: DatabaseConfig | None = None
     saml2: SAML2Config | None = None

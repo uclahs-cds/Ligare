@@ -26,7 +26,12 @@ from flask_injector import FlaskInjector
 from lib_programname import get_path_executed_script
 
 from .config import Config, load_config
-from .middleware import configure_dependencies, register_error_handlers
+from .middleware import (
+    configure_dependencies,
+    register_api_request_handlers,
+    register_api_response_handlers,
+    register_error_handlers,
+)
 
 # from sqlalchemy.orm.scoping import ScopedSession
 
@@ -81,8 +86,8 @@ def create_app(
         configure_blueprint_routes(app)
 
     register_error_handlers(app)
-    # register_api_request_handlers(app)
-    # register_api_response_handlers(app)
+    register_api_request_handlers(app)
+    register_api_response_handlers(app)
     # register_app_teardown_handlers(app)
     flask_injector = configure_dependencies(app, config)
     app.injector = flask_injector
@@ -95,7 +100,11 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     Instantiate Connexion and set Flask logging options
     """
 
-    if config.flask is None or config.flask.openapi is None:
+    if (
+        config.flask is None
+        or config.flask.openapi is None
+        or config.flask.openapi.spec_path is None
+    ):
         raise Exception("OpenAPI configuration is empty.")
 
     # host configuration set up
@@ -134,11 +143,15 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     #    json_logging.config_root_logger()
     app.logger.setLevel(environ.get("LOGLEVEL", "INFO").upper())
 
+    options: dict[str, bool] = {}
+    if config.flask.openapi.use_swagger:
+        options["swagger_ui"] = True
+
     connexion_app.add_api(
         "src/" + config.flask.openapi.spec_path,
         base_path="/v1",
         validate_responses=config.flask.openapi.validate_responses,
-        options={"swagger_ui": True},
+        options=options,
     )
 
     return connexion_app
