@@ -52,12 +52,15 @@ class FlaskOpenApiConfig:
 
 @dataclass(frozen=True)
 class FlaskSessionCookieConfig:
-    secret_key: str = "abc123"
+    secret_key: str | None = None
     httponly: bool = True
     secure: bool = True
     samesite: str = "None"
 
     def _prepare_env_for_flask(self):
+        if not self.secret_key:
+            raise Exception("`flask.session.cookie.secret_key` must be set in config.")
+
         environ.update(
             {
                 "SECRET_KEY": self.secret_key,
