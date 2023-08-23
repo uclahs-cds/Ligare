@@ -1,13 +1,13 @@
 import json
 import re
 from logging import Logger
-from typing import Any, Dict, Union
+from typing import Any, Dict, Tuple, Type, Union
 from uuid import uuid4
 
 import json_logging
 from flask import Flask, Request, Response, request, session
 from flask_injector import FlaskInjector
-from injector import inject
+from injector import Module, inject
 from werkzeug.exceptions import HTTPException, Unauthorized
 
 from ..config import Config
@@ -185,23 +185,18 @@ def register_error_handlers(app: Flask):
         return response  # pyright: ignore[reportGeneralTypeIssues]
 
 
-def configure_dependencies(app: Flask, *args: Any):
+def configure_dependencies(
+    app: Flask,
+    application_modules: list[Module] | None = None,
+):
     """
     Configures dependency injection and registers all Flask
     application dependencies. The FlaskInjector instance
     can be used to bootstrap and start the Flask application.
     """
+    modules = [AppModule(app)] + (application_modules if application_modules else [])
+
     # bootstrap the flask application and its dependencies
-    flask_injector = FlaskInjector(
-        app,
-        [
-            AppModule(app, *args),
-            # AppSamlModule(
-            #    metadata=app.config["SAML2_METADATA"]
-            #    or app.config["SAML2_METADATA_URL"],
-            #    settings=vars(app.config["SAML2_LOGGING"]),
-            # ),
-        ],
-    )
+    flask_injector = FlaskInjector(app, modules)
 
     return flask_injector

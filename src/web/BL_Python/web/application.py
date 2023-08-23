@@ -5,10 +5,11 @@ Flask entry point.
 """
 import logging
 from os import environ, path
-from pprint import pprint
-from typing import Any, Callable, Optional, Protocol, Type, cast
+from typing import Any, Optional, cast
 
 import json_logging
+from BL_Python.programming.config import Config, ConfigBuilder, load_config
+from BL_Python.programming.dependency_injection import ConfigModule
 
 # from CAP.app.blueprints.sso import *
 # from CAP.app.dependencies import AppModule, AppSamlModule
@@ -22,18 +23,17 @@ import json_logging
 # from CAP.database.models.CAP import Base
 from connexion.apps.flask_app import FlaskApp
 from flask import Flask
-from flask_injector import FlaskInjector
+from injector import Module
 from lib_programname import get_path_executed_script
 
-from .config import Config, ConfigBuilder, load_config
+# from .config import Config, ConfigBuilder, load_config
+from .config import Config as AppConfig
 from .middleware import (
     configure_dependencies,
     register_api_request_handlers,
     register_api_response_handlers,
     register_error_handlers,
 )
-
-# from sqlalchemy.orm.scoping import ScopedSession
 
 _get_program_dir = lambda: path.dirname(get_path_executed_script())
 _get_exec_dir = lambda: path.abspath(".")
@@ -42,7 +42,11 @@ _get_exec_dir = lambda: path.abspath(".")
 def create_app(
     config_filename: str = "config.toml",
     # FIXME should be a list of PydanticDataclass
-    configs: list[Any] | None = None
+    application_configs: list[Any] | None = None,
+    application_modules: list[Module] | None = None
+    # FIXME eventually should replace with builders
+    # and configurators so this list of params doesn't
+    # just grow and grow.
     # startup_builder: IStartupBuilder,
     # config: Config,
 ):
@@ -61,21 +65,23 @@ def create_app(
     if environ.get("FLASK_ENV"):
         config_overrides["env"] = environ["FLASK_ENV"]
 
-    config_type = Config
-    if configs is not None:
+    config_type = AppConfig
+    if application_configs is not None:
         # fmt: off
         config_type = ConfigBuilder()\
-            .with_root_config(Config)\
-            .with_configs(configs)\
+            .with_root_config(AppConfig)\
+            .with_configs(application_configs)\
             .build()
         # fmt: on
-    config: Config
+    config: AppConfig
     if config_overrides:
         config = load_config(
             config_filename, {"flask": config_overrides}, config_type=config_type
         )
     else:
         config = load_config(config_filename, config_type=config_type)
+
+    config.prepare_env_for_flask()
 
     if config.flask is None:
         raise Exception("You must set [flask] in the application configuration.")
@@ -103,7 +109,10 @@ def create_app(
     register_api_request_handlers(app)
     register_api_response_handlers(app)
     # register_app_teardown_handlers(app)
-    flask_injector = configure_dependencies(app, (Config, config))
+    modules = [ConfigModule(config)] + (
+        application_modules if application_modules else []
+    )
+    flask_injector = configure_dependencies(app, application_modules=modules)
     app.injector = flask_injector
 
     return app
