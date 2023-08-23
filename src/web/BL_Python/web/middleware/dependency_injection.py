@@ -8,7 +8,7 @@ from typing_extensions import override
 
 
 class AppModule(Module):
-    def __init__(self, flask_app: Flask, *args: Any) -> None:
+    def __init__(self, flask_app: Flask, *args: Tuple[Any, Any]) -> None:
         super().__init__()
         self._flask_app = flask_app
         self._other_dependencies = args
@@ -20,4 +20,4 @@ class AppModule(Module):
         binder.install(LoggerModule(self._flask_app.name))
 
         for dependency in self._other_dependencies:
-            binder.bind(type(dependency), to=dependency)
+            binder.bind(dependency[0], to=dependency[1])

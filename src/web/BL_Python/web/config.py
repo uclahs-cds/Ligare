@@ -1,11 +1,30 @@
+import typing
+
+typing.TYPE_CHECKING = True
 from dataclasses import field
 from os import environ
-from typing import Any, Literal
+from typing import Any, Literal, Type
 
 import toml
 from BL_Python.programming.collections.dict import AnyDict, merge
 from flask.config import Config as FlaskAppConfig
 from pydantic.dataclasses import dataclass
+
+# isort: off
+# fmt: off
+# Fix this error
+# https://bugs.python.org/issue45524
+# https://github.com/Fatal1ty/mashumaro/issues/28
+# Unfortunately Pydantic hides the PydanticDataclass
+# behind `if TYPE_CHECKING`, which causes Python
+# annotation inspection to fail with methods
+# like, e.g. `get_type_hints`.
+import pydantic._internal._dataclasses  # import PydanticDataclass
+class PydanticDataclass:
+    pass
+pydantic._internal._dataclasses.PydanticDataclass = PydanticDataclass
+# fmt: on
+# isort: on
 
 
 @dataclass(frozen=True)
@@ -141,12 +160,6 @@ class FlaskConfig:
 
 
 @dataclass(frozen=True)
-class DatabaseConfig:
-    connection_string: str = "sqlite:///:memory:"
-    sqlalchemy_echo: bool = False
-
-
-@dataclass(frozen=True)
 class SAML2Config:
     metadata: str | None = None
     metadata_url: str | None = None
@@ -161,8 +174,6 @@ class Config:
     logging: LoggingConfig = LoggingConfig()
     web: WebConfig = WebConfig()
     flask: FlaskConfig | None = None
-    database: DatabaseConfig | None = None
-    saml2: SAML2Config | None = None
 
     def prepare_env_for_flask(self):
         if self.flask:
@@ -175,12 +186,60 @@ class Config:
             )
 
 
-def load_config(toml_file_path: str, config_overrides: AnyDict | None = None):
+class ConfigBuilder:
+    _root_config: Type[Any] | None = None
+    _configs: list[Type[Any]] | None = None
+
+    def with_root_config(self, config: Type[PydanticDataclass]):
+        self._root_config = config
+        return self
+
+    def with_configs(self, configs: list[Type[PydanticDataclass]]):
+        self._configs = configs
+        return self
+
+    def build(self):
+        if self._root_config and not self._configs:
+            return self._root_config
+
+        if not self._configs:
+            raise Exception("Cannot build a config without any configs.")
+
+        _new_type_base = self._root_config if self._root_config else object
+
+        attrs = {}
+        annotations: dict[str, Any] = {}
+
+        for config in self._configs:
+            try:
+                config_name = config.__name__[
+                    : config.__name__.rindex("Config")
+                ].lower()
+                annotations[config_name] = config
+                attrs[config_name] = None
+            except ValueError as e:
+                raise ValueError(
+                    f"Class name '{config.__name__}' is not a valid config class. The name must end with 'Config'"
+                ) from e
+
+        attrs["__annotations__"] = annotations
+        # make one type that has the names of the config objects
+        # as attributes, and the class as their type
+        _new_type: Type[Any] = type("GeneratedConfig", (_new_type_base,), attrs)
+
+        return dataclass(frozen=True)(_new_type)
+
+
+def load_config(
+    toml_file_path: str,
+    config_overrides: AnyDict | None = None,
+    config_type: Type[Config] = Config,
+):
     config_dict: dict[str, Any] = toml.load(toml_file_path)
 
     if config_overrides is not None:
         config_dict = merge(config_dict, config_overrides)
 
-    config = Config(**config_dict)
+    config = config_type(**config_dict)
     config.prepare_env_for_flask()
     return config

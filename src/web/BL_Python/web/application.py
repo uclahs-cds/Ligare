@@ -6,7 +6,7 @@ Flask entry point.
 import logging
 from os import environ, path
 from pprint import pprint
-from typing import Optional, cast
+from typing import Any, Callable, Optional, Protocol, Type, cast
 
 import json_logging
 
@@ -25,7 +25,7 @@ from flask import Flask
 from flask_injector import FlaskInjector
 from lib_programname import get_path_executed_script
 
-from .config import Config, load_config
+from .config import Config, ConfigBuilder, load_config
 from .middleware import (
     configure_dependencies,
     register_api_request_handlers,
@@ -41,6 +41,10 @@ _get_exec_dir = lambda: path.abspath(".")
 
 def create_app(
     config_filename: str = "config.toml",
+    # FIXME should be a list of PydanticDataclass
+    configs: list[Any] | None = None
+    # startup_builder: IStartupBuilder,
+    # config: Config,
 ):
     """
     Bootstrap the Flask applcation.
@@ -57,11 +61,21 @@ def create_app(
     if environ.get("FLASK_ENV"):
         config_overrides["env"] = environ["FLASK_ENV"]
 
+    config_type = Config
+    if configs is not None:
+        # fmt: off
+        config_type = ConfigBuilder()\
+            .with_root_config(Config)\
+            .with_configs(configs)\
+            .build()
+        # fmt: on
     config: Config
     if config_overrides:
-        config = load_config(config_filename, {"flask": config_overrides})
+        config = load_config(
+            config_filename, {"flask": config_overrides}, config_type=config_type
+        )
     else:
-        config = load_config(config_filename)
+        config = load_config(config_filename, config_type=config_type)
 
     if config.flask is None:
         raise Exception("You must set [flask] in the application configuration.")
@@ -89,7 +103,7 @@ def create_app(
     register_api_request_handlers(app)
     register_api_response_handlers(app)
     # register_app_teardown_handlers(app)
-    flask_injector = configure_dependencies(app, config)
+    flask_injector = configure_dependencies(app, (Config, config))
     app.injector = flask_injector
 
     return app
@@ -189,3 +203,85 @@ def configure_blueprint_routes(app: Flask, blueprint_import_subdir: str = "bluep
             ):
                 continue
             app.register_blueprint(cast(Blueprint, module_var))
+
+
+# class ConfigurationBuilder:
+#    _DEFAULT_CONFIG_FILENAME = "config.toml"
+#
+#    def __init__(self) -> None:
+#        self._config_filename = ConfigurationBuilder._DEFAULT_CONFIG_FILENAME
+#
+#    def use_config_file(self, config_filename: str):
+#        self._config_filename = config_filename
+#
+#    def add_config(self, config: Config):
+#        pass
+#
+#    def build(self) -> Config:
+#        return load_config(self._config_filename)
+#
+#
+# class ApplicationBuilder:
+#    _configuration_callback: Callable[[ConfigurationBuilder], None] | None = None
+#
+#    def use_config(
+#        self,
+#        configuration_callback: Callable[[ConfigurationBuilder], None],
+#    ):
+#        self._configuration_callback = configuration_callback
+#        return self
+#
+#    def build(self):
+#        configuration_builder = ConfigurationBuilder()
+#        configuration: Config
+#        if self._configuration_callback is not None:
+#            self._configuration_callback(configuration_builder)
+#        configuration = configuration_builder.build()
+#
+#        return create_app(configuration)
+#
+#
+# class IStartup(Protocol):
+#    #    def configure_dependencies(self, services: BlappServices):
+#    #        ...
+#
+#    def configure_application(self, app_builder: ApplicationBuilder):
+#        ...
+#
+#
+# class IStartupBuilder(Protocol):
+#    def __init__(self, startup: Type[IStartup]) -> None:
+#        ...
+#
+#    def build(self) -> Flask:
+#        ...
+#
+#
+# class StartupBuilder:
+#    _application: IStartup
+#
+#    def __init__(self, startup: Type[IStartup]) -> None:
+#        # TODO replace `object()` with the config object
+#        self._application = startup()
+#
+#    def build(self):
+#        # service_registry = BlappServices()
+#        application_builder = ApplicationBuilder()
+#
+#        # self._application.configure_dependencies(service_registry)
+#        self._application.configure_application(application_builder)
+#
+#        return application_builder.build()
+#
+#
+# class Startup:
+#    def configure_application(self, app_builder: ApplicationBuilder):
+#        app_builder.use_config()
+#        pass
+#
+#    def build(self):
+#        pass
+#
+#
+# test_app = create_app(StartupBuilder(Startup))
+#
