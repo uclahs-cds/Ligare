@@ -1,21 +1,19 @@
-from BL_Python.programming.collections.dict import AnyDict
-from injector import Binder, CallableProvider, Module, singleton
+from typing import cast
+
+from BL_Python.database.engine import DatabaseEngine
+from BL_Python.programming.config import Config
+from injector import Binder, CallableProvider, Module, inject, singleton
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import Session
 from typing_extensions import override
+
+from .config import DatabaseConfig
 
 
 class ScopedSessionModule(Module):
     """
     Configure SQLAlchemy Session depedencies for Injector.
     """
-
-    def __init__(self, connection_string: str):
-        assert (
-            connection_string is not None
-        ), "Cannot initialize the database module without a valid connection string"
-        super().__init__()
-        self._connection_string = connection_string
 
     @override
     def configure(self, binder: Binder) -> None:
@@ -42,8 +40,9 @@ class ScopedSessionModule(Module):
         the correct engine and connection string.
         Defaults to using the `sessionmaker` Session factory.
         """
+        database_config = cast(DatabaseConfig, config)
         return DatabaseEngine.get_session_from_connection_string(
-            self._connection_string, config.SQLALCHEMY_ECHO
+            database_config.connection_string, database_config.sqlalchemy_echo
         )
 
     @inject
