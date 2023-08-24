@@ -1,6 +1,4 @@
 import typing
-
-typing.TYPE_CHECKING = True
 from typing import Any, Type, TypeVar
 
 import toml
