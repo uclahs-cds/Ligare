@@ -40,7 +40,11 @@ class ScopedSessionModule(Module):
         the correct engine and connection string.
         Defaults to using the `sessionmaker` Session factory.
         """
-        database_config = cast(DatabaseConfig, config)
+        database_config: DatabaseConfig
+        if isinstance(config, DatabaseConfig):
+            database_config = config
+        else:
+            database_config = cast(DatabaseConfig, config.database)
         return DatabaseEngine.get_session_from_connection_string(
             database_config.connection_string, database_config.sqlalchemy_echo
         )
