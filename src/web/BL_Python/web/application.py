@@ -167,6 +167,8 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     app.logger.setLevel(environ.get("LOGLEVEL", "INFO").upper())
 
     options: dict[str, bool] = {}
+    # TODO document that connexion[swagger-ui] must be installed
+    # for this to work
     if config.flask.openapi.use_swagger:
         options["swagger_ui"] = True
 
