@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Union
+from typing import Any, Union
 
-UnionDict = Union[Any, Dict[Any, Any]]
-AnyDict = Dict[Any, UnionDict]
+AnyDict = dict[Any, Union[Any, "AnyDict"]]
 
 
 def merge(a: AnyDict, b: AnyDict, skip_existing: bool = False):
