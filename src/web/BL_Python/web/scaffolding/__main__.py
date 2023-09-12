@@ -1,0 +1,2 @@
+def scaffold():
+    print("Hello!")
