@@ -9,7 +9,6 @@ application_modules.append(ScopedSessionModule())
 {% endif %}
 
 from BL_Python.web.application import create_app
-
 # fmt: off
 app = create_app(
     application_configs=application_configs,
