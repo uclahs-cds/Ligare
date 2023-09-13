@@ -3,6 +3,9 @@ from argparse import ArgumentParser, Namespace
 from os import environ
 from typing import cast
 
+from jinja2 import nodes
+from jinja2.ext import Extension
+
 if environ.get("LOG_LEVEL"):
     logging.basicConfig(
         level=int(environ.get("LOG_LEVEL"))  # pyright: ignore[reportGeneralTypeIssues]
@@ -84,7 +87,7 @@ def scaffold_template(args: Namespace):
             if directory.exists():
                 log.warn(f"{directory} already exists. Files may be overwritten.")
             else:
-                log.debug(f"Creating directory {directory}.")
+                log.debug(f"Creating directory `{directory}`.")
                 directory.mkdir(parents=True, exist_ok=True)
         pass
 
@@ -94,9 +97,20 @@ def scaffold_template(args: Namespace):
         loader=PackageLoader("BL_Python.web", f"scaffolding/templates/{template_type}"),
     )
 
+    should_skip = False
+
+    # the use of this prevent parallelizing template rendering
+    def skip_file(skip: bool):
+        nonlocal should_skip
+        should_skip = skip
+        return
+
+    env.globals["skip_file"] = skip_file
+
     template_config = ScaffoldConfig(modules=ScaffoldModules())
     # a list of directories already checked for existence
     for template_name in cast(list[str], env.list_templates()):
+        should_skip = False
         template_output_path = Path(
             args.output_directory, template_name.replace(".j2", "")
         )
@@ -104,11 +118,14 @@ def scaffold_template(args: Namespace):
         create_directory(template_output_path.parent)
 
         log.debug(
-            f"Rendering template {template_output_path}. Using config {template_config}"
+            f"Rendering template `{template_output_path}`. Using config `{template_config}`"
         )
-        env.get_template(template_name).stream(**template_config.__dict__).dump(
-            str(template_output_path)
-        )
+        r = env.get_template(template_name).render(**template_config.__dict__)
+        # stream = env.get_template(template_name).stream(**template_config.__dict__)
+        if not should_skip:
+            with open(template_output_path, "w") as f:
+                f.write(r)
+            # stream.dump(str(template_output_path))
 
 
 def scaffold():
