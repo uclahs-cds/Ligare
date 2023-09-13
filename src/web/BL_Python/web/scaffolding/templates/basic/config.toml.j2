@@ -1,0 +1,26 @@
+[logging]
+log_level = 'INFO'
+
+[flask]
+app_name = 'app'
+env = 'debug'
+host = "127.0.0.1"
+port = 5000
+
+
+[flask.session]
+permanent = true
+lifetime = 86400
+refresh_each_request = true
+
+[flask.session.cookie]
+httponly = true
+secure = true
+samesite = 'None'
+secret_key = 'abc123'
+
+{% if modules.database %}
+[database]
+connection_string = 'sqlite:///:memory:'
+sqlalchemy_echo = false
+{% endif %}
