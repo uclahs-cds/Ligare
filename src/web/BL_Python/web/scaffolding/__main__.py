@@ -3,7 +3,7 @@ from argparse import ArgumentParser, Namespace
 from os import environ
 from typing import Any, cast
 
-from jinja2 import Template
+from jinja2 import BaseLoader, Template
 
 if environ.get("LOG_LEVEL"):
     logging.basicConfig(
@@ -72,13 +72,19 @@ from dataclasses import asdict, dataclass
 
 
 @dataclass
+class ScaffoldEndpoint:
+    blueprint_name: str
+
+
+@dataclass
 class ScaffoldModules:
     database: bool = True
 
 
 @dataclass
 class ScaffoldConfig:
-    modules: ScaffoldModules
+    modules: ScaffoldModules | None
+    endpoints: list[ScaffoldEndpoint] | None
 
 
 from pathlib import Path
@@ -99,6 +105,11 @@ def scaffold_template(args: Namespace):
             else:
                 log.debug(f"Creating directory `{directory}`.")
                 directory.mkdir(parents=True, exist_ok=True)
+
+    def get_templated_string(template_string: str, config: dict[str, Any]):
+        return (
+            Environment(loader=BaseLoader).from_string(template_string).render(**config)
+        )
 
     def render_template(
         template_name: str,
@@ -131,7 +142,10 @@ def scaffold_template(args: Namespace):
         loader=PackageLoader("BL_Python.web", f"scaffolding/templates/optional"),
     )
 
-    template_config = ScaffoldConfig(modules=ScaffoldModules())
+    template_config = ScaffoldConfig(
+        modules=ScaffoldModules(),
+        endpoints=[ScaffoldEndpoint(blueprint_name="testfoobar")],
+    )
     template_config_dict = asdict(template_config)
 
     # render the base templates
@@ -151,10 +165,28 @@ def scaffold_template(args: Namespace):
             render_template(
                 template.name,
                 args.output_directory,
-                env,
+                optional_env,
                 template_config_dict,
                 template,
             )
+
+    # render optional API endpoint templates
+    for endpoint in [asdict(dc) for dc in template_config.endpoints]:
+        template = optional_env.get_template("blueprints/{{blueprint_name}}.py.j2")
+
+        if template.name is None:
+            log.error(f"Could not find template `blueprints/{{blueprint_name}}.py.j2`.")
+            continue
+
+        rendered_template_name = get_templated_string(template.name, endpoint)
+
+        render_template(
+            rendered_template_name,
+            args.output_directory,
+            optional_env,
+            template_config_dict,
+            template,
+        )
 
 
 def scaffold():
@@ -163,4 +195,5 @@ def scaffold():
     print(
         f"Scaffolding {args.template_type} template named {args.name} under directory {Path(args.output_directory).absolute()}"
     )
+
     scaffold_template(args)
