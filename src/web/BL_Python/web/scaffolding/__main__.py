@@ -47,13 +47,24 @@ def parse_args():
         action="append",
         dest="modules",
         type=str,
-        help="Optional modules to include in the application.",
+        help="An optional module to include in the application. Can be specified more than once.",
+    )
+    _ = parser.add_argument(
+        "-e",
+        action="append",
+        metavar="endpoint",
+        dest="endpoints",
+        type=str,
+        help="The name of an endpoint to scaffold. Can be specified more than once. If not specified, an endpoint sharing the name of the application will be scaffolded.",
     )
 
     args = parser.parse_args()
 
     if args.output_directory is None:
         args.output_directory = args.name
+
+    if args.endpoints is None:
+        args.endpoints = [args.name]
 
     return args
 
