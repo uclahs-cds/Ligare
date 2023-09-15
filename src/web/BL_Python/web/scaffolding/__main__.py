@@ -86,6 +86,10 @@ def scaffold():
         f"Scaffolding {args.template_type} template named {args.name} under directory {Path(args.output_directory).absolute()}"
     )
 
+    # TODO consider pulling licenses from GitHub
+    # https://docs.github.com/en/rest/licenses/licenses?apiVersion=2022-11-28#get-all-commonly-used-licenses
+    # https://docs.github.com/en/rest/licenses/licenses?apiVersion=2022-11-28#get-a-license
+
     template_config = ScaffoldConfig(
         template_type=args.template_type,
         output_directory=args.output_directory,

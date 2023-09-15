@@ -1,7 +1,5 @@
 import logging
-from argparse import ArgumentParser, Namespace
 from dataclasses import asdict, dataclass
-from os import environ
 from pathlib import Path
 from typing import Any, cast
 
