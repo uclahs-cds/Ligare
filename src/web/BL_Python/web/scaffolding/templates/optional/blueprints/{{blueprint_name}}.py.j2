@@ -5,10 +5,10 @@ from flask import Blueprint
 from flask import Config as FlaskConfig
 from injector import inject
 
-test_blueprint = Blueprint("test", __name__, url_prefix="/v1/test")
+{{blueprint.blueprint_name}}_blueprint = Blueprint("{{blueprint.blueprint_name}}", __name__, url_prefix="/{{blueprint.blueprint_name}}")
 
 
 @inject
-@test_blueprint.route("/message")
-def get_message(config: Config, logger: Logger):
-    return "test message"
+@{{blueprint.blueprint_name}}_blueprint.route("/")
+def get_{{blueprint.blueprint_name}}(config: Config, logger: Logger):
+    return "Hello, {{blueprint.blueprint_name}}!"

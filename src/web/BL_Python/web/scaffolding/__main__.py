@@ -180,11 +180,16 @@ def scaffold_template(args: Namespace):
 
         rendered_template_name = get_templated_string(template.name, endpoint)
 
+        # make the current blueprint configuration available
+        # in a top-level `blueprint` variable
+        template_config_copy = template_config_dict.copy()
+        template_config_copy["blueprint"] = endpoint
+
         render_template(
             rendered_template_name,
             args.output_directory,
             optional_env,
-            template_config_dict,
+            template_config_copy,
             template,
         )
 
