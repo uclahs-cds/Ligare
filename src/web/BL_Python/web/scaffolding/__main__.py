@@ -100,7 +100,7 @@ def scaffold():
             else [ScaffoldModule(module_name=module) for module in args.modules]
         ),
         endpoints=[
-            ScaffoldEndpoint(blueprint_name=endpoint) for endpoint in args.endpoints
+            ScaffoldEndpoint(endpoint_name=endpoint) for endpoint in args.endpoints
         ],
     )
 

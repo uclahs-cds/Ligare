@@ -182,7 +182,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     return connexion_app
 
 
-def configure_blueprint_routes(app: Flask, blueprint_import_subdir: str = "blueprints"):
+def configure_blueprint_routes(app: Flask, blueprint_import_subdir: str = "endpoints"):
     """
     Register Flask blueprints and API routes
     """

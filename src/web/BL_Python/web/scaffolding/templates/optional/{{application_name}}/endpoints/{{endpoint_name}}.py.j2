@@ -1,0 +1,12 @@
+from logging import Logger
+
+from flask import Blueprint
+from injector import inject
+
+{{endpoint.endpoint_name}}_blueprint = Blueprint("{{endpoint.endpoint_name}}", __name__, url_prefix="/{{endpoint.endpoint_name}}")
+
+
+@inject
+@{{endpoint.endpoint_name}}_blueprint.route("/")
+def get_{{endpoint.endpoint_name}}(log: Logger):
+    return "Hello, {{endpoint.endpoint_name}}!"

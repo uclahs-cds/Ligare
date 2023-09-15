@@ -9,7 +9,7 @@ from jinja2 import BaseLoader, Environment, PackageLoader, Template
 
 @dataclass
 class ScaffoldEndpoint:
-    blueprint_name: str
+    endpoint_name: str
 
 
 @dataclass
@@ -124,14 +124,14 @@ class Scaffolder:
 
         # render optional API endpoint templates
         for endpoint in [asdict(dc) for dc in self._config.endpoints]:
-            # {{blueprint_name}} is the file name - this is _not_ meant to be an interpolated string
+            # {{endpoint_name}} is the file name - this is _not_ meant to be an interpolated string
             template = env.get_template(
-                "{{application_name}}/blueprints/{{blueprint_name}}.py.j2"
+                "{{application_name}}/endpoints/{{endpoint_name}}.py.j2"
             )
 
             if template.name is None:
                 self._log.error(
-                    f"Could not find template `{{application_name}}/blueprints/{{blueprint_name}}.py.j2`."
+                    f"Could not find template `{{application_name}}/endpoints/{{endpoint_name}}.py.j2`."
                 )
                 continue
 
@@ -141,10 +141,10 @@ class Scaffolder:
                 template.name, template_string_config
             )
 
-            # make the current blueprint configuration available
-            # in a top-level `blueprint` variable
+            # make the current endpoint configuration available
+            # in a top-level `endpoint` variable
             template_config = self._config_dict.copy()
-            template_config["blueprint"] = endpoint
+            template_config["endpoint"] = endpoint
 
             self._render_template(
                 rendered_template_name,
