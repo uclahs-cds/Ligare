@@ -69,6 +69,12 @@ def parse_args():
 
     if args.endpoints is None:
         args.endpoints = [args.name]
+    else:
+        if "application" in args.endpoints:
+            log.warn(
+                'The endpoint name "application" is reserved and will not be scaffolded.'
+            )
+            args.endpoints.remove("application")
 
     return args
 

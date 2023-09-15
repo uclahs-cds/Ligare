@@ -93,7 +93,7 @@ class Scaffolder:
 
         template.stream(**template_config).dump(str(template_output_path))
 
-    def _scaffold_base(self, env: Environment):
+    def _scaffold_directory(self, env: Environment):
         # render the base templates
         for template_name in cast(list[str], env.list_templates()):
             self._render_template(template_name, env)
@@ -148,7 +148,12 @@ class Scaffolder:
             )
 
     def scaffold(self):
-        env = Environment(
+        base_env = Environment(
+            trim_blocks=True,
+            lstrip_blocks=True,
+            loader=PackageLoader("BL_Python.web", f"scaffolding/templates/base"),
+        )
+        template_type_env = Environment(
             trim_blocks=True,
             lstrip_blocks=True,
             loader=PackageLoader(
@@ -161,6 +166,8 @@ class Scaffolder:
             loader=PackageLoader("BL_Python.web", f"scaffolding/templates/optional"),
         )
 
-        self._scaffold_base(env)
+        self._scaffold_directory(base_env)
+        # template type should go after base so it can override any base templates
+        self._scaffold_directory(template_type_env)
         self._scaffold_modules(optional_env)
         self._scaffold_endpoints(optional_env)

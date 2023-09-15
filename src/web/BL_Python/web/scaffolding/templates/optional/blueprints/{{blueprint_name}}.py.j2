@@ -1,8 +1,6 @@
 from logging import Logger
 
-from BL_Python.programming.config import Config
 from flask import Blueprint
-from flask import Config as FlaskConfig
 from injector import inject
 
 {{blueprint.blueprint_name}}_blueprint = Blueprint("{{blueprint.blueprint_name}}", __name__, url_prefix="/{{blueprint.blueprint_name}}")
@@ -10,5 +8,5 @@ from injector import inject
 
 @inject
 @{{blueprint.blueprint_name}}_blueprint.route("/")
-def get_{{blueprint.blueprint_name}}(config: Config, logger: Logger):
+def get_{{blueprint.blueprint_name}}(log: Logger):
     return "Hello, {{blueprint.blueprint_name}}!"
