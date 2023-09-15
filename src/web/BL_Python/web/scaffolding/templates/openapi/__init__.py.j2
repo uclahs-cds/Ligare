@@ -1,0 +1,17 @@
+application_configs = []
+application_modules = []
+
+{% if modules.database %}
+from BL_Python.database.config import DatabaseConfig
+from BL_Python.database.dependency_injection import ScopedSessionModule
+application_configs.append(DatabaseConfig)
+application_modules.append(ScopedSessionModule())
+{% endif %}
+
+from BL_Python.web.application import create_app
+# fmt: off
+app = create_app(
+    application_configs=application_configs,
+    application_modules=application_modules
+)
+# fmt: on

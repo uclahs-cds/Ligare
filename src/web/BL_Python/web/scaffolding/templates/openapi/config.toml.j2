@@ -1,0 +1,38 @@
+[logging]
+log_level = 'INFO'
+
+[web.security.cors]
+origin = 'http://localhost:5000'
+allow_credentials = true
+allow_methods = ['GET', 'POST', 'PATCH', 'OPTIONS']
+
+[web.security]
+csp = "default-src 'self'"
+
+[flask]
+app_name = '{{application_name}}'
+env = 'debug'
+host = "127.0.0.1"
+port = 5000
+
+[flask.openapi]
+spec_path = 'openapi.yaml'
+validate_responses = false
+use_swagger = true
+
+[flask.session]
+permanent = true
+lifetime = 86400
+refresh_each_request = true
+
+[flask.session.cookie]
+httponly = true
+secure = true
+samesite = 'None'
+secret_key = '123abc'
+
+{% if modules.database %}
+[database]
+connection_string = 'sqlite:///:memory:'
+sqlalchemy_echo = false
+{% endif %}
