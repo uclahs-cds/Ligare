@@ -1,1 +1,1 @@
-from .scaffolder import ScaffoldConfig, ScaffoldEndpoint, Scaffolder, ScaffoldModules
+from .scaffolder import ScaffoldConfig, ScaffoldEndpoint, Scaffolder, ScaffoldModule

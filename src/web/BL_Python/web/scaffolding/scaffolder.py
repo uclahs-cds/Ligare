@@ -14,15 +14,16 @@ class ScaffoldEndpoint:
 
 
 @dataclass
-class ScaffoldModules:
-    database: bool = True
+class ScaffoldModule:
+    module_name: str
+    # database: bool = True
 
 
 @dataclass
 class ScaffoldConfig:
     template_type: str
     output_directory: str
-    modules: ScaffoldModules | None
+    modules: list[ScaffoldModule] | None
     endpoints: list[ScaffoldEndpoint] | None
 
 
@@ -103,21 +104,18 @@ class Scaffolder:
             return
 
         # render optional module templates
-        for module in asdict(self._config.modules):
-            module_is_enabled = getattr(self._config.modules, module)
-            if module_is_enabled:
-                template = env.get_template(f"modules/{module}.py.j2")
+        for module in self._config.modules:
+            template = env.get_template(f"modules/{module.module_name}.py.j2")
 
-                if template.name is None:
-                    self._log.error(
-                        f"Could not find template `modules/{module}.py.j2`."
-                    )
-                    continue
+            if template.name is None:
+                self._log.error(
+                    f"Could not find template `modules/{module.module_name}.py.j2`."
+                )
+                continue
 
-                self._render_template(template.name, env, template=template)
+            self._render_template(template.name, env, template=template)
 
     def _scaffold_endpoints(self, env: Environment):
-        # FIXME update config so endpoints cannot be none
         if self._config.endpoints is None:
             self._log.debug("No endpoints to scaffold.")
             return

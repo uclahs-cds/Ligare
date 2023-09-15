@@ -7,7 +7,7 @@ from BL_Python.web.scaffolding import (
     ScaffoldConfig,
     ScaffoldEndpoint,
     Scaffolder,
-    ScaffoldModules,
+    ScaffoldModule,
 )
 
 if environ.get("LOG_LEVEL"):
@@ -83,8 +83,14 @@ def scaffold():
     template_config = ScaffoldConfig(
         template_type=args.template_type,
         output_directory=args.output_directory,
-        modules=ScaffoldModules(),
-        endpoints=[ScaffoldEndpoint(blueprint_name="testfoobar")],
+        modules=(
+            None
+            if args.modules is None
+            else [ScaffoldModule(module_name=module) for module in args.modules]
+        ),
+        endpoints=[
+            ScaffoldEndpoint(blueprint_name=endpoint) for endpoint in args.endpoints
+        ],
     )
 
     scaffolder = Scaffolder(template_config, log)
