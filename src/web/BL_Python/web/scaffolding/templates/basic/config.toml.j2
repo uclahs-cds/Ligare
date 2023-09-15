@@ -1,6 +1,14 @@
 [logging]
 log_level = 'INFO'
 
+[web.security.cors]
+origin = 'http://localhost:5000'
+allow_credentials = true
+allow_methods = ['GET', 'POST', 'PATCH', 'OPTIONS']
+
+[web.security]
+csp = "default-src 'self'"
+
 [flask]
 app_name = 'app'
 env = 'debug'

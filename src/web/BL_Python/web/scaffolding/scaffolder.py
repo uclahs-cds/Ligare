@@ -16,7 +16,6 @@ class ScaffoldEndpoint:
 @dataclass
 class ScaffoldModule:
     module_name: str
-    # database: bool = True
 
 
 @dataclass
