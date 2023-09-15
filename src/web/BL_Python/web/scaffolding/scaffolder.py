@@ -5,6 +5,7 @@ from os import environ
 from pathlib import Path
 from typing import Any, cast
 
+from BL_Python.programming.collections.dict import merge
 from jinja2 import BaseLoader, Environment, PackageLoader, Template
 
 
@@ -79,7 +80,8 @@ class Scaffolder:
             template_config = self._config_dict
 
         template_output_path = Path(
-            self._config.output_directory, template_name.replace(".j2", "")
+            self._config.output_directory,
+            self._render_template_string(template_name).replace(".j2", ""),
         )
 
         self._create_directory(template_output_path.parent)
@@ -105,11 +107,13 @@ class Scaffolder:
 
         # render optional module templates
         for module in self._config.modules:
-            template = env.get_template(f"modules/{module.module_name}.py.j2")
+            template = env.get_template(
+                f"{{application_name}}/modules/{module.module_name}.py.j2"
+            )
 
             if template.name is None:
                 self._log.error(
-                    f"Could not find template `modules/{module.module_name}.py.j2`."
+                    f"Could not find template `{{application_name}}/modules/{module.module_name}.py.j2`."
                 )
                 continue
 
@@ -123,16 +127,20 @@ class Scaffolder:
         # render optional API endpoint templates
         for endpoint in [asdict(dc) for dc in self._config.endpoints]:
             # {{blueprint_name}} is the file name - this is _not_ meant to be an interpolated string
-            template = env.get_template("blueprints/{{blueprint_name}}.py.j2")
+            template = env.get_template(
+                "{{application_name}}/blueprints/{{blueprint_name}}.py.j2"
+            )
 
             if template.name is None:
                 self._log.error(
-                    f"Could not find template `blueprints/{{blueprint_name}}.py.j2`."
+                    f"Could not find template `{{application_name}}/blueprints/{{blueprint_name}}.py.j2`."
                 )
                 continue
 
+            template_string_config = merge(self._config_dict, endpoint)
+
             rendered_template_name = self._render_template_string(
-                template.name, endpoint
+                template.name, template_string_config
             )
 
             # make the current blueprint configuration available

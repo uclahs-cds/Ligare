@@ -13,7 +13,8 @@ csp = "default-src 'self'"
 app_name = '{{application_name}}'
 env = 'debug'
 host = "127.0.0.1"
-port = 5000
+# FIXME this should be an int
+port = "5000"
 
 
 [flask.session]
