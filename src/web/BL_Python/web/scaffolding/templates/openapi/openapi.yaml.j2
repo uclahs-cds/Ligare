@@ -8,8 +8,8 @@ openapi: 3.0.2
 paths:
   /healthcheck:
     get:
-      description: ""
-      operationId: "server.healthcheck"
+      description: "Check whether the application is running."
+      operationId: "blueprint.application.healthcheck"
       parameters: []
       responses:
         "200":
@@ -17,210 +17,19 @@ paths:
             application/json:
               schema:
                 type: string
-          description: ""
-      summary: ""
-  /get_person/{name}:
+          description: "Application is running correctly."
+      summary: "A simple method that returns 200 as long as the application is running."
+  {% for endpoint in endpoints %}
+  /{{endpoint.blueprint_name}}:
     get:
-      description: ""
-      operationId: "server.get_person"
-      parameters:
-        - in: path
-          name: name
-          schema:
-            type: string
-          required: true
-          description: ""
+      description: "Hello, {{endpoint.blueprint_name}}!"
+      operationId: "blueprints.{{endpoint.blueprint_name}}.get_{{endpoint.blueprint_name}}"
       responses:
         "200":
           content:
             application/json:
               schema:
                 type: string
-          description: ""
-      summary: ""
-  /add_person/{name}:
-    get:
-      description: ""
-      operationId: "server.add_person"
-      parameters:
-        - in: path
-          name: name
-          schema:
-            type: string
-          required: true
-          description: ""
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                type: string
-          description: ""
-      summary: ""
-  /create_db:
-    get:
-      description: ""
-      operationId: "server.create_db"
-      parameters: []
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                type: string
-          description: ""
-      summary: ""
-#  /server/meta:
-#    get:
-#      description: ""
-#      operationId: "CAP.app.blueprints.server.server_meta"
-#      parameters: []
-#      responses:
-#        "200":
-#          content:
-#            application/json:
-#              schema:
-#                type: string
-#          description: "Information about the CAP application and server."
-#        "401":
-#          description: "Unauthorized"
-#      summary: ""
-#  /server/feature_flag:
-#    get:
-#      description: Get existing feature flags and their current state
-#      operationId: CAP.app.blueprints.server.feature_flag
-#      parameters:
-#        - in: query
-#          name: name
-#          explode: true
-#          schema:
-#            type: array
-#            items:
-#              type: string
-#      responses:
-#        200:
-#          description: Feature flags matching the 'name' parameter
-#          content:
-#            application/json:
-#              schema:
-#                allOf:
-#                  - $ref: "#/components/schemas/DetailResponse"
-#                  - properties:
-#                      data:
-#                        type: array
-#                        items:
-#                          allOf:
-#                            - $ref: "#/components/schemas/FeatureFlag"
-#        404:
-#          description: All feature flags queried do not already exist
-#          content:
-#            application/json:
-#              schema:
-#                allOf:
-#                  - $ref: "#/components/schemas/ProblemResponse"
-#    patch:
-#      description: Enable and disable existing feature flags
-#      operationId: CAP.app.blueprints.server.feature_flag_patch
-#      requestBody:
-#        content:
-#          application/json:
-#            schema:
-#              type: array
-#              items:
-#                type: object
-#                required:
-#                  - name
-#                  - enabled
-#                properties:
-#                  name:
-#                    type: string
-#                  enabled:
-#                    type: boolean
-#      responses:
-#        200:
-#          description: Feature flags successfully updated
-#          content:
-#            application/json:
-#              schema:
-#                allOf:
-#                  - $ref: "#/components/schemas/DetailResponse"
-#                  - properties:
-#                      data:
-#                        type: array
-#                        items:
-#                          type: object
-#                          properties:
-#                            name:
-#                              type: string
-#                            old_value:
-#                              type: boolean
-#                            new_value:
-#                              type: boolean
-#        404:
-#          description: All feature flags requested for update do not already exist
-#          content:
-#            application/json:
-#              schema:
-#                allOf:
-#                  - $ref: "#/components/schemas/ProblemResponse"
-#components:
-#  securitySchemes:
-#    MednetOkta:
-#      type: apiKey
-#      in: cookie
-#      name: session
-#      x-apikeyInfoFunc: CAP.app.blueprints.sso.sso.apikey_auth
-#  schemas:
-#    DetailResponse:
-#      type: object
-#      allOf:
-#        - $ref: "#/components/schemas/SuccessResponse"
-#        - $ref: "#/components/schemas/ProblemResponse"
-#    SuccessResponse:
-#      type: object
-#      required:
-#        - data
-#      properties:
-#        data:
-#          type: array
-#          items:
-#            type: object
-#    ProblemResponse:
-#      type: object
-#      nullable: true
-#      required:
-#        - problems
-#      properties:
-#        problems:
-#          type: array
-#          items:
-#            type: object
-#            required:
-#              - title
-#              - detail
-#              - instance
-#            properties:
-#              type:
-#                type: string
-#              title:
-#                type: string
-#              detail:
-#                type: string
-#              instance:
-#                type: string
-#              status:
-#                type: number
-#    FeatureFlag:
-#      type: object
-#      required:
-#        - name
-#        - enabled
-#        - description
-#      properties:
-#        name:
-#          type: string
-#        enabled:
-#          type: boolean
-#        description:
-#          type: string
-#
+          description: "Endpoint is working correctly."
+      summary: "A simple method that returns 200 as long as the endpoint is working correctly."
+  {% endfor %}
