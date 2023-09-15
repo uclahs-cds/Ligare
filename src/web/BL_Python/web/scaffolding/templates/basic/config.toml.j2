@@ -10,7 +10,7 @@ allow_methods = ['GET', 'POST', 'PATCH', 'OPTIONS']
 csp = "default-src 'self'"
 
 [flask]
-app_name = 'app'
+app_name = '{{application_name}}'
 env = 'debug'
 host = "127.0.0.1"
 port = 5000

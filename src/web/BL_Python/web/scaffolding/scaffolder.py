@@ -22,6 +22,7 @@ class ScaffoldModule:
 class ScaffoldConfig:
     template_type: str
     output_directory: str
+    application_name: str
     modules: list[ScaffoldModule] | None
     endpoints: list[ScaffoldEndpoint] | None
 

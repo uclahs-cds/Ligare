@@ -83,6 +83,7 @@ def scaffold():
     template_config = ScaffoldConfig(
         template_type=args.template_type,
         output_directory=args.output_directory,
+        application_name=args.name,
         modules=(
             None
             if args.modules is None
