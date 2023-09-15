@@ -173,7 +173,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         options["swagger_ui"] = True
 
     connexion_app.add_api(
-        "src/" + config.flask.openapi.spec_path,
+        config.flask.openapi.spec_path,
         base_path="/v1",
         validate_responses=config.flask.openapi.validate_responses,
         options=options,
