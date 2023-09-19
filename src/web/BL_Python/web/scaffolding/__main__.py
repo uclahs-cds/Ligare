@@ -29,11 +29,12 @@ def parse_args():
         help="The name of the application.",
     )
     _ = parser.add_argument(
-        "-o",
-        metavar="output directory",
-        dest="output_directory",
+        "-e",
+        action="append",
+        metavar="endpoint",
+        dest="endpoints",
         type=str,
-        help="The output directory. The default is a new directory sharing the name of the application.",
+        help="The name of an endpoint to scaffold. Can be specified more than once. If not specified, an endpoint sharing the name of the application will be scaffolded.",
     )
     template_types = ["basic", "openapi"]
     _ = parser.add_argument(
@@ -54,12 +55,11 @@ def parse_args():
         help="An optional module to include in the application. Can be specified more than once.",
     )
     _ = parser.add_argument(
-        "-e",
-        action="append",
-        metavar="endpoint",
-        dest="endpoints",
+        "-o",
+        metavar="output directory",
+        dest="output_directory",
         type=str,
-        help="The name of an endpoint to scaffold. Can be specified more than once. If not specified, an endpoint sharing the name of the application will be scaffolded.",
+        help="The output directory. The default is a new directory sharing the name of the application.",
     )
 
     args = parser.parse_args()
