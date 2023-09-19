@@ -19,11 +19,12 @@ class ScaffoldModule:
 
 @dataclass
 class ScaffoldConfig:
-    template_type: str
     output_directory: str
     application_name: str
-    modules: list[ScaffoldModule] | None
-    endpoints: list[ScaffoldEndpoint] | None
+    template_type: str | None = None
+    modules: list[ScaffoldModule] | None = None
+    endpoints: list[ScaffoldEndpoint] | None = None
+    mode: str = "create"
 
 
 class Scaffolder:
@@ -36,16 +37,19 @@ class Scaffolder:
             loader=BaseLoader  # pyright: ignore[reportGeneralTypeIssues]
         )
 
-    def _create_directory(self, directory: Path):
+    def _create_directory(self, directory: Path, overwrite_existing_files: bool = True):
         if directory in self._checked_directories:
             return
 
         self._checked_directories.add(directory)
-        if directory.exists():
-            self._log.warn(f"{directory} already exists. Files may be overwritten.")
-        else:
-            self._log.debug(f"Creating directory `{directory}`.")
-            directory.mkdir(parents=True, exist_ok=True)
+        if overwrite_existing_files == False and directory.exists():
+            self._log.warn(
+                f"Directory `{directory}` exists, but refusing to overwrite."
+            )
+            return
+
+        self._log.debug(f"Creating directory `{directory}`.")
+        directory.mkdir(parents=True)
 
     def _render_template_string(
         self, template_string: str, template_config: dict[str, Any] | None = None
@@ -73,6 +77,7 @@ class Scaffolder:
         template_environment: Environment,
         template_config: dict[str, Any] | None = None,
         template: Template | None = None,
+        overwrite_existing_files: bool = True,
     ):
         if template_config is None:
             template_config = self._config_dict
@@ -82,7 +87,17 @@ class Scaffolder:
             self._render_template_string(template_name).replace(".j2", ""),
         )
 
-        self._create_directory(template_output_path.parent)
+        # TODO overwrite
+        if overwrite_existing_files == False and template_output_path.exists():
+            self._log.warn(
+                f"File `{template_output_path}` exists, but refusing to overwrite."
+            )
+            return
+
+        self._create_directory(
+            template_output_path.parent,
+            overwrite_existing_files=overwrite_existing_files,
+        )
 
         self._log.debug(
             f"Rendering template `{template_output_path}` with config `{template_config}`"
@@ -93,12 +108,18 @@ class Scaffolder:
 
         template.stream(**template_config).dump(str(template_output_path))
 
-    def _scaffold_directory(self, env: Environment):
+    def _scaffold_directory(
+        self, env: Environment, overwrite_existing_files: bool = True
+    ):
         # render the base templates
         for template_name in cast(list[str], env.list_templates()):
-            self._render_template(template_name, env)
+            self._render_template(
+                template_name, env, overwrite_existing_files=overwrite_existing_files
+            )
 
-    def _scaffold_modules(self, env: Environment):
+    def _scaffold_modules(
+        self, env: Environment, overwrite_existing_files: bool = True
+    ):
         if self._config.modules is None:
             self._log.debug("No optional modules to scaffold.")
             return
@@ -115,9 +136,16 @@ class Scaffolder:
                 )
                 continue
 
-            self._render_template(template.name, env, template=template)
+            self._render_template(
+                template.name,
+                env,
+                template=template,
+                overwrite_existing_files=overwrite_existing_files,
+            )
 
-    def _scaffold_endpoints(self, env: Environment):
+    def _scaffold_endpoints(
+        self, env: Environment, overwrite_existing_files: bool = True
+    ):
         if self._config.endpoints is None:
             self._log.debug("No endpoints to scaffold.")
             return
@@ -151,6 +179,7 @@ class Scaffolder:
                 env,
                 template_config,
                 template,
+                overwrite_existing_files=overwrite_existing_files,
             )
 
     def scaffold(self):
@@ -172,8 +201,14 @@ class Scaffolder:
             loader=PackageLoader("BL_Python.web", f"scaffolding/templates/optional"),
         )
 
-        self._scaffold_directory(base_env)
-        # template type should go after base so it can override any base templates
-        self._scaffold_directory(template_type_env)
-        self._scaffold_modules(optional_env)
-        self._scaffold_endpoints(optional_env)
+        if self._config.mode == "create":
+            self._scaffold_directory(base_env)
+            # template type should go after base so it can override any base templates
+            self._scaffold_directory(template_type_env)
+            self._scaffold_modules(optional_env)
+            self._scaffold_endpoints(optional_env)
+        # other mode is "modify"
+        else:
+            # currently only endpoints can be modified through
+            # this tool, and they can only be added.
+            self._scaffold_endpoints(optional_env, overwrite_existing_files=False)
