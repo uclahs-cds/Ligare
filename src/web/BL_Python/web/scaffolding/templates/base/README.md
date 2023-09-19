@@ -8,7 +8,10 @@
 4. Run the application `python {{application_name}}`
 
 ## Adding API endpoints
-...
+
+### Using Blueprints
+
+### Using OpenAPI
 
 ## Configuration
 ...
