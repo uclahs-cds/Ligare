@@ -9,9 +9,27 @@
 
 ## Adding API endpoints
 
+There are two ways to create an API with `BL_Python.web`: with Flask Blueprints, and with an OpenAPI spec. If you did not specify a type when using the scaffolder, or you specified "basic," then your application uses Blueprints.
+
 ### Using Blueprints
 
+All Blueprints should be stored in the `{{application_name}}/endpoint/` directory. After scaffolding, you will find at least one example Blueprint in the directory.
+
+For the most part, Blueprints in `BL_Python.web` are equivalent to [`flask.Blueprint`](https://flask.palletsprojects.com/en/1.1.x/api/?highlight=blueprint#flask.Blueprint), so Flask's documentation should be referenced for details about how to work with Blueprints.
+
+#### Adding a New Blueprint
+
+New Blueprints should be added to a new file in the `{{application_name}}/endpoint/` directory. The contents contained within must contain one variable whose suffix is `_blueprint` and whose value is a `Blueprint` instance.
+
+To make it easy to get started, a new Blueprint can be added with the scaffolder using the modify mode. Run `bl-python-scaffold modify -h` to see how.
+
+#### Using an Existing Blueprint
+
+Existing Blueprints can be freely changed. Endpoints can be added, removed, and altered in any way necessary. The only requirement is that one variable with the suffix `_blueprint` whose value is a `Blueprint` instance must exist.
+
 ### Using OpenAPI
+
+...
 
 ## Configuration
 ...

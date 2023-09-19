@@ -19,10 +19,11 @@ Run these commands:
 
 **Note** Once `BL_Python.web` is available in a package registry, the commands needed will change to `pip install bl-python-web` only.
 
-## Scaffold A New Application
+## Scaffold a New Application
 
-The command used is `bl-python-scaffold`. Please run `bl-python-scaffold -h` to review the possible options. The current options are explained here as well.
+The command used is `bl-python-scaffold create`. Please run `bl-python-scaffold create -h` to review the possible options. The current options are explained here as well.
 
+**Note** The command `bl-python-scaffold` has two modes: `create` and `modify`. The former is used to create a new application, while the latter is used to modify an existing one.
 
 <details>
     <summary>Scaffold help</summary>
