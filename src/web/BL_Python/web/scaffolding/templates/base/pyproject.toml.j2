@@ -1,0 +1,28 @@
+[build-system]
+
+requires = ["setuptools>=42", "wheel"]
+
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "{{application_name}}"
+version = "0.0.1"
+dependencies = [
+    "bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming",
+    "bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web",
+{% if {'module_name': 'database'} in modules %}
+    "bl-python-database@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/database",
+{% endif %}
+]
+
+[tool.pyright]
+exclude = [
+    ".venv",
+    ".pytest_cache",
+    ".github",
+    ".git",
+    "typings",
+    "**/node_modules",
+    "**/__pycache__",
+]
+typeCheckingMode = "basic"

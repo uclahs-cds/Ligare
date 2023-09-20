@@ -173,8 +173,8 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         options["swagger_ui"] = True
 
     connexion_app.add_api(
-        "src/" + config.flask.openapi.spec_path,
-        base_path="/v1",
+        f"{config.flask.app_name}/{config.flask.openapi.spec_path}",
+        base_path="/",
         validate_responses=config.flask.openapi.validate_responses,
         options=options,
     )
@@ -182,7 +182,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     return connexion_app
 
 
-def configure_blueprint_routes(app: Flask, blueprint_import_subdir: str = "blueprints"):
+def configure_blueprint_routes(app: Flask, blueprint_import_subdir: str = "endpoints"):
     """
     Register Flask blueprints and API routes
     """

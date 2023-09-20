@@ -2,6 +2,36 @@
 
 A collection of Python libraries for creating web applications, working with databases, writing tests, and supporting utilities.
 
+# Quick Starts
+
+* Create a BL_Python [web application](src/web/README.md)
+
+# Using `BL_Python` in your projects
+
+Currently these libraries are not available in any package repository, and so much be imported via other means.
+
+The suggested method is to use the `git+ssh` [VCS URL](https://pip.pypa.io/en/stable/topics/vcs-support/) with `pip`.
+
+As an example, include the `BL_Python.programming` library like this within `pyproject.toml`:
+
+```toml
+[project]
+dependencies = [
+    "bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming"
+]
+```
+
+Make note of the following:
+* The library name is prefixed with `bl-python-` followed by the library name, which is `programming` in this example. This is due to how Python namespaces packages, and the pattern is necessary for the other libraries as well.
+* The Git URL is followed by `@`, then `main`. Use this if you want the _unstable_ features in the `main` Git branch. Any Git [ref](https://git-scm.com/book/en/v2/Git-Internals-Git-References) can be used, which is helpful to lock the dependency to a specific version. The `@` is always needed when specifying a ref.
+* The Git URL ends with `#subdirectory=src/programming`. This is necessary to specify that the dependency `bl-python-programming` exists at `src/programming`.
+
+## Important requirement!
+
+Due to limitations in `pip`, some `BL_Python` libraries that depend on other `BL_Python` libraries need those dependencies explicitly defined in applications using those libraries.
+
+The libraries that require this will outline their explicit dependencies in their respective readme files. `pip` will also show an error if these requirements are not met, which will aid in discovery of invalid dependency configurations in your applications.
+
 # Available Libraries
 
 Following are each of the libraries in this repository.
@@ -63,29 +93,3 @@ Review the `BL_Python.web` [readme](src/web/README.md)
 
 #### Git VCS URL
 `bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web`
-
-# Using `BL_Python` in your projects
-
-Currently these libraries are not available in any package repository, and so much be imported via other means.
-
-The suggested method is to use the `git+ssh` [VCS URL](https://pip.pypa.io/en/stable/topics/vcs-support/) with `pip`.
-
-As an example, include the `BL_Python.programming` library like this within `pyproject.toml`:
-
-```toml
-[project]
-dependencies = [
-    "bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming"
-]
-```
-
-Make note of the following:
-* The library name is prefixed with `bl-python-` followed by the library name, which is `programming` in this example. This is due to how Python namespaces packages, and the pattern is necessary for the other libraries as well.
-* The Git URL is followed by `@`, then `main`. Use this if you want the _unstable_ features in the `main` Git branch. Any Git [ref](https://git-scm.com/book/en/v2/Git-Internals-Git-References) can be used, which is helpful to lock the dependency to a specific version. The `@` is always needed when specifying a ref.
-* The Git URL ends with `#subdirectory=src/programming`. This is necessary to specify that the dependency `bl-python-programming` exists at `src/programming`.
-
-## Important requirement!
-
-Due to limitations in `pip`, some `BL_Python` libraries that depend on other `BL_Python` libraries need those dependencies explicitly defined in applications using those libraries.
-
-The libraries that require this will outline their explicit dependencies in their respective readme files. `pip` will also show an error if these requirements are not met, which will aid in discovery of invalid dependency configurations in your applications.

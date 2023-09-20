@@ -1,0 +1,11 @@
+"""
+Non-API specific endpoints for application management
+"""
+from logging import Logger
+from injector import inject
+
+
+@inject
+def healthcheck(log: Logger):
+    log.info("Healthcheck")
+    return "healthcheck: '{{application_name}}' is running"

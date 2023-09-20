@@ -1,0 +1,35 @@
+servers:
+  - url: http://localhost:5000/
+    description: Local development
+info:
+  title: {{application_name}}
+  version: 3.0.2
+openapi: 3.0.2
+paths:
+  /healthcheck:
+    get:
+      description: "Check whether the application is running."
+      operationId: "endpoints.application.healthcheck"
+      parameters: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: "Application is running correctly."
+      summary: "A simple method that returns 200 as long as the application is running."
+  {% for endpoint in endpoints %}
+  /{{endpoint.endpoint_name}}:
+    get:
+      description: "Hello, {{endpoint.endpoint_name}}!"
+      operationId: "endpoints.{{endpoint.endpoint_name}}.get_{{endpoint.endpoint_name}}"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: "Endpoint is working correctly."
+      summary: "A simple method that returns 200 as long as the endpoint is working correctly."
+  {% endfor %}
