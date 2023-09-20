@@ -1,10 +1,12 @@
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Any, cast
 
 from BL_Python.programming.collections.dict import merge
 from jinja2 import BaseLoader, Environment, PackageLoader, Template
+from pkg_resources import ResourceManager, get_provider
 
 
 @dataclass
@@ -25,6 +27,7 @@ class ScaffoldConfig:
     application_name: str
     template_type: str | None = None
     modules: list[ScaffoldModule] | None = None
+    module: dict[str, Any] = field(default_factory=dict)
     endpoints: list[ScaffoldEndpoint] | None = None
     mode: str = "create"
 
@@ -76,6 +79,7 @@ class Scaffolder:
         self,
         template_name: str,
         template_environment: Environment,
+        template_directory_prefix: str = "",
         template_config: dict[str, Any] | None = None,
         template: Template | None = None,
         overwrite_existing_files: bool = True,
@@ -85,6 +89,7 @@ class Scaffolder:
 
         template_output_path = Path(
             self._config.output_directory,
+            template_directory_prefix,
             self._render_template_string(template_name).replace(".j2", ""),
         )
 
@@ -109,13 +114,45 @@ class Scaffolder:
         template.stream(**template_config).dump(str(template_output_path))
 
     def _scaffold_directory(
-        self, env: Environment, overwrite_existing_files: bool = True
+        self,
+        env: Environment,
+        template_directory_prefix: str = "",
+        overwrite_existing_files: bool = True,
     ):
         # render the base templates
-        for template_name in cast(list[str], env.list_templates()):
+        for template_name in cast(list[str], env.list_templates(extensions=["j2"])):
             self._render_template(
-                template_name, env, overwrite_existing_files=overwrite_existing_files
+                template_name,
+                env,
+                template_directory_prefix=template_directory_prefix,
+                overwrite_existing_files=overwrite_existing_files,
             )
+
+    _manager = ResourceManager()
+    _provider = get_provider("BL_Python.web")
+
+    def _execute_module_hooks(self, module_template_directory: str):
+        module_hook_path = Path(module_template_directory, "__hook__.py")
+        if self._provider.has_resource(str(module_hook_path)):
+            # load the module from its path
+            # and execute it
+            spec = spec_from_file_location(
+                "__hook__",
+                self._provider.get_resource_filename(
+                    self._manager, str(module_hook_path)
+                ),
+            )
+            if spec is None or spec.loader is None:
+                raise Exception(
+                    f"Module cannot be created from path {module_hook_path}"
+                )
+            module = module_from_spec(spec)
+            spec.loader.exec_module(module)
+
+            for module_name, module_var in vars(module).items():
+                if not module_name.startswith("on_"):
+                    continue
+                module_var(self._config_dict, self._log)
 
     def _scaffold_modules(
         self, env: Environment, overwrite_existing_files: bool = True
@@ -126,20 +163,18 @@ class Scaffolder:
 
         # render optional module templates
         for module in self._config.modules:
-            template = env.get_template(
-                f"{{{{application_name}}}}/modules/{module.module_name}.py.j2"
+            module_template_directory = f"scaffolding/templates/optional/{{{{application_name}}}}/modules/{module.module_name}"
+            self._execute_module_hooks(module_template_directory)
+
+            module_env = Environment(
+                trim_blocks=True,
+                lstrip_blocks=True,
+                loader=PackageLoader("BL_Python.web", str(module_template_directory)),
             )
 
-            if template.name is None:
-                self._log.error(
-                    f"Could not find template `{{{{application_name}}}}/modules/{module.module_name}.py.j2`."
-                )
-                continue
-
-            self._render_template(
-                template.name,
-                env,
-                template=template,
+            self._scaffold_directory(
+                module_env,
+                template_directory_prefix=f"{self._config.application_name}/modules/{module.module_name}",
                 overwrite_existing_files=overwrite_existing_files,
             )
 
@@ -181,8 +216,8 @@ class Scaffolder:
             self._render_template(
                 rendered_template_name,
                 env,
-                template_config,
-                template,
+                template_config=template_config,
+                template=template,
                 overwrite_existing_files=overwrite_existing_files,
             )
 
@@ -206,10 +241,13 @@ class Scaffolder:
         )
 
         if self._config.mode == "create":
+            # scaffold modules first so they can alter the config if necessary
+            self._scaffold_modules(optional_env)
+
             self._scaffold_directory(base_env)
             # template type should go after base so it can override any base templates
             self._scaffold_directory(template_type_env)
-            self._scaffold_modules(optional_env)
+
             self._scaffold_endpoints(optional_env)
         # other mode is "modify"
         else:

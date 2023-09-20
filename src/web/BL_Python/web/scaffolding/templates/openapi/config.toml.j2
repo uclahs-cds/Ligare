@@ -32,8 +32,8 @@ secure = true
 samesite = 'None'
 secret_key = '123abc'
 
-{% if modules.database %}
+{% if 'database' in module %}
 [database]
-connection_string = 'sqlite:///:memory:'
+connection_string = '{{module.database.connection_string}}'
 sqlalchemy_echo = false
 {% endif %}

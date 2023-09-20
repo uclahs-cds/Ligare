@@ -1,7 +1,7 @@
 application_configs = []
 application_modules = []
 
-{% if modules.database %}
+{% if 'database' in module %}
 from BL_Python.database.config import DatabaseConfig
 from BL_Python.database.dependency_injection import ScopedSessionModule
 application_configs.append(DatabaseConfig)

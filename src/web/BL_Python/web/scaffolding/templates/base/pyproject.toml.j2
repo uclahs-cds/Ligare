@@ -10,7 +10,7 @@ version = "0.0.1"
 dependencies = [
     "bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming",
     "bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web",
-{% if {'module_name': 'database'} in modules %}
+{% if 'database' in module %}
     "bl-python-database@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/database",
 {% endif %}
 ]
