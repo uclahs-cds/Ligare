@@ -97,7 +97,7 @@ def _parse_args():
         metavar="output directory",
         dest="output_directory",
         type=str,
-        help="The output directory. The default is a new directory sharing the name of the application.",
+        help="The output directory. The default is a directory sharing the name of the application.",
     )
     modify_parser.set_defaults(mode_executor=partial(_run_modify_mode), mode="modify")
 
