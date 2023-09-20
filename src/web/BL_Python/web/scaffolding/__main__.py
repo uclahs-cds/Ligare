@@ -132,7 +132,7 @@ def _run_create_mode(args: Namespace):
         output_directory=args.output_directory,
         application_name=args.name,
         modules=(
-            None
+            []
             if args.modules is None
             else [ScaffoldModule(module_name=module) for module in args.modules]
         ),

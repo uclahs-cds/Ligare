@@ -42,14 +42,13 @@ class Scaffolder:
             return
 
         self._checked_directories.add(directory)
-        if overwrite_existing_files == False and directory.exists():
-            self._log.warn(
-                f"Directory `{directory}` exists, but refusing to overwrite."
-            )
-            return
-
-        self._log.debug(f"Creating directory `{directory}`.")
-        directory.mkdir(parents=True)
+        if overwrite_existing_files and directory.exists():
+            self._log.warn(f"Directory `{directory}` exists. Files may be overwritten.")
+        else:
+            self._log.debug(f"Creating directory `{directory}`.")
+            # the "overwrite" check only applies in this method
+            # to log a message. It is okay if a directory already exists.
+            directory.mkdir(parents=True, exist_ok=True)
 
     def _render_template_string(
         self, template_string: str, template_config: dict[str, Any] | None = None
@@ -87,7 +86,6 @@ class Scaffolder:
             self._render_template_string(template_name).replace(".j2", ""),
         )
 
-        # TODO overwrite
         if overwrite_existing_files == False and template_output_path.exists():
             self._log.warn(
                 f"File `{template_output_path}` exists, but refusing to overwrite."
@@ -127,12 +125,12 @@ class Scaffolder:
         # render optional module templates
         for module in self._config.modules:
             template = env.get_template(
-                f"{{application_name}}/modules/{module.module_name}.py.j2"
+                f"{{{{application_name}}}}/modules/{module.module_name}.py.j2"
             )
 
             if template.name is None:
                 self._log.error(
-                    f"Could not find template `{{application_name}}/modules/{module.module_name}.py.j2`."
+                    f"Could not find template `{{{{application_name}}}}/modules/{module.module_name}.py.j2`."
                 )
                 continue
 
@@ -159,7 +157,7 @@ class Scaffolder:
 
             if template.name is None:
                 self._log.error(
-                    f"Could not find template `{{application_name}}/endpoints/{{endpoint_name}}.py.j2`."
+                    "Could not find template `{{application_name}}/endpoints/{{endpoint_name}}.py.j2`."
                 )
                 continue
 
