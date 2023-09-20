@@ -10,6 +10,8 @@ from jinja2 import BaseLoader, Environment, PackageLoader, Template
 @dataclass
 class ScaffoldEndpoint:
     endpoint_name: str
+    # This is Flask's default hostname.
+    hostname: str = "http://127.0.0.1:5000"
 
 
 @dataclass
@@ -165,6 +167,10 @@ class Scaffolder:
 
             rendered_template_name = self._render_template_string(
                 template.name, template_string_config
+            )
+
+            self._log.info(
+                f"\"{endpoint['endpoint_name']}\" will be accessible at {endpoint['hostname']}/{endpoint['endpoint_name']}"
             )
 
             # make the current endpoint configuration available
