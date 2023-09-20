@@ -14,8 +14,8 @@ First install the `BL_Python.web` scaffolding tool. You can do this in your syst
 
 Run these commands:
 
-1. `pip install bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming`
-2. `pip install bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web`
+1. `pip install 'bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming'`
+2. `pip install 'bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web'`
 
 **Note** Once `BL_Python.web` is available in a package registry, the commands needed will change to `pip install bl-python-web` only.
 
@@ -40,7 +40,7 @@ The command used is `bl-python-scaffold create`. Please run `bl-python-scaffold 
 </details>
 <br />
 
-To create an application with a single API endpoint, run `bl-python-scaffold -n <name>` where `<name>` is replaced with the desired name of your application. By default, the scaffolder will output into a directory matching the name of your application. **Existing files will be overwritten.**
+To create an application with a single API endpoint, run `bl-python-scaffold create -n <name>` where `<name>` is replaced with the desired name of your application. By default, the scaffolder will output into a directory matching the name of your application. **Existing files will be overwritten.**
 
 ## Run Your Application
 
