@@ -44,6 +44,9 @@ dependencies = [
 ]
 
 dynamic = ["version", "readme"]
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.dynamic]
 version = {attr = "BL_Python.web.__version__"}
 readme = {file = ["README.md"], content-type = "text/markdown"}
@@ -53,6 +56,9 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools.packages]
 find = {}
+
+[tool.setuptools.package-data]
+"*" = ["*.j2"]
 
 [project.scripts]
 bl-python-scaffold = "BL_Python.web.scaffolding.__main__:scaffold"
