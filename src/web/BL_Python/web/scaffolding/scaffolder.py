@@ -288,7 +288,7 @@ class Scaffolder:
                 )
                 continue
 
-            template_string_config = merge(self._config_dict, endpoint)
+            template_string_config = merge(self._config_dict.copy(), endpoint)
 
             # render the template output path, replacing the jinja2
             # directives with their associated values from `self._config_dict`.
