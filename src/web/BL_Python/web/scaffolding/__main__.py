@@ -97,7 +97,7 @@ def _parse_args():
         metavar="output directory",
         dest="output_directory",
         type=str,
-        help="The output directory. The default is a new directory sharing the name of the application.",
+        help="The output directory. The default is a directory sharing the name of the application.",
     )
     modify_parser.set_defaults(mode_executor=partial(_run_modify_mode), mode="modify")
 
@@ -121,7 +121,9 @@ def _parse_args():
 def _run_create_mode(args: Namespace):
     log.info("Running create mode.")
 
-    log.info(f"Creating new application from {args.template_type} template ...")
+    log.info(
+        f'Creating new application "{args.name}" from {args.template_type} template ...'
+    )
 
     # TODO consider pulling licenses from GitHub
     # https://docs.github.com/en/rest/licenses/licenses?apiVersion=2022-11-28#get-all-commonly-used-licenses
@@ -164,10 +166,10 @@ def _run_modify_mode(args: Namespace):
 def scaffold():
     args = _parse_args()
 
-    log.info(
+    print(
         f'Scaffolding application named "{args.name}" under directory `{Path(args.output_directory).absolute()}`.'
     )
 
     args.mode_executor(args)
 
-    log.info("Done.")
+    print("Done.")

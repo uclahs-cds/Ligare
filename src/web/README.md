@@ -26,7 +26,9 @@ The command used is `bl-python-scaffold create`. Please run `bl-python-scaffold 
 **Note** The command `bl-python-scaffold` has two modes: `create` and `modify`. The former is used to create a new application, while the latter is used to modify an existing one.
 
 <details>
-    <summary>Scaffold help</summary>
+    <summary>Scaffold "create" help</summary>
+
+These options are for the `bl-python-scaffold create` command.
 
 | Option | Explanation | Required? |
 | --- | --- | --- |
@@ -38,6 +40,20 @@ The command used is `bl-python-scaffold create`. Please run `bl-python-scaffold 
 | `-o <output directory>` | Store the new application in a directory other than one that matches the application name. | No |
 
 </details>
+<details>
+    <summary>Scaffold "modify" help</summary>
+
+These options are for the `bl-python-scaffold modify` command.
+
+| Option | Explanation | Required? |
+| --- | --- | --- |
+| `-h` | Show the tool help text. | No |
+| `-n <name>` | This is the name of your application. It is the name Flask will use to start up, and also acts as a default value for other options when they are not specified when running this tool. | Yes |
+| `-e <endpoint>` | An endpoint to create. By default, an endpoint sharing the name of your application is created. If `-e` is specified even once, the default is _not_ created. This option can be specified more than once to create multiple endpoints. | No |
+| `-o <output directory>` | Modify the application in a directory other than one that matches the application name. | No |
+
+</details>
+<br />
 <br />
 
 To create an application with a single API endpoint, run `bl-python-scaffold create -n <name>` where `<name>` is replaced with the desired name of your application. By default, the scaffolder will output into a directory matching the name of your application. **Existing files will be overwritten.**
@@ -45,3 +61,11 @@ To create an application with a single API endpoint, run `bl-python-scaffold cre
 ## Run Your Application
 
 The scaffolder will have created several files and directories, including a README.md, under the output directory. Follow the instructions in your newly scaffolded application's README.md to run and configure your application.
+
+# About the Library
+
+`BL_Python.web` is intended to handle a lot of the boilerplate needed to create and run Flask applications. A primary component of that boilerplate is tying disparate pieces of functionality and other libraries together in a seemless way. For example, [SQLAlchemy](https://www.sqlalchemy.org/) is an ORM supported through `BL_Python.database` that this library integrates with to make database functionality simpler to make use of.
+
+## Flask
+
+`BL_Python.web` is based on [Flask 1.1.4](https://flask.palletsprojects.com/en/1.1.x/). Updating to Flask 2.x is not currently planned, but may happen in the future.
