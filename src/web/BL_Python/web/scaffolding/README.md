@@ -21,7 +21,9 @@ The following order is used when rendering:
 3. Template Type
 4. Endpoints
 
-Each subsequent set of templates can overwrite files rendered from the prior set. Modules are able to modify the configuration and behavior of rendering, and so are executed first to allow this.
+Each subsequent set of templates can overwrite files rendered from the previous sets. This means, for example, that a rendered template for Template Type, e.g. `openapi/{{application_name}}/endpoints/application.py.j2`, can overwrite the like-named rendered template `base/{{application_name}}/endpoints/application.py.j2` because the Template Type templates under `openapi/` are rendered after the Base templates under `base/`. This behavior is not inherent to Jinja2 and is a conscious decision regarding the behavior of the scaffolding tool.
+
+Modules are able to modify the configuration and behavior of rendering, and so are executed first to allow this.
 
 Note that directory names under each of the `templates/` directories can also contain Jinja2 directives as long as those directives also form a valid file name. For example, there are a couple of directories named `{{application_name}}/`. This is replaced with the name of the application and creates a directory with the name of the application under the output directory. For example, if `application_name` is "foo" then the directory will be named `foo/`.
 
