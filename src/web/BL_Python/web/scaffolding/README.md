@@ -86,16 +86,20 @@ Templates under `optional/` are templates that are rendered in unique ways as co
 
 #### Endpoints
 
-Templates under `optional/endpoints/` are rendered once for every API endpoint that should be scaffolded. This is done with the `-e <endpoint>` switch, which can be specified multiple times.
+Templates under `optional/{{application_name}}/endpoints/` are rendered once for every API endpoint that should be scaffolded. This is done with the `-e <endpoint>` switch, which can be specified multiple times.
 
 These templates are aware of the scaffold template type and must make distinctions between the Basic and OpenAPI template types.
 
 #### Modules
 
-Templates under `optional/modules/` are rendered for each module specified with the `-m <module>` switch.
+Templates under `optional/{{application_name}}/modules/` are rendered for each module specified with the `-m <module>` switch.
 
-Modules are unique in that a callback can be specified that is executed when an application is being created. There is no callback available for when an application is modified. The available callbacks are:
+Modules are unique in that a callback can be specified that is executed when an application is being created. There is no callback available for when an application is modified. These callbacks are defined in `__hook__.py` at the root of the module.
+
+There is currently only one such callback:
 
 ##### `on_create(config: dict[str, Any], log: Logger) -> None`
 
-This method can modify the configuration or do anything else necessary for the module and the other templates to render correctly.
+This method can modify the scaffold configuration or do anything else necessary for the module and the other templates to render correctly.
+
+For an example, take a look at `modules/database/__hook__.py`. This module prompts the user for a database connection string and adds the value to the scaffold configuration key `module.database`. This is then utilized in the templates `basic/config.toml.j2` and `openapi/config.toml.j2`.
