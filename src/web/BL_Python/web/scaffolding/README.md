@@ -12,7 +12,7 @@ While Jinja2 is typically used to render HTML and related web files, this tool i
 
 ## Template Rendering
 
-Templates are broken up into several directories that each play a distinct role in the complete scaffolding of an application. Review Template Directories for more information.
+Templates are broken up into several directories that each play a distinct role in the complete scaffolding of an application. Review [Template Directories](#template-directories) for more information.
 
 The following order is used when rendering:
 
