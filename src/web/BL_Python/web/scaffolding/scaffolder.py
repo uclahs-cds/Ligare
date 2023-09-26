@@ -1,5 +1,9 @@
 import logging
+import sys
+import types
 from dataclasses import asdict, dataclass, field
+from importlib.machinery import SourceFileLoader
+from importlib.metadata import PackageNotFoundError
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Any, cast
@@ -313,7 +317,58 @@ class Scaffolder:
                 overwrite_existing_files=overwrite_existing_files,
             )
 
+    # it is safe for create if:
+    #      - the <application name> directory does not exist
+    #      - if it does, that the directory does not contain an application
+    # it is safe for modify if:
+    #      - the <application name> directory exists
+    #      - the scaffolder is run from the application parent directory
+    #          - meaning the <application name> directory contains some kind of fingerprint
+    def _check_scaffolded_application_exists(self):
+        """Test that the scaffolder is running from a safe directory to ensure it runs as expected."""
+        if self._config.mode == "create":
+            sys.path.insert(0, str(Path(".", self._config.output_directory)))
+
+            try:
+                # if any of these steps fail, then the output directory
+                # does not already contain a scaffolded application
+                loader = SourceFileLoader(
+                    self._config.application_name,
+                    str(
+                        Path(
+                            self._config.output_directory,
+                            self._config.application_name,
+                            "__init__.py",
+                        )
+                    ),
+                )
+                mod = types.ModuleType(loader.name)
+                sys.modules[self._config.application_name] = mod
+                module = loader.load_module()
+                breakpoint()
+                _ = module.__version__
+                _ = module._version.__bl_python_scaffold__
+                # if no errors occur, then the output directory
+                # contains a scaffolded application
+                return True
+            except Exception:
+                return False
+            finally:
+                _ = sys.path.pop(0)
+
     def scaffold(self):
+        print(self._check_scaffolded_application_exists())
+        # print("SAFETY CHECK")
+        # if self._config.mode == "create":
+        #    pass
+        ## other mode is "modify"
+        # else:
+        #    if not self._check_can_safely_run():
+        #        self._log.critical(
+        #            f"You are not running the scaffolder from an existing application parent directory."
+        #        )
+        #        return
+
         # used for the primary set of templates that a
         # scaffolded application is made up of.
         base_env = Environment(
