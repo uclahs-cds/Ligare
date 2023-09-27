@@ -389,7 +389,7 @@ class Scaffolder:
         # parent directory.
         elif self._config.mode == "modify" and not in_parent_directory:
             self._log.critical(
-                f"Attemptd to modify an existing application from a directory that is not the existing application's parent directory. This is not supported. Change your working directory to the application's parent directory."
+                f"Attempted to modify an existing application from a directory that is not the existing application's parent directory. This is not supported. Change your working directory to the application's parent directory."
             )
             return
 
