@@ -3,7 +3,6 @@ import sys
 import types
 from dataclasses import asdict, dataclass, field
 from importlib.machinery import SourceFileLoader
-from importlib.metadata import PackageNotFoundError
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Any, cast
@@ -318,56 +317,81 @@ class Scaffolder:
             )
 
     # it is safe for create if:
-    #      - the <application name> directory does not exist
-    #      - if it does, that the directory does not contain an application
+    #      - the current directory is not a scaffolded application
     # it is safe for modify if:
     #      - the <application name> directory exists
-    #      - the scaffolder is run from the application parent directory
-    #          - meaning the <application name> directory contains some kind of fingerprint
-    def _check_scaffolded_application_exists(self):
-        """Test that the scaffolder is running from a safe directory to ensure it runs as expected."""
-        if self._config.mode == "create":
-            sys.path.insert(0, str(Path(".", self._config.output_directory)))
+    #      - the <application name> directory is a scaffolded application
+    #      - the scaffolder is run from the scaffolded application's parent directory
+    def _check_scaffolded_application_exists(self, test_path: Path):
+        """
+        Determine whether the application <config.application_name> is an importable
+        BL_Python.web application that has been previously scaffolded with
+        this tool.
 
-            try:
-                # if any of these steps fail, then the output directory
-                # does not already contain a scaffolded application
-                loader = SourceFileLoader(
-                    self._config.application_name,
-                    str(
-                        Path(
-                            self._config.output_directory,
-                            self._config.application_name,
-                            "__init__.py",
-                        )
-                    ),
-                )
-                mod = types.ModuleType(loader.name)
-                sys.modules[self._config.application_name] = mod
-                module = loader.load_module()
-                breakpoint()
-                _ = module.__version__
-                _ = module._version.__bl_python_scaffold__
-                # if no errors occur, then the output directory
-                # contains a scaffolded application
-                return True
-            except Exception:
-                return False
-            finally:
-                _ = sys.path.pop(0)
+        :param test_path: The directory to test for the existence of a scaffolded application.
+        """
+        application_import_path = Path(".", test_path)
+        self._log.debug(
+            f"Adding `{application_import_path}` to process module import path."
+        )
+        # modifying the import path to include a relative directory
+        # is less than ideal and potentionally dangerous. we should
+        # consider forking here or doing something else to prevent
+        # the global modification.
+        sys.path.insert(0, str(application_import_path))
+
+        try:
+            # if any of these steps fail, then the `test_path`
+            # does not already contain a scaffolded application
+            loader = SourceFileLoader(
+                self._config.application_name,
+                str(
+                    Path(
+                        test_path,
+                        self._config.application_name,
+                        "__init__.py",
+                    )
+                ),
+            )
+            mod = types.ModuleType(loader.name)
+            sys.modules[self._config.application_name] = mod
+            module = loader.load_module()
+            _ = module.__version__
+            _ = module._version.__bl_python_scaffold__
+            # if no errors occur, then the `test_path`
+            # contains a scaffolded application
+            return True
+        except Exception as e:
+            self._log.debug(str(e), exc_info=True)
+            return False
+        finally:
+            if self._config.application_name in sys.modules:
+                del sys.modules[self._config.application_name]
+            popped_import_path = sys.path.pop(0)
+            self._log.debug(
+                f"Popped `{popped_import_path}` from process module import path. Expected to pop `{application_import_path}`."
+            )
 
     def scaffold(self):
-        print(self._check_scaffolded_application_exists())
-        # print("SAFETY CHECK")
-        # if self._config.mode == "create":
-        #    pass
-        ## other mode is "modify"
-        # else:
-        #    if not self._check_can_safely_run():
-        #        self._log.critical(
-        #            f"You are not running the scaffolder from an existing application parent directory."
-        #        )
-        #        return
+        in_parent_directory = self._check_scaffolded_application_exists(
+            Path(self._config.output_directory)
+        )
+        in_application_directory = self._check_scaffolded_application_exists(Path("."))
+
+        # "create" can run from any directory that is not an existing
+        # application's root directory.
+        if self._config.mode == "create" and in_application_directory:
+            self._log.critical(
+                "Attmpted to scaffold a new application in the same directory as an existing application. This is not supported. Change your working directory to the application's parent directory, or run this from a directory that does not contain an existing application."
+            )
+            return
+        # modify can only run from an existing application's
+        # parent directory.
+        elif self._config.mode == "modify" and not in_parent_directory:
+            self._log.critical(
+                f"Attemptd to modify an existing application from a directory that is not the existing application's parent directory. This is not supported. Change your working directory to the application's parent directory."
+            )
+            return
 
         # used for the primary set of templates that a
         # scaffolded application is made up of.
