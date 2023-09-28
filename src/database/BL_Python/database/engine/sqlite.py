@@ -3,6 +3,7 @@ from typing import Any, Callable
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy.pool import Pool, StaticPool
 
 
 class SQLiteScopedSession(ScopedSession):
@@ -15,8 +16,22 @@ class SQLiteScopedSession(ScopedSession):
         """
         Create a new session factory for SQLite.
         """
+        poolclass: type[Pool] | None = None
+        # if the connection string is an SQLite in-memory database
+        # then make SQLAlchemy maintain an static pool of "connections"
+        # so that the in-memory database is not deallocated. Otherwise,
+        # the database would disappear when a thread is done with it.
+        # Note: SQLite will reject usage from other threads unless
+        # the connection string also contains `?check_same_thread=False`,
+        # e.g. `sqlite:///:memory:?check_same_thread=False`
+        if ":memory:" in connection_string:
+            poolclass = StaticPool
+
         engine = create_engine(
-            connection_string, echo=echo, execution_options=execution_options or {}
+            connection_string,
+            echo=echo,
+            execution_options=execution_options or {},
+            poolclass=poolclass,
         )
 
         return SQLiteScopedSession(
