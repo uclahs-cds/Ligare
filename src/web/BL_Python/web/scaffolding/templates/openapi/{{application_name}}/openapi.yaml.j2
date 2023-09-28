@@ -22,7 +22,11 @@ paths:
   {% for endpoint in endpoints %}
   /{{endpoint.endpoint_name}}:
     get:
+      {% if module.database %}
+      description: "Get all entries in the {{endpoint.endpoint_name}} table."
+      {% else %}
       description: "Hello, {{endpoint.endpoint_name}}!"
+      {% endif %}
       operationId: "endpoints.{{endpoint.endpoint_name}}.get_{{endpoint.endpoint_name}}"
       responses:
         "200":
@@ -32,4 +36,26 @@ paths:
                 type: string
           description: "Endpoint is working correctly."
       summary: "A simple method that returns 200 as long as the endpoint is working correctly."
+    {% if module.database %}
+    post:
+      description: Add a new {{endpoint.endpoint_name.capitalize()}} to the {{endpoint.endpoint_name}} table.
+      operationId: "endpoints.{{endpoint.endpoint_name}}.add_{{endpoint.endpoint_name}}"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        201:
+          description: "The new {{endpoint.endpoint_name.capitalize()}} was successfully added to the {{endpoint.endpoint_name}} table."
+          content:
+            application/json:
+              schema:
+                type: string
+    {% endif %}
   {% endfor %}
