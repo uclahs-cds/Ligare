@@ -49,7 +49,7 @@ def create_app(
     # just grow and grow.
     # startup_builder: IStartupBuilder,
     # config: Config,
-):
+) -> Flask:
     """
     Bootstrap the Flask applcation.
 

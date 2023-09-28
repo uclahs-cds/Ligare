@@ -1,4 +1,15 @@
+# isort: off
 from {{application_name}}._version import __version__
+# isort: on
+
+{% if module.database %}
+from typing import Any, cast
+from injector import Injector
+from sqlalchemy import MetaData
+
+from sqlalchemy.orm import Session
+from {{application_name}}.modules.database import Base
+{% endif %}
 
 def create_app():
     application_configs = []
@@ -13,8 +24,29 @@ def create_app():
 
     from BL_Python.web.application import create_app as _create_app
     # fmt: off
-    return _create_app(
+    app = _create_app(
         application_configs=application_configs,
         application_modules=application_modules
     )
     # fmt: on
+
+    {% if module.database %}
+    # For now, create the database and tables
+    # when the application starts. This behavior
+    # will be removed when Alembic is integrated.
+    session = cast(Injector, app.injector.injector).get(Session)
+    cast(MetaData, Base.metadata).create_all(session.bind) # pyright: ignore[reportGeneralTypeIssues]
+
+    {#
+        ideally this would use @inject w/ session: Session,
+        but something is preventing it from running or
+        sending in the dependencies to remove_db.
+        For now, just resolve it directly.
+    #}
+    @app.teardown_request
+    def remove_db(exception: Any):
+        session = app.injector.injector.get(Session)
+        session.rollback()
+    {% endif %}
+
+    return app

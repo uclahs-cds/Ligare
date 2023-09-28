@@ -2,6 +2,14 @@ from logging import Logger
 
 from flask import Blueprint
 from injector import inject
+{% if module.database %}
+from flask import request
+from sqlalchemy.orm import Session
+{% endif %}
+
+{% if module.database %}
+from {{application_name}}.modules.database import {{endpoint.endpoint_name.capitalize()}}
+{% endif %}
 
 {% if template_type != "openapi" %}
 {{endpoint.endpoint_name}}_blueprint = Blueprint("{{endpoint.endpoint_name}}", __name__, url_prefix="/{{endpoint.endpoint_name}}")
@@ -12,5 +20,36 @@ from injector import inject
 {% if template_type != "openapi" %}
 @{{endpoint.endpoint_name}}_blueprint.route("/")
 {% endif %}
+{% if module.database %}
+def get_{{endpoint.endpoint_name}}(session: Session, log: Logger):
+    entries = session.query({{endpoint.endpoint_name.capitalize()}}).all()
+    return {"names": [x.name for x in entries]}
+{% else %}
 def get_{{endpoint.endpoint_name}}(log: Logger):
     return "Hello, {{endpoint.endpoint_name}}!"
+{% endif %}
+
+{% if module.database %}
+@inject
+{% if template_type != "openapi" %}
+@{{endpoint.endpoint_name}}_blueprint.route("/", methods=["POST"])
+{% endif %}
+def add_{{endpoint.endpoint_name}}(session: Session, log: Logger):
+    name: str|None = None
+    try:
+        data = request.get_json(force=True)
+        if data is None or not (name := data["name"]):
+            return "Request JSON must contain a 'name' field with a string value.", 400
+
+        session.add({{endpoint.endpoint_name.capitalize()}}(name = name))
+    except Exception as e:
+        log.critical(str(e), exc_info=True)
+        return "Request JSON must contain a 'name' field with a string value.", 400
+
+    try:
+        session.commit()
+        return f"Added {name} to the {{endpoint.endpoint_name.capitalize()}} table.", 201
+    except Exception as e:
+        log.critical(str(e), exc_info=True)
+        return "An error occurred! Check the application logs.", 500
+{% endif %}
