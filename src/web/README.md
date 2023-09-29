@@ -69,3 +69,7 @@ The scaffolder will have created several files and directories, including a READ
 ## Flask
 
 `BL_Python.web` is based on [Flask 1.1.4](https://flask.palletsprojects.com/en/1.1.x/). Updating to Flask 2.x is not currently planned, but may happen in the future.
+
+## Development
+
+Development dependencies can be installed with `[dev-dependencies]`. If developing from the core repository, use the command `pip install -e src/web[dev-dependencies]`.

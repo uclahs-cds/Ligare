@@ -93,3 +93,13 @@ Review the `BL_Python.web` [readme](src/web/README.md)
 
 #### Git VCS URL
 `bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web`
+
+# Development
+
+`BL_Python` is a mono-repo containing several independent libraries, which are noted under [Available Libraries](#available-libraries).
+
+When developing from within the mono-repo, the libraries can be individually installed by referencing their path. Both the mono-repo and each library have their own set of dependencies.
+
+To install the base dependencies, run `pip install -e .` from the mono-repo root. Development dependencies can be installed with `pip install -e .[dev-dependencies]`
+
+To install the library dependencies, run, for example, `pip install -e src/web` to install `BL_Python.web`. Similar to the mono-repo, development dependencies can be installed with `pip install -e src/web[dev-dependencies]`.
