@@ -3,7 +3,7 @@ Compound Assay Platform Flask application.
 
 Flask entry point.
 """
-import logging
+from logging import Logger
 from os import environ, path
 from typing import Any, Optional, cast
 
@@ -22,7 +22,7 @@ from BL_Python.programming.dependency_injection import ConfigModule
 # from CAP.app.services.user.login_manager import LoginManager
 # from CAP.database.models.CAP import Base
 from connexion.apps.flask_app import FlaskApp
-from flask import Flask
+from flask import Flask, url_for
 from injector import Module
 from lib_programname import get_path_executed_script
 
@@ -115,6 +115,14 @@ def create_app(
     flask_injector = configure_dependencies(app, application_modules=modules)
     app.injector = flask_injector
 
+    if config.flask.openapi is not None and config.flask.openapi.use_swagger:
+        with app.app_context():
+            # use this logger so we can control where output is sent.
+            # the default logger retrieved here logs to the console.
+            app.injector.injector.get(Logger).info(
+                f"Swagger UI can be accessed at {url_for('/./_swagger_ui_index', _external=True)}"
+            )
+
     return app
 
 
@@ -166,11 +174,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     #    json_logging.config_root_logger()
     app.logger.setLevel(environ.get("LOGLEVEL", "INFO").upper())
 
-    options: dict[str, bool] = {}
-    # TODO document that connexion[swagger-ui] must be installed
-    # for this to work
-    if config.flask.openapi.use_swagger:
-        options["swagger_ui"] = True
+    options: dict[str, bool] = {"swagger_ui": config.flask.openapi.use_swagger}
 
     connexion_app.add_api(
         f"{config.flask.app_name}/{config.flask.openapi.spec_path}",
