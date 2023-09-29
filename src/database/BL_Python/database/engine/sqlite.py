@@ -18,7 +18,7 @@ class SQLiteScopedSession(ScopedSession):
         """
         poolclass: type[Pool] | None = None
         # if the connection string is an SQLite in-memory database
-        # then make SQLAlchemy maintain an static pool of "connections"
+        # then make SQLAlchemy maintain a static pool of "connections"
         # so that the in-memory database is not deallocated. Otherwise,
         # the database would disappear when a thread is done with it.
         # Note: SQLite will reject usage from other threads unless
