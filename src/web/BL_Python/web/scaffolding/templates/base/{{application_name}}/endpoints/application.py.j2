@@ -25,6 +25,12 @@ def root(flask: Flask, config: Config, log: Logger):
     if config['ENV'] != 'debug':
         return "", 405
 
+    {#
+    TODO this does not group by like-URLs that are used for different methods.
+    for example, get_foo() and post_foo() might both use the URL /foo, but the
+    HTTP verbs GET (for get_) and POST (for post_). This makes the table look
+    awkward, so it may be prudent to think about how to represent that.
+    #}
     # in debug environments, print a table of all routes and their allowed methods
     output = "<table><tr><th>url</th><th>methods</th></tr>"
     for rule in flask.url_map.iter_rules():
