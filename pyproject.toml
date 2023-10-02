@@ -105,6 +105,7 @@ reportMissingTypeStubs = "information"
 
 [tool.pytest.ini_options]
 testpaths = [
+    "test",
     "src/AWS/test",
     "src/database/test",
     "src/development/test",

@@ -3,9 +3,10 @@ Compound Assay Platform Flask application.
 
 Flask entry point.
 """
+import logging
 from logging import Logger
 from os import environ, path
-from typing import Any, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 import json_logging
 from BL_Python.programming.config import Config, ConfigBuilder, load_config
@@ -38,11 +39,18 @@ from .middleware import (
 _get_program_dir = lambda: path.dirname(get_path_executed_script())
 _get_exec_dir = lambda: path.abspath(".")
 
+# isort: off
+# fmt: off
+if TYPE_CHECKING:
+    from pydantic import BaseModel
+# fmt: on
+# isort: on
+
 
 def create_app(
     config_filename: str = "config.toml",
     # FIXME should be a list of PydanticDataclass
-    application_configs: list[Any] | None = None,
+    application_configs: "list[type[BaseModel]] | None" = None,
     application_modules: list[Module] | None = None
     # FIXME eventually should replace with builders
     # and configurators so this list of params doesn't
@@ -68,7 +76,7 @@ def create_app(
     config_type = AppConfig
     if application_configs is not None:
         # fmt: off
-        config_type = ConfigBuilder()\
+        config_type = ConfigBuilder[AppConfig]()\
             .with_root_config(AppConfig)\
             .with_configs(application_configs)\
             .build()
@@ -94,10 +102,6 @@ def create_app(
     app: Flask
 
     if config.flask.openapi is not None:
-        if config.flask.openapi.spec_path is None:
-            raise Exception(
-                "When using OpenAPI with Flask, you must set spec_path in the config."
-            )
         openapi: FlaskApp = configure_openapi(config, config.flask.app_name)
         app = cast(Flask, openapi.app)
     else:
@@ -115,14 +119,6 @@ def create_app(
     flask_injector = configure_dependencies(app, application_modules=modules)
     app.injector = flask_injector
 
-    if config.flask.openapi is not None and config.flask.openapi.use_swagger:
-        with app.app_context():
-            # use this logger so we can control where output is sent.
-            # the default logger retrieved here logs to the console.
-            app.injector.injector.get(Logger).info(
-                f"Swagger UI can be accessed at {url_for('/./_swagger_ui_index', _external=True)}"
-            )
-
     return app
 
 
@@ -136,7 +132,9 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         or config.flask.openapi is None
         or config.flask.openapi.spec_path is None
     ):
-        raise Exception("OpenAPI configuration is empty.")
+        raise Exception(
+            "OpenAPI configuration is empty. Review the `openapi` section of your application's `config.toml`."
+        )
 
     # host configuration set up
     # TODO host/port setup should move into application initialization
@@ -174,7 +172,10 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     #    json_logging.config_root_logger()
     app.logger.setLevel(environ.get("LOGLEVEL", "INFO").upper())
 
-    options: dict[str, bool] = {"swagger_ui": config.flask.openapi.use_swagger}
+    options: dict[str, bool | str] = {
+        "swagger_ui": config.flask.openapi.use_swagger,
+        "swagger_url": config.flask.openapi.swagger_url or "/",
+    }
 
     connexion_app.add_api(
         f"{config.flask.app_name}/{config.flask.openapi.spec_path}",
@@ -182,6 +183,15 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         validate_responses=config.flask.openapi.validate_responses,
         options=options,
     )
+
+    if config.flask.openapi.use_swagger:
+        # App context needed for url_for.
+        # This can only run after connexion is instantiated
+        # because it registers the swagger UI url.
+        with app.app_context():
+            app.logger.info(
+                f"Swagger UI can be accessed at {url_for('/./_swagger_ui_index', _external=True)}"
+            )
 
     return connexion_app
 

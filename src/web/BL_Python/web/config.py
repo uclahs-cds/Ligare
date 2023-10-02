@@ -1,21 +1,19 @@
-import typing
-
-typing.TYPE_CHECKING = True
 from dataclasses import field
 from os import environ
 from typing import Any, Literal
 
 from flask.config import Config as FlaskAppConfig
-from pydantic.dataclasses import dataclass
+#from pydantic.dataclasses import dataclass
+from pydantic import BaseModel
 
 
-@dataclass(frozen=True)
-class LoggingConfig:
+#@dataclass(frozen=True)
+class LoggingConfig(BaseModel):
     log_level: str = "INFO"
 
 
-@dataclass(frozen=True)
-class WebSecurityCorsConfig:
+#@dataclass(frozen=True)
+class WebSecurityCorsConfig(BaseModel):
     origin: str | None = None
     allow_credentials: bool = True
     allow_methods: list[
@@ -33,30 +31,34 @@ class WebSecurityCorsConfig:
     ] = field(default_factory=lambda: ["GET", "POST", "OPTIONS"])
 
 
-@dataclass(frozen=True)
-class WebSecurityConfig:
+#@dataclass(frozen=True)
+class WebSecurityConfig(BaseModel):
     cors: WebSecurityCorsConfig = WebSecurityCorsConfig()
     csp: str | None = None
 
 
-@dataclass(frozen=True)
-class WebConfig:
+#@dataclass(frozen=True)
+class WebConfig(BaseModel):
     security: WebSecurityConfig = WebSecurityConfig()
 
 
-@dataclass(frozen=True)
-class FlaskOpenApiConfig:
+#@dataclass(frozen=True)
+class FlaskOpenApiConfig(BaseModel):
     spec_path: str | None = None
     validate_responses: bool = False
     use_swagger: bool = True
+    swagger_url: str | None = None
 
 
-@dataclass(frozen=True)
-class FlaskSessionCookieConfig:
+#@dataclass(frozen=True)
+class FlaskSessionCookieConfig(BaseModel):
+    # FIXME this needs to be handled much more securely.
+    # FIXME This is not done at the moment solely because we are not making
+    # FIXME active use of sessions, but this should not be forgotten!
     secret_key: str | None = None
     httponly: bool = True
     secure: bool = True
-    samesite: str = "None"
+    samesite: str = "none"
 
     def _prepare_env_for_flask(self):
         if not self.secret_key:
@@ -81,8 +83,8 @@ class FlaskSessionCookieConfig:
         flask_app_config.from_object(ConfigObject)
 
 
-@dataclass(frozen=True)
-class FlaskSessionConfig:
+#@dataclass(frozen=True)
+class FlaskSessionConfig(BaseModel):
     cookie: FlaskSessionCookieConfig
     permanent: bool = True
     lifetime: int | None = 86400
@@ -115,8 +117,8 @@ class FlaskSessionConfig:
         flask_app_config.from_object(ConfigObject)
 
 
-@dataclass(frozen=True)
-class FlaskConfig:
+#@dataclass(frozen=True)
+class FlaskConfig(BaseModel):
     app_name: str = "app"
     env: str = "Development"
     host: str | None = None
@@ -142,8 +144,8 @@ class FlaskConfig:
         flask_app_config.from_object(ConfigObject)
 
 
-@dataclass(frozen=True)
-class SAML2Config:
+#@dataclass(frozen=True)
+class SAML2Config(BaseModel):
     metadata: str | None = None
     metadata_url: str | None = None
     relay_state: str | None = None
@@ -152,8 +154,8 @@ class SAML2Config:
     logging: dict[str, Any] | None = None
 
 
-@dataclass(frozen=True)
-class Config:
+#@dataclass(frozen=True)
+class Config(BaseModel):
     logging: LoggingConfig = LoggingConfig()
     web: WebConfig = WebConfig()
     flask: FlaskConfig | None = None

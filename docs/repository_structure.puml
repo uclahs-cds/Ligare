@@ -1,0 +1,53 @@
+@startuml
+package "BL Python" {
+    [AWS] as aws
+    [Database] as database
+    [Development] as development
+    [Platform] as platform
+    [Programming] as programming
+    [Testing] as testing
+    [Web] as web
+}
+aws -down[hidden]-> database
+database -down[hidden]-> development
+development -down[hidden]-> platform
+platform -down[hidden]-> programming
+programming -down[hidden]-> testing
+testing -down[hidden]-> web
+
+note right of aws
+    For working
+    with AWS
+endnote
+
+note left of database
+    For PostgreSQL and
+    SQLite database usage
+endnote
+
+note left of development
+    For assistance during
+    development
+endnote
+
+note left of platform
+    For controlling and
+    configuring applications
+endnote
+
+note left of programming
+    Patterns for and utilities
+    for writing code
+endnote
+
+note left of testing
+    Utilities for working
+    with pytest
+endnote
+
+note left of web
+    For creating web
+    applications
+endnote
+
+@enduml

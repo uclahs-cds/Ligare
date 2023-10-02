@@ -1,43 +1,25 @@
-import typing
-from typing import Any, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 import toml
 from BL_Python.programming.collections.dict import AnyDict, merge
-from pydantic.dataclasses import dataclass
+from pydantic import BaseModel
+
+TConfig = TypeVar("TConfig")
 
 
-# isort: off
-# fmt: off
-# Fix this error
-# https://bugs.python.org/issue45524
-# https://github.com/Fatal1ty/mashumaro/issues/28
-# Unfortunately Pydantic hides the PydanticDataclass
-# behind `if TYPE_CHECKING`, which causes Python
-# annotation inspection to fail with methods
-# like, e.g. `get_type_hints`.
-import pydantic._internal._dataclasses  # import PydanticDataclass
-class PydanticDataclass:
-    pass
-pydantic._internal._dataclasses.PydanticDataclass = PydanticDataclass
-# fmt: on
-# isort: on
-class Config:
-    pass
+class ConfigBuilder(Generic[TConfig]):
+    _root_config: "type[TConfig]" | None = None
+    _configs: "list[type[BaseModel]]" | None = None
 
-
-class ConfigBuilder:
-    _root_config: Type[Any] | None = None
-    _configs: list[Type[Any]] | None = None
-
-    def with_root_config(self, config: Type[PydanticDataclass]):
+    def with_root_config(self, config: "type[TConfig]"):
         self._root_config = config
         return self
 
-    def with_configs(self, configs: list[Type[PydanticDataclass]]):
+    def with_configs(self, configs: "list[type[BaseModel]]"):
         self._configs = configs
         return self
 
-    def build(self):
+    def build(self) -> type[TConfig]:
         if self._root_config and not self._configs:
             return self._root_config
 
@@ -64,18 +46,17 @@ class ConfigBuilder:
         attrs["__annotations__"] = annotations
         # make one type that has the names of the config objects
         # as attributes, and the class as their type
-        _new_type: Type[Any] = type("GeneratedConfig", (_new_type_base,), attrs)
+        _new_type = cast(
+            "type[TConfig]", type("GeneratedConfig", (_new_type_base,), attrs)
+        )
 
-        return dataclass(frozen=True)(_new_type)
-
-
-TConfig = TypeVar("TConfig")
+        return _new_type
 
 
 def load_config(
     toml_file_path: str,
     config_overrides: AnyDict | None = None,
-    config_type: Type[TConfig] = Config,
+    config_type: type[TConfig] = BaseModel,
 ) -> TConfig:
     config_dict: dict[str, Any] = toml.load(toml_file_path)
 

@@ -1,0 +1,65 @@
+@startuml
+package Web {
+    [Middleware] as middleware
+    [Scaffolding] as scaffolding
+    [Application] as application
+    [Config] as config
+}
+
+middleware -down[hidden]-> scaffolding
+scaffolding -down[hidden]-> application
+application -down[hidden]-> config
+
+note right of middleware
+    Hooks into Flask
+    and other BL_Python systems
+endnote
+
+note left of scaffolding
+    Tooling to help create
+    new BL_Python web applications
+endnote
+
+note left of application
+    Bootstrapping and configuration
+    of a BL_Python web application
+    during runtime
+endnote
+
+note left of config
+    Pydantic configuration classes
+    for a BL_Python web application
+    during runtime
+endnote
+
+
+
+/'
+flask -down[hidden]-> config
+config -down[hidden]-> connexion
+blueprints -down[hidden]-> identity
+identity -down[hidden]-> dependencyinjection
+
+note right of flask
+    Minimal API
+    framework
+endnote
+note left of config
+    YAML application
+    configuration
+endnote
+note bottom of api
+    API endpoint
+    management
+endnote
+note left of identity
+    User authentication
+    and authorization
+endnote
+note left of dependencyinjection
+    Control and usage of
+    runtime dependencies
+endnote
+'/
+
+@enduml
