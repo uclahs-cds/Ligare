@@ -22,7 +22,7 @@ def healthcheck(log: Logger):
 @application_blueprint.route("/", methods=("GET",))
 def root(flask: Flask, config: Config, log: Logger):
     # do not allow any requests to / in non-debug environments
-    if config['ENV'] != 'debug':
+    if config['ENV'] != 'development':
         return "", 405
 
     {#

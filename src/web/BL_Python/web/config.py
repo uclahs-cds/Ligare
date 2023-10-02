@@ -51,10 +51,13 @@ class FlaskOpenApiConfig:
 
 @dataclass(frozen=True)
 class FlaskSessionCookieConfig:
+    # FIXME this needs to be handled much more securely.
+    # FIXME This is not done at the moment solely because we are not making
+    # FIXME active use of sessions, but this should not be forgotten!
     secret_key: str | None = None
     httponly: bool = True
     secure: bool = True
-    samesite: str = "None"
+    samesite: str = "none"
 
     def _prepare_env_for_flask(self):
         if not self.secret_key:

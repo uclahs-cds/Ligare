@@ -95,10 +95,6 @@ def create_app(
     app: Flask
 
     if config.flask.openapi is not None:
-        if config.flask.openapi.spec_path is None:
-            raise Exception(
-                "When using OpenAPI with Flask, you must set spec_path in the config."
-            )
         openapi: FlaskApp = configure_openapi(config, config.flask.app_name)
         app = cast(Flask, openapi.app)
     else:
@@ -129,7 +125,9 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         or config.flask.openapi is None
         or config.flask.openapi.spec_path is None
     ):
-        raise Exception("OpenAPI configuration is empty.")
+        raise Exception(
+            "OpenAPI configuration is empty. Review the `openapi` section of your application's `config.toml`."
+        )
 
     # host configuration set up
     # TODO host/port setup should move into application initialization

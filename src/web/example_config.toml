@@ -18,7 +18,7 @@ refresh_each_request = true
 [flask.session.cookie]
 httponly = true
 secure = true
-samesite = 'None'
+samesite = 'none'
 secret_key = 'abc123'
 
 
