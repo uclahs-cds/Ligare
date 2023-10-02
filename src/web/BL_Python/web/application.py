@@ -6,7 +6,7 @@ Flask entry point.
 import logging
 from logging import Logger
 from os import environ, path
-from typing import Any, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 import json_logging
 from BL_Python.programming.config import Config, ConfigBuilder, load_config
@@ -39,11 +39,18 @@ from .middleware import (
 _get_program_dir = lambda: path.dirname(get_path_executed_script())
 _get_exec_dir = lambda: path.abspath(".")
 
+# isort: off
+# fmt: off
+if TYPE_CHECKING:
+    from pydantic import BaseModel
+# fmt: on
+# isort: on
+
 
 def create_app(
     config_filename: str = "config.toml",
     # FIXME should be a list of PydanticDataclass
-    application_configs: list[Any] | None = None,
+    application_configs: "list[type[BaseModel]] | None" = None,
     application_modules: list[Module] | None = None
     # FIXME eventually should replace with builders
     # and configurators so this list of params doesn't
@@ -69,7 +76,7 @@ def create_app(
     config_type = AppConfig
     if application_configs is not None:
         # fmt: off
-        config_type = ConfigBuilder()\
+        config_type = ConfigBuilder[AppConfig]()\
             .with_root_config(AppConfig)\
             .with_configs(application_configs)\
             .build()

@@ -1,7 +1,6 @@
-from pydantic.dataclasses import dataclass
+from pydantic import BaseModel
 
 
-@dataclass(frozen=True)
-class DatabaseConfig:
+class DatabaseConfig(BaseModel):
     connection_string: str = "sqlite:///:memory:"
     sqlalchemy_echo: bool = False
