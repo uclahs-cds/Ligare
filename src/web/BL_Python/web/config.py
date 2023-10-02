@@ -46,6 +46,7 @@ class FlaskOpenApiConfig:
     spec_path: str | None = None
     validate_responses: bool = False
     use_swagger: bool = True
+    swagger_url: str | None = None
 
 
 @dataclass(frozen=True)

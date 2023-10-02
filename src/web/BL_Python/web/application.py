@@ -3,6 +3,7 @@ Compound Assay Platform Flask application.
 
 Flask entry point.
 """
+import logging
 from logging import Logger
 from os import environ, path
 from typing import Any, Optional, cast
@@ -115,14 +116,6 @@ def create_app(
     flask_injector = configure_dependencies(app, application_modules=modules)
     app.injector = flask_injector
 
-    if config.flask.openapi is not None and config.flask.openapi.use_swagger:
-        with app.app_context():
-            # use this logger so we can control where output is sent.
-            # the default logger retrieved here logs to the console.
-            app.injector.injector.get(Logger).info(
-                f"Swagger UI can be accessed at {url_for('/./_swagger_ui_index', _external=True)}"
-            )
-
     return app
 
 
@@ -174,7 +167,10 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     #    json_logging.config_root_logger()
     app.logger.setLevel(environ.get("LOGLEVEL", "INFO").upper())
 
-    options: dict[str, bool] = {"swagger_ui": config.flask.openapi.use_swagger}
+    options: dict[str, bool | str] = {
+        "swagger_ui": config.flask.openapi.use_swagger,
+        "swagger_url": config.flask.openapi.swagger_url or "/",
+    }
 
     connexion_app.add_api(
         f"{config.flask.app_name}/{config.flask.openapi.spec_path}",
@@ -182,6 +178,15 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         validate_responses=config.flask.openapi.validate_responses,
         options=options,
     )
+
+    if config.flask.openapi.use_swagger:
+        # App context needed for url_for.
+        # This can only run after connexion is instantiated
+        # because it registers the swagger UI url.
+        with app.app_context():
+            app.logger.info(
+                f"Swagger UI can be accessed at {url_for('/./_swagger_ui_index', _external=True)}"
+            )
 
     return connexion_app
 
