@@ -29,8 +29,7 @@ dependencies = [
     "flask-login == 0.6.2",
     "types-flask == 1.1.6",
     "connexion == 2.14.2",
-    # TODO is this one necessary, or should it perhaps belong in the app?
-    "connexion[swagger-ui-bundle] == 2.14.2",
+    "swagger_ui_bundle==0.0.9",
     # specific version because Jinja (Flask dependency)
     # does not specify an upper bound for MarkupSafe,
     # and it pulls in a breaking change that prevents

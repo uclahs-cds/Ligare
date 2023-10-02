@@ -137,6 +137,7 @@ class FlaskConfig:
 
         class ConfigObject:
             ENV = self.env
+            SERVER_NAME = f"{self.host}:{self.port}"
 
         flask_app_config.from_object(ConfigObject)
 
