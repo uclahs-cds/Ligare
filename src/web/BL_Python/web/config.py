@@ -1,6 +1,3 @@
-import typing
-
-typing.TYPE_CHECKING = True
 from dataclasses import field
 from os import environ
 from typing import Any, Literal

@@ -1,4 +1,4 @@
-from BL_Python.web.config import load_config
+from BL_Python.programming.config import load_config
 from pytest_mock import MockerFixture
 
 
