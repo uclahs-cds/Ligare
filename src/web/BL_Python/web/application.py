@@ -3,12 +3,9 @@ Compound Assay Platform Flask application.
 
 Flask entry point.
 """
-import logging
-from logging import Logger
 from os import environ, path
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Optional, cast
 
-import json_logging
 from BL_Python.programming.config import ConfigBuilder, load_config
 from BL_Python.programming.dependency_injection import ConfigModule
 

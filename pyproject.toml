@@ -76,6 +76,7 @@ include = [
 ]
 
 exclude = [
+    "**/build",
     "**/.venv",
     "**/.pytest_cache",
     ".github",
