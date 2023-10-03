@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Optional, Protocol, cast
+from typing import TYPE_CHECKING, List, Optional, Protocol, cast, final
 
 from sqlalchemy.orm import DeclarativeMeta
 
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
             ...
 
 
+@final
 class DialectHelper:
     """
     Utilities to get database schema and table names

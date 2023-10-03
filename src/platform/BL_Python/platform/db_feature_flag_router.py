@@ -7,6 +7,7 @@ from sqlalchemy import Boolean, Column, Unicode
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm.session import Session
+from typing_extensions import override
 
 from .feature_flag_router import FeatureFlagRouter
 
@@ -31,6 +32,7 @@ class FeatureFlagTable(Singleton):
             enabled = Column("enabled", Boolean, nullable=True, default=False)
             description = Column("description", Unicode, nullable=False)
 
+            @override
             def __repr__(self) -> str:
                 return "<FeatureFlag %s>" % (self.name)
 
@@ -45,6 +47,7 @@ class DBFeatureFlagRouter(FeatureFlagRouter):
         self._session = session
         super().__init__(logger)
 
+    @override
     def set_feature_is_enabled(self, name: str, is_enabled: bool):
         """
         Enable or disable a feature flag in the database.
