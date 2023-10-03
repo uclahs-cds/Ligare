@@ -13,9 +13,9 @@ from .feature_flag_router import FeatureFlagRouter
 
 class FeatureFlag(Protocol):
     __tablename__: str
-    name: ClassVar[Column[str] | str]
-    enabled: ClassVar[Column[bool] | bool]
-    description: ClassVar[Column[str] | str]
+    name: ClassVar[Column[Unicode] | str]
+    enabled: ClassVar[Column[Boolean] | bool]
+    description: ClassVar[Column[Unicode] | str]
 
 
 class FeatureFlagTable(Singleton):
@@ -67,7 +67,7 @@ class DBFeatureFlagRouter(FeatureFlagRouter):
         try:
             feature_flag = (
                 self._session.query(FeatureFlag)
-                .filter(cast(Column[str], FeatureFlag.name) == name)
+                .filter(cast(Column[Unicode], FeatureFlag.name) == name)
                 .one()
             )
         except NoResultFound as e:
@@ -100,7 +100,7 @@ class DBFeatureFlagRouter(FeatureFlagRouter):
 
         feature_flag = (
             self._session.query(FeatureFlag)
-            .filter(cast(Column[str], FeatureFlag.name) == name)
+            .filter(cast(Column[Unicode], FeatureFlag.name) == name)
             .one_or_none()
         )
 
