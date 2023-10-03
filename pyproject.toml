@@ -80,7 +80,7 @@ exclude = [
     ".pytest_cache",
     ".github",
     ".git",
-    "typings",
+    "**/typings",
     "**/node_modules",
     "**/__pycache__"
 ]
