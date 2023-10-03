@@ -76,8 +76,8 @@ include = [
 ]
 
 exclude = [
-    ".venv",
-    ".pytest_cache",
+    "**/.venv",
+    "**/.pytest_cache",
     ".github",
     ".git",
     "**/typings",
