@@ -54,9 +54,9 @@ class ConfigBuilder(Generic[TConfig]):
 
 
 def load_config(
+    config_type: type[TConfig],
     toml_file_path: str,
     config_overrides: AnyDict | None = None,
-    config_type: type[TConfig] = BaseModel,
 ) -> TConfig:
     config_dict: dict[str, Any] = toml.load(toml_file_path)
 

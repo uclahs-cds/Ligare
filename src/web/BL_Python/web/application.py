@@ -80,11 +80,9 @@ def create_app(
         # fmt: on
     config: Config
     if config_overrides:
-        config = load_config(
-            config_filename, {"flask": config_overrides}, config_type=config_type
-        )
+        config = load_config(config_type, config_filename, {"flask": config_overrides})
     else:
-        config = load_config(config_filename, config_type=config_type)
+        config = load_config(config_type, config_filename)
 
     config.prepare_env_for_flask()
 

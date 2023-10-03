@@ -1,14 +1,13 @@
 from injector import Binder, Module
+from pydantic import BaseModel
 from typing_extensions import override
-
-from .config import Config
 
 
 class ConfigModule(Module):
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: BaseModel) -> None:
         super().__init__()
         self._config = config
 
     @override
     def configure(self, binder: Binder) -> None:
-        binder.bind(Config, to=self._config)
+        binder.bind(BaseModel, to=self._config)
