@@ -119,3 +119,5 @@ VSCode unfortunately has [limitations](https://github.com/microsoft/pylance-rele
     "src/web"
 ]
 ```
+
+Alternatively, or if you intend to use `pyright` on the command line, you will need to use ["strict" editable installs](https://setuptools.pypa.io/en/latest/userguide/development_mode.html#strict-editable-installs). An example command for this is `pip install -e src/programming --config-settings editable_mode=strict`. 
