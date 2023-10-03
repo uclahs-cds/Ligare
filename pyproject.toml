@@ -116,6 +116,10 @@ testpaths = [
     "src/web/test"
 ]
 
+addopts = [
+    "--import-mode=importlib"
+]
+
 python_files = "test_*.py"
 
-norecursedirs = "__pycache__ build .pytest_cache *.egg-info"
+norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv"
