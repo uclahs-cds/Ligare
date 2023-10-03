@@ -87,6 +87,16 @@ exclude = [
     "**/__pycache__"
 ]
 
+extraPaths = [
+    "src/AWS",
+    "src/database",
+    "src/development",
+    "src/platform",
+    "src/programming",
+    "src/testing",
+    "src/web"
+]
+
 stubPath = "./typings"
 
 useLibraryCodeForTypes = true
