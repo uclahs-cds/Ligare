@@ -3,7 +3,6 @@ from os import environ
 import pytest
 from BL_Python.web.application import create_app
 from BL_Python.web.config import Config, FlaskConfig
-from mock import MagicMock
 from pytest_mock import MockerFixture
 
 

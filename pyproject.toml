@@ -72,7 +72,8 @@ pythonVersion = "3.10"
 
 include = [
     "*.py",
-    "."
+    "src/",
+    "test/"
 ]
 
 exclude = [

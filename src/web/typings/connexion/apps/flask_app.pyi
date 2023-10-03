@@ -8,6 +8,7 @@ from typing import Any
 
 from flask import json
 
+from ..apis.flask_api import FlaskApi
 from ..options import ConnexionOptions
 from ..resolver import Resolver
 from .abstract import AbstractApp
@@ -18,7 +19,7 @@ This module defines a FlaskApp, a Connexion application to wrap a Flask applicat
 logger = ...
 
 class FlaskApp(AbstractApp):
-    api_cls: FlaskApp
+    api_cls: FlaskApi
     app: FlaskApp
 
     def __init__(
@@ -52,7 +53,21 @@ class FlaskApp(AbstractApp):
         :type exception: Exception
         """
         ...
-    def add_api(self, specification, **kwargs): ...
+    def add_api(
+        self,
+        specification: pathlib.Path | str | dict[Any, Any],
+        base_path: str | None = None,
+        arguments: dict[Any, Any] | None = None,
+        auth_all_paths: bool | None = None,
+        validate_responses: bool = False,
+        strict_validation: bool = False,
+        resolver: Resolver | types.FunctionType | None = None,
+        resolver_error: int | None = None,
+        pythonic_params: bool = False,
+        pass_context_arg_name: str | None = None,
+        options: dict[Any, Any] | None = None,
+        validator_map: dict[Any, Any] | None = None,
+    ) -> FlaskApi: ...
     def add_error_handler(
         self, error_code: int, function: types.FunctionType
     ) -> None: ...

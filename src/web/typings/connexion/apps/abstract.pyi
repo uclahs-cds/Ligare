@@ -7,6 +7,7 @@ import pathlib
 import types
 from typing import Any
 
+from ..apis.abstract import AbstractAPI
 from ..options import ConnexionOptions
 from ..resolver import Resolver
 
@@ -91,19 +92,19 @@ class AbstractApp(metaclass=abc.ABCMeta):
         ...
     def add_api(
         self,
-        specification,
-        base_path=...,
-        arguments=...,
-        auth_all_paths=...,
-        validate_responses=...,
-        strict_validation=...,
-        resolver=...,
-        resolver_error=...,
-        pythonic_params=...,
-        pass_context_arg_name=...,
-        options=...,
-        validator_map=...,
-    ):
+        specification: pathlib.Path | str | dict[Any, Any],
+        base_path: str | None = None,
+        arguments: dict[Any, Any] | None = None,
+        auth_all_paths: bool | None = None,
+        validate_responses: bool = False,
+        strict_validation: bool = False,
+        resolver: Resolver | types.FunctionType | None = None,
+        resolver_error: int | None = None,
+        pythonic_params: bool = False,
+        pass_context_arg_name: str | None = None,
+        options: dict[Any, Any] | None = None,
+        validator_map: dict[Any, Any] | None = None,
+    ) -> AbstractAPI:
         """
         Adds an API to the application based on a swagger file or API dict
 

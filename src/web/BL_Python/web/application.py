@@ -4,7 +4,7 @@ Compound Assay Platform Flask application.
 Flask entry point.
 """
 from os import environ, path
-from typing import TYPE_CHECKING, Optional, cast
+from typing import Optional, cast
 
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
 from BL_Python.programming.dependency_injection import ConfigModule
@@ -166,7 +166,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     config.update_flask_config(app.config)
 
     # flask request log handler
-    enable_json = not environ.get("PLAINTEXT_LOG_OUTPUT")
+    # enable_json = not environ.get("PLAINTEXT_LOG_OUTPUT")
     # FIXME this errors in the new structure
     # json_logging.init_connexion(enable_json=enable_json)
     # json_logging.init_request_instrument(connexion_app)
@@ -179,7 +179,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         "swagger_url": config.flask.openapi.swagger_url or "/",
     }
 
-    connexion_app.add_api(
+    _ = connexion_app.add_api(
         f"{config.flask.app_name}/{config.flask.openapi.spec_path}",
         base_path="/",
         validate_responses=config.flask.openapi.validate_responses,
