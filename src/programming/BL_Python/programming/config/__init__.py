@@ -8,8 +8,8 @@ TConfig = TypeVar("TConfig")
 
 
 class ConfigBuilder(Generic[TConfig]):
-    _root_config: "type[TConfig]" | None = None
-    _configs: "list[type[BaseModel]]" | None = None
+    _root_config: "type[TConfig] | None" = None
+    _configs: "list[type[BaseModel]] | None" = None
 
     def with_root_config(self, config: "type[TConfig]"):
         self._root_config = config
