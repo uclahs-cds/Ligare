@@ -103,3 +103,19 @@ When developing from within the mono-repo, the libraries can be individually ins
 To install the base dependencies, run `pip install -e .` from the mono-repo root. Development dependencies can be installed with `pip install -e .[dev-dependencies]`
 
 To install the library dependencies, run, for example, `pip install -e src/web` to install `BL_Python.web`. Similar to the mono-repo, development dependencies can be installed with `pip install -e src/web[dev-dependencies]`.
+
+## Using VSCode
+
+VSCode unfortunately has [limitations](https://github.com/microsoft/pylance-release/issues/78) with editable installs. While this issue is closed, the issue persists. You can resolve this with a configuration change. Add this to your VSCode settings.
+
+```json
+"python.analysis.extraPaths": [
+    "src/AWS",
+    "src/database",
+    "src/development",
+    "src/platform",
+    "src/programming",
+    "src/testing",
+    "src/web"
+]
+```
