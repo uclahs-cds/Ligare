@@ -1,13 +1,12 @@
 from logging import Logger
 from typing import ClassVar, Protocol, Type, cast
 
+from BL_Python.programming.patterns import Singleton
 from injector import inject
 from sqlalchemy import Boolean, Column, Unicode
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm.session import Session
-
-from BL_Python.programming.programming import Singleton
 
 from .feature_flag_router import FeatureFlagRouter
 

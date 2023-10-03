@@ -1,7 +1,7 @@
 from typing import cast
 
 from BL_Python.database.engine import DatabaseEngine
-from BL_Python.programming.config import Config
+from BL_Python.programming.config import AbstractConfig
 from injector import Binder, CallableProvider, Module, inject, singleton
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import Session
@@ -34,7 +34,7 @@ class ScopedSessionModule(Module):
         binder.bind(Session, to=CallableProvider(self._get_session))
 
     @inject
-    def _get_scoped_session(self, config: Config) -> ScopedSession:
+    def _get_scoped_session(self, config: AbstractConfig) -> ScopedSession:
         """
         Returns a ScopedSession instance configured with
         the correct engine and connection string.

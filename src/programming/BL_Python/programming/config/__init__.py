@@ -1,3 +1,4 @@
+import abc
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 import toml
@@ -5,6 +6,10 @@ from BL_Python.programming.collections.dict import AnyDict, merge
 from pydantic import BaseModel
 
 TConfig = TypeVar("TConfig")
+
+
+class AbstractConfig(abc.ABC):
+    pass
 
 
 class ConfigBuilder(Generic[TConfig]):
