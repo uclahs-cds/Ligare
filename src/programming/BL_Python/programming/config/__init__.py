@@ -1,9 +1,8 @@
 import abc
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from typing import Any, Generic, TypeVar, cast
 
 import toml
 from BL_Python.programming.collections.dict import AnyDict, merge
-from pydantic import BaseModel
 
 TConfig = TypeVar("TConfig")
 
@@ -13,14 +12,14 @@ class AbstractConfig(abc.ABC):
 
 
 class ConfigBuilder(Generic[TConfig]):
-    _root_config: "type[TConfig] | None" = None
-    _configs: "list[type[BaseModel]] | None" = None
+    _root_config: type[TConfig] | None = None
+    _configs: list[type[AbstractConfig]] | None = None
 
     def with_root_config(self, config: "type[TConfig]"):
         self._root_config = config
         return self
 
-    def with_configs(self, configs: "list[type[BaseModel]]"):
+    def with_configs(self, configs: list[type[AbstractConfig]]):
         self._configs = configs
         return self
 
