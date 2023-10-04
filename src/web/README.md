@@ -10,7 +10,7 @@ Libraries for building web applications in Boutros Lab.
 
 ## Install Scaffolding
 
-First install the `BL_Python.web` scaffolding tool. You can do this in your system Python install, or in a separate virtual environment.
+First install the `BL_Python.web` scaffolding tool. You can do this in your system Python install, or in a separate virtual environment. Read more about virtual environments at [docs.python.org](https://docs.python.org/3/library/venv.html) or [realpython.com](https://realpython.com/python-virtual-environments-a-primer/).
 
 Run these commands:
 
