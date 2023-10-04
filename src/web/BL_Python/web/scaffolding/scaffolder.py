@@ -386,13 +386,32 @@ class Scaffolder:
                 "Attmpted to scaffold a new application in the same directory as an existing application. This is not supported. Change your working directory to the application's parent directory, or run this from a directory that does not contain an existing application."
             )
             return
+
         # modify can only run from an existing application's
         # parent directory.
-        elif self._config.mode == "modify" and not in_parent_directory:
+        if self._config.mode == "modify" and not in_parent_directory:
             self._log.critical(
                 f"Attempted to modify an existing application from a directory that is not the existing application's parent directory. This is not supported. Change your working directory to the application's parent directory."
             )
             return
+
+        if (
+            # Only in create mode do we make absolutely certain that
+            # the user is intentionally using a directory that
+            # already exists, if it indeed does.
+            self._config.mode == "create"
+            and Path(self._config.output_directory).exists()
+        ):
+            self._log.debug(
+                f"The directory `{self._config.output_directory}` already exists. Prompting the user whether to continue."
+            )
+            response = input(
+                f"\nThe directory `{self._config.output_directory}` already exists. It is likely that files will be overwritten.\nDo you want to continue? [y/N] "
+            )
+            if not response.upper() == "Y":
+                self._log.debug(f"User's input is `{response}`. Not continuing.")
+                return
+            self._log.debug(f"User's input is `{response}`. Continuing.")
 
         # used for the primary set of templates that a
         # scaffolded application is made up of.

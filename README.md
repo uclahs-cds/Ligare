@@ -4,7 +4,9 @@ A collection of Python libraries for creating web applications, working with dat
 
 # Quick Starts
 
-* Create a BL_Python [web application](src/web/README.md)
+**🚩** `BL_Python` has a minimum Python version requirement of `>= 3.10`.
+
+*  Create a BL_Python [web application](src/web/README.md)
 
 # Using `BL_Python` in your projects
 

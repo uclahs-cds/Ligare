@@ -10,20 +10,20 @@ Libraries for building web applications in Boutros Lab.
 
 ## Install Scaffolding
 
-First install the `BL_Python.web` scaffolding tool. You can do this in your system Python install, or in a separate virtual environment.
+First install the `BL_Python.web` scaffolding tool. You can do this in your system Python install, or in a separate virtual environment. Read more about virtual environments at [docs.python.org](https://docs.python.org/3/library/venv.html) or [realpython.com](https://realpython.com/python-virtual-environments-a-primer/).
 
 Run these commands:
 
 1. `pip install 'bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming'`
 2. `pip install 'bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web'`
 
-**Note** Once `BL_Python.web` is available in a package registry, the commands needed will change to `pip install bl-python-web` only.
+**🚩** Once `BL_Python.web` is available in a package registry, the commands needed will change to `pip install bl-python-web` only.
 
 ## Scaffold a New Application
 
 The command used is `bl-python-scaffold create`. Please run `bl-python-scaffold create -h` to review the possible options. The current options are explained here as well.
 
-**Note** The command `bl-python-scaffold` has two modes: `create` and `modify`. The former is used to create a new application, while the latter is used to modify an existing one.
+**🚩** The command `bl-python-scaffold` has two modes: `create` and `modify`. The former is used to create a new application, while the latter is used to modify an existing one.
 
 <details>
     <summary>Scaffold "create" help</summary>
@@ -56,7 +56,9 @@ These options are for the `bl-python-scaffold modify` command.
 <br />
 <br />
 
-To create an application with a single API endpoint, run `bl-python-scaffold create -n <name>` where `<name>` is replaced with the desired name of your application. By default, the scaffolder will output into a directory matching the name of your application. **Existing files will be overwritten.**
+To create an application with a single API endpoint, run `bl-python-scaffold create -n <name>` where `<name>` is replaced with the desired name of your application. By default, the scaffolder will output into a directory matching the name of your application. **❗ Existing files will be overwritten.**
+
+**🚩** Scaffolding modules can only be done during creation of the application. If you need database functionality, for example, be sure to include `-m database`!
 
 ## Run Your Application
 
@@ -64,7 +66,7 @@ The scaffolder will have created several files and directories, including a READ
 
 # About the Library
 
-`BL_Python.web` is intended to handle a lot of the boilerplate needed to create and run Flask applications. A primary component of that boilerplate is tying disparate pieces of functionality and other libraries together in a seemless way. For example, [SQLAlchemy](https://www.sqlalchemy.org/) is an ORM supported through `BL_Python.database` that this library integrates with to make database functionality simpler to make use of.
+`BL_Python.web` is intended to handle a lot of the boilerplate needed to create and run Flask applications. A primary component of that boilerplate is tying disparate pieces of functionality and other libraries together in a seamless way. For example, [SQLAlchemy](https://www.sqlalchemy.org/) is an ORM supported through `BL_Python.database` that this library integrates with to make database functionality simpler to make use of.
 
 ## Flask
 
