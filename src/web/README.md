@@ -64,7 +64,7 @@ The scaffolder will have created several files and directories, including a READ
 
 # About the Library
 
-`BL_Python.web` is intended to handle a lot of the boilerplate needed to create and run Flask applications. A primary component of that boilerplate is tying disparate pieces of functionality and other libraries together in a seemless way. For example, [SQLAlchemy](https://www.sqlalchemy.org/) is an ORM supported through `BL_Python.database` that this library integrates with to make database functionality simpler to make use of.
+`BL_Python.web` is intended to handle a lot of the boilerplate needed to create and run Flask applications. A primary component of that boilerplate is tying disparate pieces of functionality and other libraries together in a seamless way. For example, [SQLAlchemy](https://www.sqlalchemy.org/) is an ORM supported through `BL_Python.database` that this library integrates with to make database functionality simpler to make use of.
 
 ## Flask
 
