@@ -17,13 +17,13 @@ Run these commands:
 1. `pip install 'bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming'`
 2. `pip install 'bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web'`
 
-**Note** Once `BL_Python.web` is available in a package registry, the commands needed will change to `pip install bl-python-web` only.
+**🚩** Once `BL_Python.web` is available in a package registry, the commands needed will change to `pip install bl-python-web` only.
 
 ## Scaffold a New Application
 
 The command used is `bl-python-scaffold create`. Please run `bl-python-scaffold create -h` to review the possible options. The current options are explained here as well.
 
-**Note** The command `bl-python-scaffold` has two modes: `create` and `modify`. The former is used to create a new application, while the latter is used to modify an existing one.
+**🚩** The command `bl-python-scaffold` has two modes: `create` and `modify`. The former is used to create a new application, while the latter is used to modify an existing one.
 
 <details>
     <summary>Scaffold "create" help</summary>
@@ -56,7 +56,9 @@ These options are for the `bl-python-scaffold modify` command.
 <br />
 <br />
 
-To create an application with a single API endpoint, run `bl-python-scaffold create -n <name>` where `<name>` is replaced with the desired name of your application. By default, the scaffolder will output into a directory matching the name of your application. **Existing files will be overwritten.**
+To create an application with a single API endpoint, run `bl-python-scaffold create -n <name>` where `<name>` is replaced with the desired name of your application. By default, the scaffolder will output into a directory matching the name of your application. **❗ Existing files will be overwritten.**
+
+**🚩** Scaffolding modules can only be done during creation of the application. If you need database functionality, for example, be sure to include `-m database`!
 
 ## Run Your Application
 
