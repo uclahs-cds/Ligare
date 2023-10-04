@@ -1,22 +1,22 @@
 from logging import Logger
 from typing import ClassVar, Protocol, Type, cast
 
+from BL_Python.programming.patterns import Singleton
 from injector import inject
 from sqlalchemy import Boolean, Column, Unicode
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm.session import Session
-
-from BL_Python.programming.programming import Singleton
+from typing_extensions import override
 
 from .feature_flag_router import FeatureFlagRouter
 
 
 class FeatureFlag(Protocol):
     __tablename__: str
-    name: ClassVar[Column[str] | str]
-    enabled: ClassVar[Column[bool] | bool]
-    description: ClassVar[Column[str] | str]
+    name: ClassVar[Column[Unicode] | str]
+    enabled: ClassVar[Column[Boolean] | bool]
+    description: ClassVar[Column[Unicode] | str]
 
 
 class FeatureFlagTable(Singleton):
@@ -32,6 +32,7 @@ class FeatureFlagTable(Singleton):
             enabled = Column("enabled", Boolean, nullable=True, default=False)
             description = Column("description", Unicode, nullable=False)
 
+            @override
             def __repr__(self) -> str:
                 return "<FeatureFlag %s>" % (self.name)
 
@@ -46,6 +47,7 @@ class DBFeatureFlagRouter(FeatureFlagRouter):
         self._session = session
         super().__init__(logger)
 
+    @override
     def set_feature_is_enabled(self, name: str, is_enabled: bool):
         """
         Enable or disable a feature flag in the database.
@@ -68,7 +70,7 @@ class DBFeatureFlagRouter(FeatureFlagRouter):
         try:
             feature_flag = (
                 self._session.query(FeatureFlag)
-                .filter(cast(Column[str], FeatureFlag.name) == name)
+                .filter(cast(Column[Unicode], FeatureFlag.name) == name)
                 .one()
             )
         except NoResultFound as e:
@@ -101,7 +103,7 @@ class DBFeatureFlagRouter(FeatureFlagRouter):
 
         feature_flag = (
             self._session.query(FeatureFlag)
-            .filter(cast(Column[str], FeatureFlag.name) == name)
+            .filter(cast(Column[Unicode], FeatureFlag.name) == name)
             .one_or_none()
         )
 

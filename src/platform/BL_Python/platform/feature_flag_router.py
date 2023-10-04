@@ -15,6 +15,7 @@ class FeatureFlagRouter(ABC):
     def __init__(self, logger: Logger) -> None:
         self._logger = logger
         self._feature_flags = {}
+        super().__init__()
 
     def set_feature_is_enabled(self, name: str, is_enabled: bool) -> None:
         """

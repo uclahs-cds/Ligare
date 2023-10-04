@@ -3,7 +3,6 @@ from os import environ
 import pytest
 from BL_Python.web.application import create_app
 from BL_Python.web.config import Config, FlaskConfig
-from mock import MagicMock
 from pytest_mock import MockerFixture
 
 
@@ -32,7 +31,7 @@ class TestCreateApp:
         _ = create_app(config_filename=toml_filename)
         assert load_config_mock.called
         assert load_config_mock.call_args and load_config_mock.call_args[0]
-        assert load_config_mock.call_args[0][0] == toml_filename
+        assert load_config_mock.call_args[0][1] == toml_filename
 
     @pytest.mark.parametrize(
         "envvar_name,config_var_name,var_value",

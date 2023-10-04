@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass, field
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, cast, final
 
 from BL_Python.programming.collections.dict import merge
 from jinja2 import BaseLoader, Environment, PackageLoader, Template
@@ -40,6 +40,7 @@ class ScaffoldConfig:
     mode: str = "create"
 
 
+@final
 class Scaffolder:
     def __init__(self, config: ScaffoldConfig, log: logging.Logger) -> None:
         self._config = config

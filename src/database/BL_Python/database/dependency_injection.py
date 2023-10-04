@@ -1,7 +1,4 @@
-from typing import cast
-
 from BL_Python.database.engine import DatabaseEngine
-from BL_Python.programming.config import Config
 from injector import Binder, CallableProvider, Module, inject, singleton
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import Session
@@ -16,7 +13,9 @@ class ScopedSessionModule(Module):
     """
 
     @override
-    def configure(self, binder: Binder) -> None:
+    def configure(
+        self, binder: Binder, database_config: DatabaseConfig | None = None
+    ) -> None:
         # Any ScopedSession dependency should be the same for the lifetime of the application.
         # ScopeSession is a factory that creates a Session per thread.
         # The Session returned is the same for the lifetime of the thread.
@@ -33,18 +32,18 @@ class ScopedSessionModule(Module):
         # It is safe for this method to be called multiple times.
         binder.bind(Session, to=CallableProvider(self._get_session))
 
+        # it is possible for DatabaseConfig to have been registered
+        # in another module for the IoC container.
+        if database_config:
+            binder.bind(DatabaseConfig, database_config)
+
     @inject
-    def _get_scoped_session(self, config: Config) -> ScopedSession:
+    def _get_scoped_session(self, database_config: DatabaseConfig) -> ScopedSession:
         """
         Returns a ScopedSession instance configured with
         the correct engine and connection string.
         Defaults to using the `sessionmaker` Session factory.
         """
-        database_config: DatabaseConfig
-        if isinstance(config, DatabaseConfig):
-            database_config = config
-        else:
-            database_config = cast(DatabaseConfig, config.database)
         return DatabaseEngine.get_session_from_connection_string(
             database_config.connection_string, database_config.sqlalchemy_echo
         )

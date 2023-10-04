@@ -1,6 +1,6 @@
 import logging
 from argparse import ArgumentParser, Namespace
-from functools import partial, singledispatch
+from functools import partial
 from os import environ
 from pathlib import Path
 

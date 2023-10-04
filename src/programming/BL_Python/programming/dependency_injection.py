@@ -1,14 +1,16 @@
+from BL_Python.programming.config import AbstractConfig
 from injector import Binder, Module
 from typing_extensions import override
 
-from .config import Config
-
 
 class ConfigModule(Module):
-    def __init__(self, config: Config) -> None:
+    def __init__(
+        self, config: AbstractConfig, interface: type[AbstractConfig] = AbstractConfig
+    ) -> None:
         super().__init__()
         self._config = config
+        self._interface = interface
 
     @override
     def configure(self, binder: Binder) -> None:
-        binder.bind(Config, to=self._config)
+        binder.bind(self._interface, to=self._config)

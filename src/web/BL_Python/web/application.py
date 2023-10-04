@@ -3,13 +3,10 @@ Compound Assay Platform Flask application.
 
 Flask entry point.
 """
-import logging
-from logging import Logger
 from os import environ, path
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import Optional, cast
 
-import json_logging
-from BL_Python.programming.config import Config, ConfigBuilder, load_config
+from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
 from BL_Python.programming.dependency_injection import ConfigModule
 
 # from CAP.app.blueprints.sso import *
@@ -28,7 +25,7 @@ from injector import Module
 from lib_programname import get_path_executed_script
 
 # from .config import Config, ConfigBuilder, load_config
-from .config import Config as AppConfig
+from .config import Config
 from .middleware import (
     configure_dependencies,
     register_api_request_handlers,
@@ -39,18 +36,11 @@ from .middleware import (
 _get_program_dir = lambda: path.dirname(get_path_executed_script())
 _get_exec_dir = lambda: path.abspath(".")
 
-# isort: off
-# fmt: off
-if TYPE_CHECKING:
-    from pydantic import BaseModel
-# fmt: on
-# isort: on
-
 
 def create_app(
     config_filename: str = "config.toml",
     # FIXME should be a list of PydanticDataclass
-    application_configs: "list[type[BaseModel]] | None" = None,
+    application_configs: list[type[AbstractConfig]] | None = None,
     application_modules: list[Module] | None = None
     # FIXME eventually should replace with builders
     # and configurators so this list of params doesn't
@@ -73,49 +63,61 @@ def create_app(
     if environ.get("FLASK_ENV"):
         config_overrides["env"] = environ["FLASK_ENV"]
 
-    config_type = AppConfig
+    config_type = Config
     if application_configs is not None:
         # fmt: off
-        config_type = ConfigBuilder[AppConfig]()\
-            .with_root_config(AppConfig)\
+        config_type = ConfigBuilder[Config]()\
+            .with_root_config(Config)\
             .with_configs(application_configs)\
             .build()
         # fmt: on
-    config: AppConfig
+    full_config: Config
     if config_overrides:
-        config = load_config(
-            config_filename, {"flask": config_overrides}, config_type=config_type
+        full_config = load_config(
+            config_type, config_filename, {"flask": config_overrides}
         )
     else:
-        config = load_config(config_filename, config_type=config_type)
+        full_config = load_config(config_type, config_filename)
 
-    config.prepare_env_for_flask()
+    full_config.prepare_env_for_flask()
 
-    if config.flask is None:
+    if full_config.flask is None:
         raise Exception("You must set [flask] in the application configuration.")
 
-    if not config.flask.app_name:
+    if not full_config.flask.app_name:
         raise Exception(
             "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar."
         )
 
     app: Flask
 
-    if config.flask.openapi is not None:
-        openapi: FlaskApp = configure_openapi(config, config.flask.app_name)
+    if full_config.flask.openapi is not None:
+        openapi: FlaskApp = configure_openapi(full_config, full_config.flask.app_name)
         app = cast(Flask, openapi.app)
     else:
-        app = Flask(config.flask.app_name)
-        config.update_flask_config(app.config)
+        app = Flask(full_config.flask.app_name)
+        full_config.update_flask_config(app.config)
         configure_blueprint_routes(app)
 
     register_error_handlers(app)
     register_api_request_handlers(app)
     register_api_response_handlers(app)
     # register_app_teardown_handlers(app)
-    modules = [ConfigModule(config)] + (
-        application_modules if application_modules else []
-    )
+
+    # Register every subconfig as a ConfigModule.
+    # This will allow subpackages to resolve their own config types,
+    # allow for type safety against objects of those types.
+    # Otherwise, they can resolve `AbstractConfig`, but then type
+    # safety is lost.
+    # Note that, if any `ConfigModule` is provided in `application_modules`,
+    # those will override the automatically generated `ConfigModule`s.
+    application_modules = [
+        ConfigModule(config, type(config)) for (_, config) in full_config
+    ] + (application_modules if application_modules else [])
+    # The `full_config` module cannot be overridden unless the application
+    # IoC container is fiddled with. `full_config` is the instance registered
+    # to `AbstractConfig`.
+    modules = application_modules + [ConfigModule(full_config)]
     flask_injector = configure_dependencies(app, application_modules=modules)
     app.injector = flask_injector
 
@@ -164,7 +166,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     config.update_flask_config(app.config)
 
     # flask request log handler
-    enable_json = not environ.get("PLAINTEXT_LOG_OUTPUT")
+    # enable_json = not environ.get("PLAINTEXT_LOG_OUTPUT")
     # FIXME this errors in the new structure
     # json_logging.init_connexion(enable_json=enable_json)
     # json_logging.init_request_instrument(connexion_app)
@@ -177,7 +179,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         "swagger_url": config.flask.openapi.swagger_url or "/",
     }
 
-    connexion_app.add_api(
+    _ = connexion_app.add_api(
         f"{config.flask.app_name}/{config.flask.openapi.spec_path}",
         base_path="/",
         validate_responses=config.flask.openapi.validate_responses,

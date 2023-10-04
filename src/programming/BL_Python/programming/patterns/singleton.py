@@ -10,12 +10,13 @@ from typing import Any, NewType, Type, cast
 
 
 class _Singleton(Type[Any]):
-    _block_change: bool
+    _block_change: bool = False
 
 
 _SingletonType = NewType("_SingletonType", _Singleton)
 
 
+# FIXME is this broken? take another look with a fresh brain
 class Singleton(type):
     """Singleton metaclass"""
 

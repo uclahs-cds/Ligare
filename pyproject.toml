@@ -72,17 +72,29 @@ pythonVersion = "3.10"
 
 include = [
     "*.py",
-    "."
+    "src/",
+    "test/"
 ]
 
 exclude = [
-    ".venv",
-    ".pytest_cache",
+    "**/build",
+    "**/.venv",
+    "**/.pytest_cache",
     ".github",
     ".git",
-    "typings",
+    "**/typings",
     "**/node_modules",
     "**/__pycache__"
+]
+
+extraPaths = [
+    "src/AWS",
+    "src/database",
+    "src/development",
+    "src/platform",
+    "src/programming",
+    "src/testing",
+    "src/web"
 ]
 
 stubPath = "./typings"
@@ -115,6 +127,10 @@ testpaths = [
     "src/web/test"
 ]
 
+addopts = [
+    "--import-mode=importlib"
+]
+
 python_files = "test_*.py"
 
-norecursedirs = "__pycache__ build .pytest_cache *.egg-info"
+norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv"

@@ -3,16 +3,13 @@ from os import environ
 from typing import Any, Literal
 
 from flask.config import Config as FlaskAppConfig
-#from pydantic.dataclasses import dataclass
 from pydantic import BaseModel
 
 
-#@dataclass(frozen=True)
 class LoggingConfig(BaseModel):
     log_level: str = "INFO"
 
 
-#@dataclass(frozen=True)
 class WebSecurityCorsConfig(BaseModel):
     origin: str | None = None
     allow_credentials: bool = True
@@ -31,18 +28,15 @@ class WebSecurityCorsConfig(BaseModel):
     ] = field(default_factory=lambda: ["GET", "POST", "OPTIONS"])
 
 
-#@dataclass(frozen=True)
 class WebSecurityConfig(BaseModel):
     cors: WebSecurityCorsConfig = WebSecurityCorsConfig()
     csp: str | None = None
 
 
-#@dataclass(frozen=True)
 class WebConfig(BaseModel):
     security: WebSecurityConfig = WebSecurityConfig()
 
 
-#@dataclass(frozen=True)
 class FlaskOpenApiConfig(BaseModel):
     spec_path: str | None = None
     validate_responses: bool = False
@@ -50,7 +44,6 @@ class FlaskOpenApiConfig(BaseModel):
     swagger_url: str | None = None
 
 
-#@dataclass(frozen=True)
 class FlaskSessionCookieConfig(BaseModel):
     # FIXME this needs to be handled much more securely.
     # FIXME This is not done at the moment solely because we are not making
@@ -83,7 +76,6 @@ class FlaskSessionCookieConfig(BaseModel):
         flask_app_config.from_object(ConfigObject)
 
 
-#@dataclass(frozen=True)
 class FlaskSessionConfig(BaseModel):
     cookie: FlaskSessionCookieConfig
     permanent: bool = True
@@ -117,7 +109,6 @@ class FlaskSessionConfig(BaseModel):
         flask_app_config.from_object(ConfigObject)
 
 
-#@dataclass(frozen=True)
 class FlaskConfig(BaseModel):
     app_name: str = "app"
     env: str = "Development"
@@ -144,7 +135,6 @@ class FlaskConfig(BaseModel):
         flask_app_config.from_object(ConfigObject)
 
 
-#@dataclass(frozen=True)
 class SAML2Config(BaseModel):
     metadata: str | None = None
     metadata_url: str | None = None
@@ -154,8 +144,10 @@ class SAML2Config(BaseModel):
     logging: dict[str, Any] | None = None
 
 
-#@dataclass(frozen=True)
-class Config(BaseModel):
+from BL_Python.programming.config import AbstractConfig
+
+
+class Config(BaseModel, AbstractConfig):
     logging: LoggingConfig = LoggingConfig()
     web: WebConfig = WebConfig()
     flask: FlaskConfig | None = None

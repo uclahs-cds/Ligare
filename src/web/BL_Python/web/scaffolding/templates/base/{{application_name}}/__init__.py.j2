@@ -31,14 +31,14 @@ def create_app():
     # fmt: on
 
     {% if module.database %}
-    # For now, create the database and tables
+    # TODO For now, create the database and tables
     # when the application starts. This behavior
     # will be removed when Alembic is integrated.
     session = cast(Injector, app.injector.injector).get(Session)
     cast(MetaData, Base.metadata).create_all(session.bind) # pyright: ignore[reportGeneralTypeIssues]
 
     {#
-        ideally this would use @inject w/ session: Session,
+        # TODO ideally this would use @inject w/ session: Session,
         but something is preventing it from running or
         sending in the dependencies to remove_db.
         For now, just resolve it directly.
