@@ -11,13 +11,23 @@ from BL_Python.web.scaffolding import (
     ScaffoldModule,
 )
 
-if environ.get("LOG_LEVEL"):
+log_level: int = logging.INFO
+env_log_level = environ.get("LOG_LEVEL")
+if env_log_level:
+    # support both integer and named log level values
+    # from the envvar, e.g., `10` or `DEBUG`
+    try:
+        log_level = int(env_log_level)
+    except ValueError as e:
+        if not "invalid literal for int" in str(e):
+            raise
+        log_level = getattr(logging, env_log_level.upper())
     logging.basicConfig(
-        level=int(environ.get("LOG_LEVEL")),  # pyright: ignore[reportGeneralTypeIssues]
+        level=log_level,
         format="[%(levelname)-7s]: %(message)s",
     )
 else:
-    logging.basicConfig(level=logging.INFO, format="[%(levelname)-7s] %(message)s")
+    logging.basicConfig(level=log_level, format="[%(levelname)-7s] %(message)s")
 
 log = logging.getLogger()
 
