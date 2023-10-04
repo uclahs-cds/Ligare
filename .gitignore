@@ -1,4 +1,5 @@
 # System files
+.editorconfig
 *.log
 .DS_Store
 
