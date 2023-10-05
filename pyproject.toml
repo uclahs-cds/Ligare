@@ -140,4 +140,5 @@ exclude = "src/.+/(typings|build)"
 
 [tool.isort]
 profile = "black"
+src_paths = ["src"]
 skip_glob = ["src/*/typings", "src/*/build"]
