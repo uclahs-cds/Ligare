@@ -72,4 +72,4 @@ jobs:
 
       - name: Check import order
         run: |
-          isort --check-only src
+          isort --profile black --check-only src
