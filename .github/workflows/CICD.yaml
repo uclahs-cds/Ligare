@@ -68,13 +68,8 @@ jobs:
 
       - name: Check code style
         run: |
-          black \
-            --exclude 'src/.+/typings' \
-            --check src
+          black --check src
 
       - name: Check import order
         run: |
-          isort \
-            --check-only \
-            --skip src/*/typings \
-            src
+          isort --check-only src

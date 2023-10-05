@@ -9,9 +9,11 @@ from typing import Any, cast, final
 
 from BL_Python.programming.collections.dict import merge
 from jinja2 import BaseLoader, Environment, PackageLoader, Template
+
 # fmt: off
-from pkg_resources import \
-    ResourceManager  # pyright: ignore[reportUnknownVariableType,reportGeneralTypeIssues]
+from pkg_resources import (
+    ResourceManager,  # pyright: ignore[reportUnknownVariableType,reportGeneralTypeIssues]
+)
 from pkg_resources import get_provider
 
 # fmt: on
