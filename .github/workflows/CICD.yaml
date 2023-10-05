@@ -1,0 +1,80 @@
+name: CICD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  Build-backend:
+    name: Build and test backend
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+        node-version: [12.x]
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.os }}-npm-node-${{matrix.node-version}}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Set up Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          ./install_all.sh
+          npm i
+
+      - name: Test with pyright
+        run: |
+          pyright
+
+      - name: Test with pytest
+        run: |
+          echo Running pytest
+          # infra is not set up to support integration tests, so ignore postgresql
+          # etl has been updated, while the tests have not been
+          pytest --junitxml pytest.xml \
+                 -k "not acceptance"
+
+      - name: Output pytest report
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytest-report
+          path: pytest.xml
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Check code style
+        run: |
+          black \
+            --exclude 'src/.+/typings' \
+            --check src
+
+      - name: Check import order
+        run: |
+          isort \
+            --check-only \
+            --skip src/*/typings \
+            src
