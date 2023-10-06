@@ -1,1 +1,2 @@
 IGNORE_NAMED_TESTS="bllinter.test_all.CommonTestCase.test_repo_name"
+PYTHON_PYLINT_CONFIG_FILE=true
