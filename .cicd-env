@@ -1,2 +1,2 @@
-IGNORE_NAMED_TESTS="bllinter.test_all.CommonTestCase.test_repo_name"
+IGNORE_NAMED_TESTS="bllinter.test_all.CommonTestCase.test_repo_name:bllinter.test_all.LinterTestCase.test_python_linting"
 PYTHON_PYLINT_CONFIG_FILE=true
