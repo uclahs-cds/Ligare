@@ -3,10 +3,10 @@ max-line-length = 88
 
 [MESSAGES CONTROL]
 disable=C0103,
+        C0113,
         C0114,
         C0115,
         C0116,
-        C0117,
         C0121,
         C0123,
         C0204,
@@ -34,5 +34,4 @@ disable=C0103,
         W4902,
         E0601,
         E1101,
-        E1120,
-        E3701
+        E1120
