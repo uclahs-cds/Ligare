@@ -1,0 +1,43 @@
+[build-system]
+
+requires = [
+    "setuptools>=42",
+    "wheel"
+]
+
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "BL_Python.GitHub"
+requires-python = ">=3.10"
+authors = [
+    {name = 'Aaron Holmes', email = 'aholmes@mednet.ucla.edu'}
+]
+description = 'Libraries for working with the GitHub API in Boutros Lab.'
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License (GPL)",
+    "Operating System :: OS Independent"
+]
+
+dependencies = [
+    "urllib3~=1.26"
+]
+
+dynamic = ["version", "readme"]
+[tool.setuptools.dynamic]
+version = {attr = "BL_Python.GitHub.__version__"}
+readme = {file = ["README.md"], content-type = "text/markdown"}
+
+[tool.setuptools.package-dir]
+"BL_Python.GitHub" = "BL_Python/GitHub"
+
+[tool.setuptools.packages]
+find = {}
+
+[project.optional-dependencies]
+dev-dependencies = [
+    "pytest == 7.4.0",
+    "pytest-mock == 3.11.1",
+    "mock == 5.1.0"
+]
