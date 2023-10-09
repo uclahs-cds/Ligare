@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "urllib3~=1.26"
+    "PyGithub~=2.1"
 ]
 
 dynamic = ["version", "readme"]
