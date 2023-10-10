@@ -1,7 +1,8 @@
-from typing import Any, Literal, cast
+from typing import Literal, cast
 
 from github import Auth, Github
 from github.AuthenticatedUser import AuthenticatedUser
+from github.GithubObject import NotSet, Opt
 from github.NamedUser import NamedUser
 from github.Organization import Organization
 from github.Repository import Repository
@@ -24,8 +25,39 @@ class GitHub:
         team = organization.get_team_by_slug(team_name)
         return team
 
-    def add_collaborator(self, repository: Repository, collaborator: str | NamedUser):
-        return repository.add_to_collaborators(collaborator)
+    def add_collaborator(
+        self,
+        repository: Repository,
+        collaborator: str | NamedUser,
+        permission: Opt[str] = NotSet,
+    ):
+        return repository.add_to_collaborators(collaborator, permission=permission)
+
+    def get_repository(
+        self, repository_name: str, organization_name: str | None = None
+    ):
+        if organization_name is None:
+            return self._get_repository_for_user(repository_name)
+
+        return self._get_repository_for_organization(repository_name, organization_name)
+
+    def _get_repository_for_user(self, repository_name: str):
+        user = self._client.get_user()
+        return self._client.get_repo(f"{user.login}/{repository_name}")
+
+    def _get_repository_for_organization(
+        self, repository_name: str, organization_name: str
+    ):
+        # repo = organization.get_repo(repository_name)
+        ## can't use repo.organization because of this
+        ## https://github.com/PyGithub/PyGithub/issues/1598
+        # return repo
+        repository = self._client.get_repo(f"{organization_name}/{repository_name}")
+        organization = self._client.get_organization(organization_name)
+        repository._organization._value = (  # pyright: ignore[reportPrivateUsage,reportGeneralTypeIssues]
+            organization
+        )
+        return repository
 
     def create_repository(
         self,
@@ -62,7 +94,6 @@ class GitHub:
         user = cast(AuthenticatedUser, self._client.get_user())
         repository: Repository
         if template_name is None:
-            # name, description=description, private=private
             repository = user.create_repo(name)
         else:
             template_repo = user.get_repo(template_name)
