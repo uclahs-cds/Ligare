@@ -11,6 +11,10 @@ GITHUB_API_BASE_URL = "https://api.github.com"
 
 
 class GitHub:
+    """
+    Extends PyGithub with better organization API handling.
+    """
+
     _client: Github
 
     def __init__(
@@ -21,7 +25,9 @@ class GitHub:
         super().__init__()
 
     def get_team(self, organization: Organization, team_name: str):
-        # organization = self._client.get_organization(organization_name)
+        """
+        Get a team for an organization.
+        """
         team = organization.get_team_by_slug(team_name)
         return team
 
@@ -31,11 +37,21 @@ class GitHub:
         collaborator: str | NamedUser,
         permission: Opt[str] = NotSet,
     ):
-        return repository.add_to_collaborators(collaborator, permission=permission)
+        """
+        Add a user as a collaborator to a repository.
+        """
+        invitation = repository.add_to_collaborators(
+            collaborator, permission=permission
+        )
+        return invitation
 
     def get_repository(
         self, repository_name: str, organization_name: str | None = None
     ):
+        """
+        Get a repository.
+        If `organization_name` is supplied, this will get the repository `repository_name` from that organization's repositories.
+        """
         if organization_name is None:
             return self._get_repository_for_user(repository_name)
 
@@ -48,12 +64,12 @@ class GitHub:
     def _get_repository_for_organization(
         self, repository_name: str, organization_name: str
     ):
-        # repo = organization.get_repo(repository_name)
+        ## repo = organization.get_repo(repository_name)
         ## can't use repo.organization because of this
         ## https://github.com/PyGithub/PyGithub/issues/1598
-        # return repo
         repository = self._client.get_repo(f"{organization_name}/{repository_name}")
         organization = self._client.get_organization(organization_name)
+        # fixes the PyGithub API URLs for working with the organiztion owning the repository
         repository._organization._value = (  # pyright: ignore[reportPrivateUsage,reportGeneralTypeIssues]
             organization
         )
@@ -68,6 +84,9 @@ class GitHub:
         private: bool = True,
         visibility: Literal["private", "internal", "public"] | None = None,
     ):
+        """
+        Create a new repository.
+        """
         if organization_name is None:
             return self._create_repository_for_user(
                 name,
@@ -133,8 +152,8 @@ class GitHub:
         repository: Repository,
         visibility: Literal["private", "internal", "public"],
     ):
-        # PyGitHub code does not allow "internal"
-        # so we call the same code here instead
+        # PyGitHub code does not allow "internal,"
+        # so we do the same thing repository.edit does
         # to avoid the incorrect assertions.
         (
             _,
