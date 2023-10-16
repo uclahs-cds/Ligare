@@ -134,3 +134,11 @@ addopts = [
 python_files = "test_*.py"
 
 norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv"
+
+[tool.black]
+exclude = "src/.+/(typings|build)"
+
+[tool.isort]
+profile = "black"
+src_paths = ["src"]
+skip_glob = ["src/*/typings", "src/*/build"]

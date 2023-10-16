@@ -1,5 +1,5 @@
-import sys
 import logging
+import sys
 from typing import Any
 
 from injector import Binder, Module
@@ -7,7 +7,12 @@ from typing_extensions import override
 
 
 class LoggerModule(Module):
-    def __init__(self, name: str | None = None, log_level: int = logging.INFO, log_to_stdout: bool = False) -> None:
+    def __init__(
+        self,
+        name: str | None = None,
+        log_level: int = logging.INFO,
+        log_to_stdout: bool = False,
+    ) -> None:
         super().__init__()
         self._logger = logging.getLogger(name)
         self._logger.setLevel(log_level)
