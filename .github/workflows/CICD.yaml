@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  Build-backend:
-    name: Build and test backend
+  All:
+    name: Build and test BL_Python
     runs-on: ubuntu-latest
     strategy:
       matrix:
