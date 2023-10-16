@@ -1,6 +1,7 @@
 from typing import Literal, cast
 
-from github import Auth, Github
+from github import Auth
+from github import Github as pygithub
 from github.AuthenticatedUser import AuthenticatedUser
 from github.GithubObject import NotSet, Opt
 from github.NamedUser import NamedUser
@@ -15,13 +16,13 @@ class GitHub:
     Extends PyGithub with better organization API handling.
     """
 
-    _client: Github
+    _client: pygithub
 
     def __init__(
         self, auth_token: str, default_api_url: str = GITHUB_API_BASE_URL
     ) -> None:
         auth = Auth.Token(auth_token)
-        self._client = Github(base_url=default_api_url, auth=auth)
+        self._client = pygithub(base_url=default_api_url, auth=auth)
         super().__init__()
 
     def get_team(self, organization: Organization, team_name: str):
