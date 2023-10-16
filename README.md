@@ -10,7 +10,7 @@ A collection of Python libraries for creating web applications, working with dat
 
 # Using `BL_Python` in your projects
 
-Currently these libraries are not available in any package repository, and so much be imported via other means.
+Currently these libraries are not available in any package repository, and so must be imported via other means.
 
 The suggested method is to use the `git+ssh` [VCS URL](https://pip.pypa.io/en/stable/topics/vcs-support/) with `pip`.
 
