@@ -104,4 +104,4 @@ When developing from within the mono-repo, the libraries can be individually ins
 
 To install the base dependencies, run `pip install -e .` from the mono-repo root. Development dependencies can be installed with `pip install -e .[dev-dependencies]`
 
-To install the library dependencies, run, for example, `pip install -e src/web` to install `BL_Python.web`. Similar to the mono-repo, development dependencies can be installed with `pip install -e src/web[dev-dependencies]`.
+To install the library dependencies, run, for example, `pip install -e src/web` to install `BL_Python.web`. Similar to the mono-repo, development dependencies can be installed with `pip install -e src/web[dev-dependencies]`. To install all libraries, you can run `./install_all.sh`.
