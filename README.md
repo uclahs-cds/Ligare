@@ -45,6 +45,9 @@ Libraries for working with AWS.
 
 Review the `BL_Python.AWS` [readme](src/AWS/README.md)
 
+#### PyPI Package Name
+`bl-python.aws`
+
 #### Git VCS URL
 `bl-python-aws@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/AWS`
 
@@ -52,6 +55,9 @@ Review the `BL_Python.AWS` [readme](src/AWS/README.md)
 Libraries for working with SQLite and PostgreSQL databases.
 
 Review the `BL_Python.database` [readme](src/database/README.md)
+
+#### PyPI Package Name
+`bl-python.database`
 
 #### Git VCS URL
 `bl-python-database@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/database`
@@ -61,6 +67,9 @@ Utilities and tools for assisting in development of software.
 
 Review the `BL_Python.development` [readme](src/development/README.md)
 
+#### PyPI Package Name
+`bl-python.development`
+
 #### Git VCS URL
 `bl-python-development@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/development`
 
@@ -68,6 +77,9 @@ Review the `BL_Python.development` [readme](src/development/README.md)
 Libraries for PaaS offerings such as tools for altering application configurations.
 
 Review the `BL_Python.platform` [readme](src/platform/README.md)
+
+#### PyPI Package Name
+`bl-python.platform`
 
 #### Git VCS URL
 `bl-python-platform@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/platform`
@@ -77,6 +89,9 @@ Libraries used for writing software, such as pattern implementations so wheels d
 
 Review the `BL_Python.programming` [readme](src/programming/README.md)
 
+#### PyPI Package Name
+`bl-python.programming`
+
 #### Git VCS URL
 `bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming`
 
@@ -85,6 +100,9 @@ Libraries used to aid in automated testing.
 
 Review the `BL_Python.testing` [readme](src/testing/README.md)
 
+#### PyPI Package Name
+`bl-python.testing`
+
 #### Git VCS URL
 `bl-python-testing@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/testing`
 
@@ -92,6 +110,9 @@ Review the `BL_Python.testing` [readme](src/testing/README.md)
 Libraries used to building web applications.
 
 Review the `BL_Python.web` [readme](src/web/README.md)
+
+#### PyPI Package Name
+`bl-python.web`
 
 #### Git VCS URL
 `bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web`
