@@ -14,10 +14,8 @@ First install the `BL_Python.web` scaffolding tool. You can do this in your syst
 
 Run these commands:
 
-1. `pip install 'bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming'`
-2. `pip install 'bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web'`
-
-**🚩** Once `BL_Python.web` is available in a package registry, the commands needed will change to `pip install bl-python-web` only.
+1. `pip install bl-python.programming`
+2. `pip install bl-python.web`
 
 ## Scaffold a New Application
 
