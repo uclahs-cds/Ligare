@@ -12,12 +12,9 @@ Libraries for building web applications in Boutros Lab.
 
 First install the `BL_Python.web` scaffolding tool. You can do this in your system Python install, or in a separate virtual environment. Read more about virtual environments at [docs.python.org](https://docs.python.org/3/library/venv.html) or [realpython.com](https://realpython.com/python-virtual-environments-a-primer/).
 
-Run these commands:
+Install necessary dependencies:
 
-1. `pip install 'bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming'`
-2. `pip install 'bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web'`
-
-**🚩** Once `BL_Python.web` is available in a package registry, the commands needed will change to `pip install bl-python-web` only.
+- `pip install bl-python.web`
 
 ## Scaffold a New Application
 

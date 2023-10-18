@@ -18,16 +18,30 @@ description = 'Python libraries for use in Boutros Lab.'
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License (GPL)",
-    "Operating System :: OS Independent"
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Development Status :: 4 - Beta",
+    "Natural Language :: English"
 ]
 dependencies = []
 
 dynamic = ["version", "readme"]
 [tool.setuptools.dynamic]
-version = {attr = "src.__version__"}
+version = {attr = "BL_Python.__version__"}
 readme = {file = ["README.md"], content-type = "text/markdown"}
 
+[project.urls]
+"Homepage" = "https://github.com/uclahs-cds/BL_Python"
+"Bug Tracker" = "https://github.com/uclahs-cds/BL_Python/issues"
+"Repository" = "https://github.com/uclahs-cds/BL_Python.git"
+"Changelog" = "https://github.com/uclahs-cds/BL_Python/blob/main/CHANGELOG.md"
+
 [tool.setuptools.package-dir]
+"BL_Python" = "src"
 "BL_Python.AWS" = "src/AWS/BL_Python/AWS"
 "BL_Python.database" = "src/database/BL_Python/database"
 "BL_Python.development" = "src/development/BL_Python/development"
@@ -38,6 +52,7 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools]
 packages = [
+    "BL_Python",
     "BL_Python.AWS",
     "BL_Python.database",
     "BL_Python.development",

@@ -17,7 +17,14 @@ description = 'Libraries for building web applications in Boutros Lab.'
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License (GPL)",
-    "Operating System :: OS Independent"
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Development Status :: 4 - Beta",
+    "Natural Language :: English"
 ]
 
 dependencies = [
@@ -45,6 +52,12 @@ dependencies = [
 dynamic = ["version", "readme"]
 [tool.setuptools]
 include-package-data = true
+
+[project.urls]
+"Homepage" = "https://github.com/uclahs-cds/BL_Python"
+"Bug Tracker" = "https://github.com/uclahs-cds/BL_Python/issues"
+"Repository" = "https://github.com/uclahs-cds/BL_Python.git"
+"Changelog" = "https://github.com/uclahs-cds/BL_Python/blob/main/CHANGELOG.md"
 
 [tool.setuptools.dynamic]
 version = {attr = "BL_Python.web.__version__"}

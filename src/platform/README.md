@@ -2,10 +2,9 @@
 
 Libraries for developing PaaS software in Boutros Lab.
 
-# `BL_Python` dependencies
+# `BL_Python` Development Dependencies
 
-`BL_Python.platform` has dependencies on other `BL_Python` libraries and requires explicit dependency declaration in applications using this library.
+During development of `BL_Python.platform`, you may need to explicitly install other `BL_Python` dependencies.
 
-Add the following to your application's dependencies, altering any portion necessary (such as the Git ref):
-
-* `bl-python-database@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/database`
+If developing from the root repository, install with:
+- `pip install -e src/database`
