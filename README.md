@@ -26,7 +26,7 @@ Review the `BL_Python.AWS` [readme](src/AWS/README.md)
 `bl-python.aws`
 
 #### Git VCS URL
-`bl-python-aws@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/AWS`
+`bl-python-aws@ git+ssh://git@github.com/uclahs-cds/BL_Python.git@main#subdirectory=src/AWS`
 
 ## Database [ `BL_Python.database` ]
 Libraries for working with SQLite and PostgreSQL databases.
@@ -37,7 +37,7 @@ Review the `BL_Python.database` [readme](src/database/README.md)
 `bl-python.database`
 
 #### Git VCS URL
-`bl-python-database@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/database`
+`bl-python-database@ git+ssh://git@github.com/uclahs-cds/BL_Python.git@main#subdirectory=src/database`
 
 ## Development [ `BL_Python.development` ]
 Utilities and tools for assisting in development of software.
@@ -48,7 +48,7 @@ Review the `BL_Python.development` [readme](src/development/README.md)
 `bl-python.development`
 
 #### Git VCS URL
-`bl-python-development@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/development`
+`bl-python-development@ git+ssh://git@github.com/uclahs-cds/BL_Python.git@main#subdirectory=src/development`
 
 ## Platform [ `BL_Python.platform` ]
 Libraries for PaaS offerings such as tools for altering application configurations.
@@ -59,7 +59,7 @@ Review the `BL_Python.platform` [readme](src/platform/README.md)
 `bl-python.platform`
 
 #### Git VCS URL
-`bl-python-platform@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/platform`
+`bl-python-platform@ git+ssh://git@github.com/uclahs-cds/BL_Python.git@main#subdirectory=src/platform`
 
 ## Programming [ `BL_Python.programming` ]
 Libraries used for writing software, such as pattern implementations so wheels don't need to be reinvented.
@@ -70,7 +70,7 @@ Review the `BL_Python.programming` [readme](src/programming/README.md)
 `bl-python.programming`
 
 #### Git VCS URL
-`bl-python-programming@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/programming`
+`bl-python-programming@ git+ssh://git@github.com/uclahs-cds/BL_Python.git@main#subdirectory=src/programming`
 
 ## Testing [ `BL_Python.testing` ]
 Libraries used to aid in automated testing.
@@ -81,7 +81,7 @@ Review the `BL_Python.testing` [readme](src/testing/README.md)
 `bl-python.testing`
 
 #### Git VCS URL
-`bl-python-testing@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/testing`
+`bl-python-testing@ git+ssh://git@github.com/uclahs-cds/BL_Python.git@main#subdirectory=src/testing`
 
 ## Web [ `BL_Python.web` ]
 Libraries used to building web applications.
@@ -92,7 +92,7 @@ Review the `BL_Python.web` [readme](src/web/README.md)
 `bl-python.web`
 
 #### Git VCS URL
-`bl-python-web@ git+ssh://git@github.com/uclahs-cds/private-BL-python-libraries.git@main#subdirectory=src/web`
+`bl-python-web@ git+ssh://git@github.com/uclahs-cds/BL_Python.git@main#subdirectory=src/web`
 
 # Development
 
