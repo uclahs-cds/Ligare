@@ -7,6 +7,7 @@ python -m pip install -e \
     src/AWS \
     src/database \
     src/development \
+    src/GitHub \
     src/platform \
     src/programming \
     src/testing \

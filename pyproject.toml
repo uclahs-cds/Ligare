@@ -31,6 +31,7 @@ dependencies = [
     "BL_Python.AWS",
     "BL_Python.database",
     "BL_Python.development",
+    "BL_Python.GitHub",
     "BL_Python.platform",
     "BL_Python.programming",
     "BL_Python.testing",
@@ -53,6 +54,7 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 "BL_Python.AWS" = "src/AWS/BL_Python/AWS"
 "BL_Python.database" = "src/database/BL_Python/database"
 "BL_Python.development" = "src/development/BL_Python/development"
+"BL_Python.GitHub" = "src/GitHub/BL_Python/GitHub"
 "BL_Python.platform" = "src/platform/BL_Python/platform"
 "BL_Python.programming" = "src/programming/BL_Python/programming"
 "BL_Python.testing" = "src/testing/BL_Python/testing"
@@ -64,6 +66,7 @@ packages = [
     "BL_Python.AWS",
     "BL_Python.database",
     "BL_Python.development",
+    "BL_Python.GitHub",
     "BL_Python.platform",
     "BL_Python.programming",
     "BL_Python.testing",
@@ -114,6 +117,7 @@ extraPaths = [
     "src/AWS",
     "src/database",
     "src/development",
+    "src/GitHub",
     "src/platform",
     "src/programming",
     "src/testing",
@@ -144,6 +148,7 @@ testpaths = [
     "src/AWS/test",
     "src/database/test",
     "src/development/test",
+    "src/GitHub/test",
     "src/platform/test",
     "src/programming/test",
     "src/testing/test",
