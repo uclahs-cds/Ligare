@@ -1,3 +1,3 @@
-# `BL_Python.AWS`
+# `BL_Python.GitHub`
 
-Libraries for working with AWS services in Boutros Lab.
+Libraries for working with the GitHub HTTP API in Boutros Lab.
