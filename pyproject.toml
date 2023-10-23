@@ -31,6 +31,7 @@ dependencies = [
     "BL_Python.AWS",
     "BL_Python.database",
     "BL_Python.development",
+    "BL_Python.GitHub",
     "BL_Python.platform",
     "BL_Python.programming",
     "BL_Python.testing",

@@ -50,6 +50,17 @@ Review the `BL_Python.development` [readme](src/development/README.md)
 #### Git VCS URL
 `bl-python-development@ git+ssh://git@github.com/uclahs-cds/BL_Python.git@main#subdirectory=src/development`
 
+## Development [ `BL_Python.GitHub` ]
+Utilities for working with the GitHub HTTP API. Uses `PyGithub` under the hood.
+
+Review the `BL_Python.GitHub` [readme](src/GitHub/README.md)
+
+#### PyPI Package Name
+`bl-python.github`
+
+#### Git VCS URL
+`bl-python-github@ git+ssh://git@github.com/uclahs-cds/BL_Python.git@main#subdirectory=src/GitHub`
+
 ## Platform [ `BL_Python.platform` ]
 Libraries for PaaS offerings such as tools for altering application configurations.
 
