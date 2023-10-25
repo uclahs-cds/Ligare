@@ -94,6 +94,12 @@ jobs:
           inputs: >-
             ./dist/*.tar.gz
             ./dist/*.whl
+      - name: Create GitHub Release
+        # TODO change the relase notes to use the changelog
+        run: >-
+          gh release create
+          '${{ github.ref_name }}'
+          --notes ""
       - name: Upload artifact signatures to GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
