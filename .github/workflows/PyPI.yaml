@@ -2,8 +2,8 @@ name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 
 on:
   push:
-    tags:
-      - "*-v*"
+  #  tags:
+  #    - "*-v*"
 jobs:
   build:
     name: Build distribution 📦
@@ -15,7 +15,8 @@ jobs:
         id: vars
         run: |
           set -eo pipefail
-          tag=${GITHUB_REF#refs/*/}
+          #tag=${GITHUB_REF#refs/*/}
+          tag=BL_Python.web-v0.0.1
           echo "tag=$tag" >> $GITHUB_OUTPUT
 
           package_name=$(gawk 'match($0, /BL_Python\.?([^-]+)?/, m) { print s m[1]}' <<<$tag)
@@ -46,41 +47,45 @@ jobs:
         with:
           name: python-package-distributions
           path: "${{ steps.vars.outputs.package_directory }}dist/"
-
-  publish-to-pypi:
-    name: Publish Python 🐍 distribution 📦 to PyPI
-    if: startsWith(github.ref, 'refs/tags/') # only publish to PyPI on tag pushes
-    needs:
-      - build
-    runs-on: ubuntu-latest
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/BL_Python.${{ steps.vars.outputs.package_name }} # Replace <package-name> with your PyPI project name
-    permissions:
-      id-token: write # IMPORTANT: mandatory for trusted publishing
-
-    steps:
-      - name: Download all the dists
-        uses: actions/download-artifact@v3
-        with:
-          name: python-package-distributions
-          path: dist/
-      - name: Publish distribution 📦 to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1.8
-        with:
-          repository-url: https://test.pypi.org/legacy/
-
+  #
+  #  publish-to-pypi:
+  #    name: Publish Python 🐍 distribution 📦 to PyPI
+  #    if: startsWith(github.ref, 'refs/tags/') # only publish to PyPI on tag pushes
+  #    needs:
+  #      - build
+  #    runs-on: ubuntu-latest
+  #    environment:
+  #      name: testpypi
+  #      url: https://test.pypi.org/p/BL_Python.${{ steps.vars.outputs.package_name }} # Replace <package-name> with your PyPI project name
+  #    permissions:
+  #      id-token: write # IMPORTANT: mandatory for trusted publishing
+  #
+  #    steps:
+  #      - name: Download all the dists
+  #        uses: actions/download-artifact@v3
+  #        with:
+  #          name: python-package-distributions
+  #          path: dist/
+  #      - name: Publish distribution 📦 to PyPI
+  #        uses: pypa/gh-action-pypi-publish@release/v1.8
+  #        with:
+  #          repository-url: https://test.pypi.org/legacy/
+  #
   github-release:
     name: >-
       Sign the Python 🐍 distribution 📦 with Sigstore
       and upload them to GitHub Release
     needs:
-      - publish-to-pypi
+      #- publish-to-pypi
+      - build
     runs-on: ubuntu-latest
 
     permissions:
       contents: write # IMPORTANT: mandatory for making GitHub Releases
       id-token: write # IMPORTANT: mandatory for sigstore
+
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
 
     steps:
       - name: Download all the dists
@@ -99,10 +104,9 @@ jobs:
         run: >-
           gh release create
           '${{ github.ref_name }}'
+          --repo '${{ github.repository }}'
           --notes ""
       - name: Upload artifact signatures to GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
         # Upload to GitHub Release using the `gh` CLI.
         # `dist/` contains the built packages, and the
         # sigstore-produced signatures and certificates.
