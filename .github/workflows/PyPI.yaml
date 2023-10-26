@@ -20,7 +20,7 @@ jobs:
       - name: Get package details from tag
         # sets the step outputs package_directory and package_name
         id: package_details
-        run: ${{ github.action_path }}/PyPI-scripts/extract-package-details-from-tag.sh
+        run: ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
       - uses: actions/setup-python@v4
         with:
           python-version: "3.x"
