@@ -13,14 +13,15 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      package_details: ${{ steps.package_details.outputs }}
+      package_name: ${{ steps.package_details.outputs.package_name }}
+      package_directory: ${{ steps.package_details.outputs.package_directory }}
 
     steps:
       - uses: actions/checkout@v4
       - name: Get package details from tag
         # sets the step outputs package_directory and package_name
         id: package_details
-        run: ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh >> $GITHUB_OUTPUT
+        run: ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
       - uses: actions/setup-python@v4
         with:
           python-version: "3.x"
@@ -47,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/BL_Python.${{ needs.build.outputs.package_details.package_name }}
+      url: https://test.pypi.org/p/BL_Python.${{ needs.build.outputs.package_name }}
     permissions:
       id-token: write
 
