@@ -10,5 +10,5 @@ if [ "$package_name" == "all" ]; then
 else
     package_directory="src/$package_name/"
 fi
-echo "package_name=$package_name" >> $GITHUB_OUTPUT
-echo "package_directory=$package_directory" >> $GITHUB_OUTPUT
+echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
+echo "package_directory=$package_directory" >> "$GITHUB_OUTPUT"
