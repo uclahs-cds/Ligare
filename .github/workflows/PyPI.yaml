@@ -47,8 +47,8 @@ jobs:
       - build
     runs-on: ubuntu-latest
     environment:
-      name: testpypi
-      url: https://test.pypi.org/p/BL_Python.${{ needs.build.outputs.package_name }}
+      name: pypi
+      url: https://pypi.org/p/BL_Python.${{ needs.build.outputs.package_name }}
     permissions:
       id-token: write
 
@@ -61,7 +61,7 @@ jobs:
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1.8
         with:
-          repository-url: https://test.pypi.org/legacy/
+          repository-url: https://pypi.org/legacy/
 
   github-release:
     name: >-
