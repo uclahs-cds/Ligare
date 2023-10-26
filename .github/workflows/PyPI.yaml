@@ -1,34 +1,26 @@
+# This Action mostly follows these docs
+# https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
+
 name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 
 on:
   push:
-  #  tags:
-  #    - "*-v*"
+    tags:
+      - "BL_Python.*-v*"
 jobs:
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
 
+    outputs:
+      package_details: ${{ steps.package_details.outputs }}
+
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        id: vars
-        run: |
-          set -eo pipefail
-          #tag=${GITHUB_REF#refs/*/}
-          tag=BL_Python.web-v0.0.1
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-
-          package_name=$(gawk 'match($0, /BL_Python\.?([^-]+)?/, m) { print s m[1]}' <<<$tag)
-          if [ -z $package_name ]; then
-              package_directory=.
-              # TODO pull from pyproject.toml?
-              package_name=all
-          else
-              package_directory="src/$package_name/"
-          fi
-          echo "package_name=$package_name" >> $GITHUB_OUTPUT
-          echo "package_directory=$package_directory" >> $GITHUB_OUTPUT
+      - name: Get package details from tag
+        # sets the step outputs package_directory and package_name
+        id: package_details
+        run: ${{ github.action_path }}/PyPI-scripts/extract-package-details-from-tag.sh
       - uses: actions/setup-python@v4
         with:
           python-version: "3.x"
@@ -39,50 +31,48 @@ jobs:
       - name: Build a binary wheel and a source tarball
         run: |
           set -eo pipefail
-          pushd "${{ steps.vars.outputs.package_directory }}"
+          pushd "${{ steps.package_details.outputs.package_directory }}"
           python3 -m build
 
       - name: Store the distribution packages
         uses: actions/upload-artifact@v3
         with:
           name: python-package-distributions
-          path: "${{ steps.vars.outputs.package_directory }}dist/"
-  #
-  #  publish-to-pypi:
-  #    name: Publish Python 🐍 distribution 📦 to PyPI
-  #    if: startsWith(github.ref, 'refs/tags/') # only publish to PyPI on tag pushes
-  #    needs:
-  #      - build
-  #    runs-on: ubuntu-latest
-  #    environment:
-  #      name: testpypi
-  #      url: https://test.pypi.org/p/BL_Python.${{ steps.vars.outputs.package_name }} # Replace <package-name> with your PyPI project name
-  #    permissions:
-  #      id-token: write # IMPORTANT: mandatory for trusted publishing
-  #
-  #    steps:
-  #      - name: Download all the dists
-  #        uses: actions/download-artifact@v3
-  #        with:
-  #          name: python-package-distributions
-  #          path: dist/
-  #      - name: Publish distribution 📦 to PyPI
-  #        uses: pypa/gh-action-pypi-publish@release/v1.8
-  #        with:
-  #          repository-url: https://test.pypi.org/legacy/
-  #
+          path: "${{ steps.package_details.outputs.package_directory }}dist/"
+
+  publish-to-pypi:
+    name: Publish Python 🐍 distribution 📦 to PyPI
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/BL_Python.${{ needs.build.outputs.package_details.package_name }}
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v3
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1.8
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
   github-release:
     name: >-
       Sign the Python 🐍 distribution 📦 with Sigstore
       and upload them to GitHub Release
     needs:
-      #- publish-to-pypi
-      - build
+      - publish-to-pypi
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write # IMPORTANT: mandatory for making GitHub Releases
-      id-token: write # IMPORTANT: mandatory for sigstore
+      contents: write
+      id-token: write
 
     env:
       GITHUB_TOKEN: ${{ github.token }}
@@ -107,9 +97,6 @@ jobs:
           --repo '${{ github.repository }}'
           --notes ""
       - name: Upload artifact signatures to GitHub Release
-        # Upload to GitHub Release using the `gh` CLI.
-        # `dist/` contains the built packages, and the
-        # sigstore-produced signatures and certificates.
         run: >-
           gh release upload
           '${{ github.ref_name }}' dist/**
