@@ -4,7 +4,7 @@ tag="${GITHUB_REF#refs/*/}"
 
 # This is the package name minus `BL_Python.`.
 package_name=$(gawk 'match($0, /BL_Python\.?([^-]+)?/, m) { print s m[1]}' <<<$tag)
-# `all` is the root of the repository and include all other packages
+# `all` is the root of the repository and includes all other packages
 if [ "$package_name" == "all" ]; then
     package_directory=.
 else
