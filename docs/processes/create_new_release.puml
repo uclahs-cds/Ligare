@@ -1,0 +1,68 @@
+@startuml
+!theme cerulean
+
+
+| |
+    start
+    :Ready to make release;
+    note
+    Either the root repository or
+    one of the individual packages
+    end note
+
+|Root package|
+    :Determine root package version;
+    noteleft
+    Current version is in `src/~__init__.py`.
+    end note
+
+    :Update the version number accordingly;
+    noteleft
+    The root package version will depend on
+    the version change of any other packages
+    being published with this release.
+    end note
+
+|Other packages|
+    while (Did any other packages change?) is (<b>yes)
+        :Determine package version;
+        note right
+        Current version is in
+        `src/<package name>/BL_Python/<package name>/~__init__.py`.
+        end note
+        :Update the version number accordingly;
+        :Update the package CHANGELOG;
+    endwhile (<b>no)
+
+|Root package|
+    :Update the root package CHANGELOG;
+
+| |
+    :Open PR;
+    :PR approval and merge;
+    :Create new Git tags;
+
+|Root package|
+    :Name is `BL_Python.all-v1.0.0`;
+    note
+    Replace `v1.0.0` with actual version.
+    end note
+
+|Other packages|
+    while (Any other package releases?) is (<b>yes)
+        ' this may be automated in the future
+        'if (Determine tag name from package and version) is (Root package) then
+        :Name is `BL_Python.web-v1.0.0`;
+        note
+        Replace `web` with actual package name
+        and `v1.0.0` with actual version.
+        end note
+    endwhile (<b>no)
+
+| |
+    :Push tags;
+    :GitHub builds package,
+    publishes release on PyPI,
+    and creates new GitHub release;
+stop
+@enduml
