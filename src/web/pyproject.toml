@@ -38,7 +38,8 @@ dependencies = [
     "json-logging",
     "lib_programname",
     "toml",
-    "pydantic ~= 2.1"
+    "pydantic ~= 2.1",
+    "a2wsgi"
 ]
 
 dynamic = ["version", "readme"]
