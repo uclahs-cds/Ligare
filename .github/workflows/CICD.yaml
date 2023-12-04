@@ -35,19 +35,24 @@ jobs:
         run: |
           pyright
 
-      - name: Test with pytest
+      - name: Test with pytest and generate reports
         run: |
           echo Running pytest
-          # infra is not set up to support integration tests, so ignore postgresql
-          # etl has been updated, while the tests have not been
-          pytest --junitxml pytest.xml \
-                 -k "not acceptance"
+          pytest \
+            --cov='.' \
+            --junitxml pytest.xml -o junit_family=xunit2 \
+            -k "not acceptance"
+
+          coverage html
 
       - name: Output pytest report
         uses: actions/upload-artifact@v3
         with:
-          name: pytest-report
-          path: pytest.xml
+          name: pytest-and-coverage-report
+          path: |
+            pytest.xml
+            .coverage
+            htmlcov/
           retention-days: 1
           if-no-files-found: error
 
