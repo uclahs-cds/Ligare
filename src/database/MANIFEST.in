@@ -1,3 +1,2 @@
-graft BL_Python/web/scaffolding/templates/
 global-include *.pyi
 global-include py.typed

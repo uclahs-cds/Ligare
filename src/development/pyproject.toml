@@ -45,3 +45,6 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools.packages]
 find = {}
+
+[tool.setuptools.package-data]
+"BL_Python.development" = ["py.typed"]

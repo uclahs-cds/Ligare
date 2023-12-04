@@ -73,6 +73,9 @@ packages = [
     "BL_Python.web"
 ]
 
+[tool.setuptools.package-data]
+"BL_Python" = ["py.typed"]
+
 #
 [project.optional-dependencies]
 dev-dependencies = [

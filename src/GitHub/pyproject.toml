@@ -35,6 +35,9 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 [tool.setuptools.packages]
 find = {}
 
+[tool.setuptools.package-data]
+"BL_Python.GitHub" = ["py.typed"]
+
 [project.optional-dependencies]
 dev-dependencies = [
     "pytest == 7.4.0",
