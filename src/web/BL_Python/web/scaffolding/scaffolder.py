@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass, field
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
-from typing import Any, cast, final
+from typing import Any, final
 
 from BL_Python.programming.collections.dict import merge
 from jinja2 import BaseLoader, Environment, PackageLoader, Template
@@ -168,12 +168,7 @@ class Scaffolder:
         Only files ending with `.j2` are rendered.
         """
         # render the base templates
-        for template_name in cast(
-            list[str],
-            env.list_templates(  # pyright: ignore[reportUnknownMemberType]
-                extensions=["j2"]
-            ),
-        ):
+        for template_name in env.list_templates(extensions=["j2"]):
             self._render_template(
                 template_name,
                 env,

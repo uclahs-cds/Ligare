@@ -30,23 +30,16 @@ classifiers = [
 dependencies = [
     "BL_Python.programming == 0.0.1",
 
-    "injector ~= 0.20",
-    "Flask == 2.2.5",
-    "flask-injector ~= 0.13.0",
-    "flask-login == 0.6.2",
-    "types-flask == 1.1.6",
-    "connexion == 2.14.2",
-    "swagger_ui_bundle==0.0.9",
-    # specific version because Jinja (Flask dependency)
-    # does not specify an upper bound for MarkupSafe,
-    # and it pulls in a breaking change that prevents
-    # Flask from running.
-    "MarkupSafe == 1.1.1",
-    "python-dotenv == 1.0.0",
-    "json-logging == 1.3.0",
-    "lib_programname == 2.0.9",
-    "toml == 0.10.2",
-    "pydantic ~= 2.1.1"
+    "Flask ~= 3.0",
+    "flask-injector",
+    "connexion ~= 3.0",
+    "swagger_ui_bundle",
+    "python-dotenv",
+    "json-logging",
+    "lib_programname",
+    "toml",
+    "pydantic ~= 2.1",
+    "a2wsgi"
 ]
 
 dynamic = ["version", "readme"]

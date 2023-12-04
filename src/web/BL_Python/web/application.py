@@ -19,7 +19,7 @@ from BL_Python.programming.dependency_injection import ConfigModule
 # )
 # from CAP.app.services.user.login_manager import LoginManager
 # from CAP.database.models.CAP import Base
-from connexion.apps.flask_app import FlaskApp
+from connexion.apps.flask import FlaskApp
 from flask import Flask, url_for
 from injector import Module
 from lib_programname import get_path_executed_script
@@ -93,7 +93,7 @@ def create_app(
 
     if full_config.flask.openapi is not None:
         openapi: FlaskApp = configure_openapi(full_config, full_config.flask.app_name)
-        app = cast(Flask, openapi.app)
+        app = openapi.app
     else:
         app = Flask(full_config.flask.app_name)
         full_config.update_flask_config(app.config)
@@ -119,7 +119,7 @@ def create_app(
     # to `AbstractConfig`.
     modules = application_modules + [ConfigModule(full_config)]
     flask_injector = configure_dependencies(app, application_modules=modules)
-    app.injector = flask_injector
+    app.injector = flask_injector  # pyright: ignore[reportGeneralTypeIssues]
 
     return app
 
@@ -138,15 +138,15 @@ def configure_openapi(config: Config, name: Optional[str] = None):
             "OpenAPI configuration is empty. Review the `openapi` section of your application's `config.toml`."
         )
 
-    # host configuration set up
-    # TODO host/port setup should move into application initialization
-    # and not be tied to connexion configuration
-    host = "127.0.0.1"
-    port = 5000
-    # TODO replace SERVER_NAME with host/port in config
-    if environ.get("SERVER_NAME") is not None:
-        (host, port_str) = environ["SERVER_NAME"].split(":")
-        port = int(port_str)
+    ## host configuration set up
+    ## TODO host/port setup should move into application initialization
+    ## and not be tied to connexion configuration
+    # host = "127.0.0.1"
+    # port = 5000
+    ## TODO replace SERVER_NAME with host/port in config
+    # if environ.get("SERVER_NAME") is not None:
+    #    (host, port_str) = environ["SERVER_NAME"].split(":")
+    #    port = int(port_str)
 
     # connexion and openapi set up
     # openapi_spec_dir: str = "app/swagger/"
@@ -159,10 +159,10 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         __name__ if name is None else name,
         # TODO support relative OPENAPI_SPEC_DIR and prepend program_dir?
         specification_dir=exec_dir,
-        host=host,
-        port=port,
+        # host=host,
+        # port=port,
     )
-    app = cast(Flask, connexion_app.app)
+    app = connexion_app.app
     config.update_flask_config(app.config)
 
     # flask request log handler
@@ -179,7 +179,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         "swagger_url": config.flask.openapi.swagger_url or "/",
     }
 
-    _ = connexion_app.add_api(
+    _ = connexion_app.add_api(  # pyright: ignore[reportUnknownMemberType]
         f"{config.flask.app_name}/{config.flask.openapi.spec_path}",
         base_path="/",
         validate_responses=config.flask.openapi.validate_responses,
