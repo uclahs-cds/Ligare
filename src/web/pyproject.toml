@@ -72,5 +72,6 @@ bl-python-scaffold = "BL_Python.web.scaffolding.__main__:scaffold"
 dev-dependencies = [
     "pytest == 7.4.0",
     "pytest-mock == 3.11.1",
-    "mock == 5.1.0"
+    "mock == 5.1.0",
+    "pytest-cov == 4.1.0"
 ]
