@@ -1,7 +1,7 @@
 import json
 import re
 from logging import Logger
-from typing import Dict, Union
+from typing import Dict, MutableMapping, Union, cast
 from uuid import uuid4
 
 import json_logging
@@ -20,15 +20,12 @@ HEADER_COOKIE = "Cookie"
 
 
 def _get_correlation_id(log: Logger):
+    _session = cast(MutableMapping[str, str], session)
     try:
-        session[CORRELATION_ID_HEADER] = str(
-            json_logging.get_correlation_id(  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
-                request
-            )
-        )
-        return session[CORRELATION_ID_HEADER]
+        _session[CORRELATION_ID_HEADER] = json_logging.get_correlation_id(request)
+        return _session[CORRELATION_ID_HEADER]
     except Exception as e:
-        correlation_id = session.get(CORRELATION_ID_HEADER)
+        correlation_id = _session.get(CORRELATION_ID_HEADER)
         if not correlation_id:
             correlation_id = str(uuid4())
             session[CORRELATION_ID_HEADER] = correlation_id
