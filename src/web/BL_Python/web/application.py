@@ -19,7 +19,9 @@ from BL_Python.programming.dependency_injection import ConfigModule
 # )
 # from CAP.app.services.user.login_manager import LoginManager
 # from CAP.database.models.CAP import Base
-from connexion.apps.flask import FlaskApp
+from connexion import (  # pyright: ignore[reportMissingTypeStubs] Connexion is missing py.typed file
+    FlaskApp,
+)
 from flask import Flask, url_for
 from injector import Module
 from lib_programname import get_path_executed_script
