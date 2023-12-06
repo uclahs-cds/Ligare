@@ -1,13 +1,15 @@
 import json
 import re
 from logging import Logger
-from typing import Dict, MutableMapping, Union, cast
+from typing import Any, Callable, Dict, MutableMapping, TypeVar, Union, cast
 from uuid import uuid4
 
 import json_logging
 from flask import Flask, Request, Response, request, session
+from flask.typing import AfterRequestCallable, BeforeRequestCallable
 from flask_injector import FlaskInjector
-from injector import Module, inject
+from injector import Module
+from injector import inject as _inject
 from werkzeug.exceptions import HTTPException, Unauthorized
 
 from ..config import Config
@@ -17,6 +19,17 @@ CORRELATION_ID_HEADER = "X-Correlation-ID"
 HEADER_COOKIE = "Cookie"
 
 # pyright: reportUnusedFunction=false
+
+AfterRequestCallableResponse = AfterRequestCallable[Response]
+T = TypeVar("T", AfterRequestCallableResponse, BeforeRequestCallable)
+FlaskRequestHandler = Callable[[Callable[..., Any]], T]
+
+
+def inject(t: T) -> FlaskRequestHandler[T]:
+    def inject_wrapper(f: Callable[..., Any]) -> FlaskRequestHandler[T]:
+        return _inject(f)
+
+    return cast(FlaskRequestHandler[T], inject_wrapper)
 
 
 def _get_correlation_id(log: Logger):
@@ -36,8 +49,8 @@ def _get_correlation_id(log: Logger):
 
 
 def register_api_request_handlers(app: Flask):
-    @app.before_request  # pyright: ignore[reportGeneralTypeIssues]
-    @inject
+    @app.before_request
+    @inject(BeforeRequestCallable)
     def log_all_api_requests(request: Request, log: Logger):
         correlation_id = _get_correlation_id(log)
 
@@ -68,8 +81,8 @@ def register_api_request_handlers(app: Flask):
 def register_api_response_handlers(app: Flask):
     # TODO consider moving request/response logging to the WSGI app
     # apparently Flask may not call this if unhandled exceptions occur
-    @app.after_request  # pyright: ignore[reportGeneralTypeIssues]
-    @inject
+    @app.after_request
+    @inject(AfterRequestCallableResponse)
     def ordered_api_response_handers(response: Response, config: Config, log: Logger):
         wrap_all_api_responses(response, config, log)
         log_all_api_responses(response, log)
