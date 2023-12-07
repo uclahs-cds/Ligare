@@ -1,9 +1,9 @@
 from typing import Any, Tuple
 
-from BL_Python.programming.patterns.dependency_injection import LoggerModule, Module
+from BL_Python.programming.patterns.dependency_injection import LoggerModule
 from flask import Config as Config
 from flask import Flask
-from injector import Binder
+from injector import Binder, Module
 from typing_extensions import override
 
 
