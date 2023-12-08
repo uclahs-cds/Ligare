@@ -51,14 +51,18 @@ def _get_correlation_id(log: Logger):
 def register_api_request_handlers(app: Flask):
     @app.before_request
     @inject(BeforeRequestCallable)
-    def log_all_api_requests(request: Request, log: Logger):
+    def log_all_api_requests(request: Request, config: Config, log: Logger):
         correlation_id = _get_correlation_id(log)
 
         request_headers_safe: Dict[str, str] = dict(request.headers)
 
-        if request_headers_safe.get(HEADER_COOKIE):
+        if (
+            request_headers_safe.get(HEADER_COOKIE)
+            and config.flask
+            and config.flask.session
+        ):
             request_headers_safe[HEADER_COOKIE] = re.sub(
-                rf"({app.session_cookie_name or 'session'}=)[^;]+(;|$)",
+                rf"({config.flask.session.cookie.name}=)[^;]+(;|$)",
                 r"\1<redacted>\2",
                 request_headers_safe[HEADER_COOKIE],
             )
@@ -85,7 +89,7 @@ def register_api_response_handlers(app: Flask):
     @inject(AfterRequestCallableResponse)
     def ordered_api_response_handers(response: Response, config: Config, log: Logger):
         wrap_all_api_responses(response, config, log)
-        log_all_api_responses(response, log)
+        log_all_api_responses(response, config, log)
         return response
 
     def wrap_all_api_responses(response: Response, config: Config, log: Logger):
@@ -103,9 +107,9 @@ def register_api_response_handlers(app: Flask):
         if cors_domain:
             response.headers["Access-Control-Allow-Origin"] = cors_domain
 
-        response.headers[
-            "Access-Control-Allow-Credentials"
-        ] = config.web.security.cors.allow_credentials
+        response.headers["Access-Control-Allow-Credentials"] = str(
+            config.web.security.cors.allow_credentials
+        )
 
         response.headers["Access-Control-Allow-Methods"] = ",".join(
             config.web.security.cors.allow_methods
@@ -127,14 +131,18 @@ def register_api_response_handlers(app: Flask):
                     "Content-Security-Policy"
                 ] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'self' 'unsafe-inline'"
 
-    def log_all_api_responses(response: Response, log: Logger):
+    def log_all_api_responses(response: Response, config: Config, log: Logger):
         correlation_id = _get_correlation_id(log)
 
         response_headers_safe: Dict[str, str] = dict(response.headers)
 
-        if response_headers_safe.get(HEADER_COOKIE):
+        if (
+            response_headers_safe.get(HEADER_COOKIE)
+            and config.flask
+            and config.flask.session
+        ):
             response_headers_safe[HEADER_COOKIE] = re.sub(
-                rf"(Set-Cookie: {app.session_cookie_name or 'session'}=)[^;]+(;|$)",
+                rf"(Set-Cookie: {config.flask.session.cookie.name}=)[^;]+(;|$)",
                 r"\1<redacted>\2",
                 response_headers_safe[HEADER_COOKIE],
             )
