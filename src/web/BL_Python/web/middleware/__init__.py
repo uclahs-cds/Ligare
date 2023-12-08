@@ -1,15 +1,29 @@
 import json
 import re
 from logging import Logger
-from typing import Any, Callable, Dict, MutableMapping, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    MutableMapping,
+    TypeVar,
+    Union,
+    cast,
+)
 from uuid import uuid4
 
 import json_logging
-from flask import Flask, Request, Response, request, session
-from flask.typing import AfterRequestCallable, BeforeRequestCallable
+from flask import Flask  # pyright: ignore[reportGeneralTypeIssues]
+from flask import Request, Response, request, session
+from flask.typing import (
+    AfterRequestCallable,
+    BeforeRequestCallable,
+    ResponseReturnValue,
+)
 from flask_injector import FlaskInjector
-from injector import Module
-from injector import inject as _inject
+from injector import Module, inject
 from werkzeug.exceptions import HTTPException, Unauthorized
 
 from ..config import Config
@@ -20,16 +34,30 @@ HEADER_COOKIE = "Cookie"
 
 # pyright: reportUnusedFunction=false
 
-AfterRequestCallableResponse = AfterRequestCallable[Response]
-T = TypeVar("T", AfterRequestCallableResponse, BeforeRequestCallable)
-FlaskRequestHandler = Callable[[Callable[..., Any]], T]
+
+# Fixes type problems when using @inject with @app.before_request and @app.after_request.
+# The main difference with these types as opposed to the Flask-defined types is that
+# these types allow the handler to take any arguments, versus no arguments or just Response.
+AfterRequestCallable = Callable[..., Response] | Callable[..., Awaitable[Response]]
+BeforeRequestCallable = (
+    Callable[..., ResponseReturnValue | None]
+    | Callable[..., Awaitable[ResponseReturnValue | None]]
+)
+T_request_callable = TypeVar(
+    "T_request_callable", bound=BeforeRequestCallable | AfterRequestCallable | None
+)
 
 
-def inject(t: T) -> FlaskRequestHandler[T]:
-    def inject_wrapper(f: Callable[..., Any]) -> FlaskRequestHandler[T]:
-        return _inject(f)
+def bind(
+    app: Flask,
+    flask_app_handler: Callable[
+        [Flask, Callable[..., Response | None]], T_request_callable
+    ],
+):
+    def wrapper(request_callable: Callable[..., Response | None]) -> T_request_callable:
+        return flask_app_handler(app, request_callable)
 
-    return cast(FlaskRequestHandler[T], inject_wrapper)
+    return wrapper
 
 
 def _get_correlation_id(log: Logger):
@@ -49,8 +77,8 @@ def _get_correlation_id(log: Logger):
 
 
 def register_api_request_handlers(app: Flask):
-    @app.before_request
-    @inject(BeforeRequestCallable)
+    @bind(app, Flask.before_request)
+    @inject
     def log_all_api_requests(request: Request, config: Config, log: Logger):
         correlation_id = _get_correlation_id(log)
 
@@ -85,8 +113,8 @@ def register_api_request_handlers(app: Flask):
 def register_api_response_handlers(app: Flask):
     # TODO consider moving request/response logging to the WSGI app
     # apparently Flask may not call this if unhandled exceptions occur
-    @app.after_request
-    @inject(AfterRequestCallableResponse)
+    @bind(app, Flask.after_request)
+    @inject
     def ordered_api_response_handers(response: Response, config: Config, log: Logger):
         wrap_all_api_responses(response, config, log)
         log_all_api_responses(response, config, log)
