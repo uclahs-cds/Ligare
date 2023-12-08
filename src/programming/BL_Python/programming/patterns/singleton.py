@@ -16,9 +16,15 @@ class _Singleton(Type[Any]):
 _SingletonType = NewType("_SingletonType", _Singleton)
 
 
-# FIXME is this broken? take another look with a fresh brain
 class Singleton(type):
-    """Singleton metaclass"""
+    """
+    Singleton metaclass.
+    Create a new Singleton type by setting that class's metaclass:
+
+    `class Foo(metaclass=Singleton): ...`
+
+    In addition to making a class a Singleton, these classes cannot have their attributes changed.
+    """
 
     def __new__(
         cls: Type[Any],
@@ -29,7 +35,7 @@ class Singleton(type):
         _new_type: Type[Any] = type(cls_name, bases, members)
         _instance: _SingletonType | None = None
 
-        def __new__(cls: Type[Any], *args: Any, **kwargs: Any):
+        def __new__(cls: Type[Singleton], *args: Any, **kwargs: Any):
             nonlocal _instance
             if _instance is None:
                 _instance = cast(
