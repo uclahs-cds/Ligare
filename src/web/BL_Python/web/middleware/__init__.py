@@ -1,22 +1,11 @@
 import json
 import re
 from logging import Logger
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    MutableMapping,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Awaitable, Callable, Dict, MutableMapping, TypeVar, cast
 from uuid import uuid4
 
 import json_logging
-from flask import Flask  # pyright: ignore[reportGeneralTypeIssues]
-from flask import Request, Response, request, session
+from flask import Flask, Request, Response, request, session
 from flask.typing import (
     AfterRequestCallable,
     BeforeRequestCallable,
@@ -46,9 +35,17 @@ BeforeRequestCallable = (
 T_request_callable = TypeVar(
     "T_request_callable", bound=BeforeRequestCallable | AfterRequestCallable | None
 )
+# Fixes type problems when using Flask-Injector, which automatically sets up any bound
+# error handlers. The error handler types in Flask have the same problem as After/BeforeRequestCallable
+# in that their parameters are `[Any]` rather than `...`. This relaxes that. The type
+# is valid here because Flask-Injector does actually include the provided types as parameters.
+ErrorHandlerCallable = (
+    Callable[..., ResponseReturnValue] | Callable[..., Awaitable[ResponseReturnValue]]
+)
+T_error_handler = TypeVar("T_error_handler", bound=ErrorHandlerCallable)
 
 
-def bind(
+def bind_requesthandler(
     app: Flask,
     flask_app_handler: Callable[
         [Flask, Callable[..., Response | None]], T_request_callable
@@ -58,6 +55,13 @@ def bind(
         return flask_app_handler(app, request_callable)
 
     return wrapper
+
+
+def bind_errorhandler(
+    app: Flask,
+    code_or_exception: type[Exception] | int,
+) -> Callable[[T_error_handler], T_error_handler]:
+    return app.errorhandler(code_or_exception)
 
 
 def _get_correlation_id(log: Logger):
@@ -77,7 +81,7 @@ def _get_correlation_id(log: Logger):
 
 
 def register_api_request_handlers(app: Flask):
-    @bind(app, Flask.before_request)
+    @bind_requesthandler(app, Flask.before_request)
     @inject
     def log_all_api_requests(request: Request, config: Config, log: Logger):
         correlation_id = _get_correlation_id(log)
@@ -113,7 +117,7 @@ def register_api_request_handlers(app: Flask):
 def register_api_response_handlers(app: Flask):
     # TODO consider moving request/response logging to the WSGI app
     # apparently Flask may not call this if unhandled exceptions occur
-    @bind(app, Flask.after_request)
+    @bind_requesthandler(app, Flask.after_request)
     @inject
     def ordered_api_response_handers(response: Response, config: Config, log: Logger):
         wrap_all_api_responses(response, config, log)
@@ -189,14 +193,14 @@ def register_api_response_handlers(app: Flask):
 
 
 def register_error_handlers(app: Flask):
-    @app.errorhandler(Exception)
+    @bind_errorhandler(app, Exception)
     def catch_all_catastrophic(error: Exception, log: Logger):
         log.exception(error)
 
         response = {"status_code": 500, "error_msg": "Unknown error."}
         return response, 500
 
-    @app.errorhandler(HTTPException)
+    @bind_errorhandler(app, HTTPException)
     def catch_all(error: HTTPException, log: Logger):
         log.exception(error)
 
@@ -205,30 +209,32 @@ def register_error_handlers(app: Flask):
             "error_msg": error.description,
             "status": error.name,
         }
-        return response, error.code
 
-    @app.errorhandler(401)
-    def unauthorized(
-        error: Unauthorized, log: Logger
-    ) -> Union[Dict[str, int], Response]:
+        return (
+            response,
+            error.code if error.code is not None else 500,
+        )
+
+    @bind_errorhandler(app, 401)
+    def unauthorized(error: Unauthorized, log: Logger):
         log.info(error)
 
         if error.response is None:
             response = {
-                "status_code": error.code,
+                "status_code": 401,
                 "error_msg": error.description,
                 "status": error.name,
             }
-            return response, error.code  # pyright: ignore[reportGeneralTypeIssues]
+            return response, 401
 
-        response = error.response
+        response = cast(Response, error.response)
         data = {
             "status_code": response.status_code,
             "error_msg": response.data.decode(),
             "status": response.status,
         }
         response.data = json.dumps(data)
-        return response  # pyright: ignore[reportGeneralTypeIssues]
+        return response
 
 
 def configure_dependencies(
