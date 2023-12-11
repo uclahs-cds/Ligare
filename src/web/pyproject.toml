@@ -30,15 +30,15 @@ classifiers = [
 dependencies = [
     "BL_Python.programming == 0.0.1",
 
-    "Flask ~= 3.0",
+    "Flask",
     "flask-injector",
-    "connexion ~= 3.0",
+    "connexion",
     "swagger_ui_bundle",
     "python-dotenv",
     "json-logging",
     "lib_programname",
     "toml",
-    "pydantic ~= 2.1",
+    "pydantic",
     "a2wsgi"
 ]
 
@@ -72,8 +72,8 @@ bl-python-scaffold = "BL_Python.web.scaffolding.__main__:scaffold"
 
 [project.optional-dependencies]
 dev-dependencies = [
-    "pytest == 7.4.0",
-    "pytest-mock == 3.11.1",
-    "mock == 5.1.0",
-    "pytest-cov == 4.1.0"
+    "pytest",
+    "pytest-mock",
+    "mock",
+    "pytest-cov"
 ]

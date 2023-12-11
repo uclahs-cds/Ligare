@@ -32,8 +32,8 @@ dependencies = [
     "sqlalchemy ~= 1.4",
     "alembic ~= 1.8",
     "sqlalchemy2-stubs ~= 0.0.2a34",
-    "injector ~= 0.20",
-    "pydantic ~= 2.1.1"
+    "injector",
+    "pydantic"
 ]
 
 dynamic = ["version", "readme"]

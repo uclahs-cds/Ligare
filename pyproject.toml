@@ -80,21 +80,21 @@ packages = [
 [project.optional-dependencies]
 dev-dependencies = [
     # testing automation. use specific versions so behavior does not change.
-    "pytest == 7.4.0",
-    "pytest-mock == 3.11.1",
-    "mock == 5.1.0",
-    "pytest-cov == 4.1.0",
+    "pytest",
+    "pytest-mock",
+    "mock",
+    "pytest-cov",
 
     # code quality. allow minor version updates.
     # this can possibly change behavior of quality checks,
     # which allows us to catch new types of problems.
-    "pyright ~= 1.1",
-    "isort ~= 5.12",
+    "pyright",
+    "isort",
     # specific version is nnecessary due to Flask dependency
     # version conflict with `click`
     # flask 1.1.4 depends on click<8.0 and >=5.1
     # black 22.1.0 depends on click>=8.0.0
-    "black == 21.12b0"
+    "black"
 ]
 
 [tool.pyright]

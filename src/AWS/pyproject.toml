@@ -28,7 +28,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "boto3 ~= 1.27"
+    "boto3"
 ]
 
 dynamic = ["version", "readme"]

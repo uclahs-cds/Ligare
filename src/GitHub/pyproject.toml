@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "PyGithub~=2.1"
+    "PyGithub"
 ]
 
 dynamic = ["version", "readme"]
@@ -40,7 +40,7 @@ find = {}
 
 [project.optional-dependencies]
 dev-dependencies = [
-    "pytest == 7.4.0",
-    "pytest-mock == 3.11.1",
-    "mock == 5.1.0"
+    "pytest",
+    "pytest-mock",
+    "mock"
 ]
