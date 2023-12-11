@@ -49,6 +49,7 @@ class FlaskSessionCookieConfig(BaseModel):
     # FIXME This is not done at the moment solely because we are not making
     # FIXME active use of sessions, but this should not be forgotten!
     secret_key: str | None = None
+    name: str = "session"
     httponly: bool = True
     secure: bool = True
     samesite: str = "none"
@@ -60,6 +61,7 @@ class FlaskSessionCookieConfig(BaseModel):
         environ.update(
             {
                 "SECRET_KEY": self.secret_key,
+                "SESSION_COOKIE_NAME": self.name,
                 "SESSION_COOKIE_HTTPONLY": str(1 if self.httponly else 0),
                 "SESSION_COOKIE_SECURE": str(1 if self.secure else 0),
                 "SESSION_COOKIE_SAMESITE": self.samesite,
@@ -69,6 +71,7 @@ class FlaskSessionCookieConfig(BaseModel):
     def _update_flask_config(self, flask_app_config: FlaskAppConfig):
         class ConfigObject:
             SECRET_KEY = self.secret_key
+            SESSION_COOKIE_NAME = self.name
             SESSION_COOKIE_HTTPONLY = self.httponly
             SESSION_COOKIE_SECURE = self.secure
             SESSION_COOKIE_SAMESITE = self.samesite
