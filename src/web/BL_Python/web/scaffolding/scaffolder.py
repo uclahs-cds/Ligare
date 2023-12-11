@@ -79,9 +79,7 @@ class Scaffolder:
             f"Rendering template string `{template_string}` with config `{template_config}`."
         )
 
-        rendered_string = self._base_env.from_string(
-            template_string
-        ).render(  # pyright: ignore[reportUnknownMemberType]
+        rendered_string = self._base_env.from_string(template_string).render(
             **template_config
         )
 
