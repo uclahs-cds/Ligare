@@ -37,16 +37,11 @@ class CreateApp:
         config = self._get_basic_config()
 
         with mocker.patch(
-            # "BL_Python.programming.config.load_config",
             "BL_Python.web.application.load_config",
             return_value=config,
-        ) as p:
-            with mocker.patch(
-                "BL_Python.programming.config.load_config",
-                return_value=config,
-            ) as pp:
-                app = create_app()
-                yield app
+        ):
+            app = create_app()
+            yield app
 
     @pytest.fixture()
     def flask_client(
@@ -78,13 +73,6 @@ class CreateApp:
     # then tells pytest to use it for every test in the class
     @pytest.fixture(autouse=True)
     def setup_method_fixture(self, mocker: MockerFixture):
-        # with ExitStack() as stack:
-        #    stack.enter_context(mocker.patch("io.open"))
-        #    stack.enter_context(mocker.patch("toml.decoder.loads", return_value={}))
-        #    stack.enter_context(
-        #        mocker.patch("BL_Python.web.application.configure_blueprint_routes")
-        #    )
-        #    yield stack
         _ = mocker.patch("io.open")
         _ = mocker.patch("toml.decoder.loads", return_value={})
         _ = mocker.patch("BL_Python.web.application.configure_blueprint_routes")
