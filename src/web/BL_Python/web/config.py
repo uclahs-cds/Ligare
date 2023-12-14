@@ -115,13 +115,18 @@ class FlaskSessionConfig(BaseModel):
 class FlaskConfig(BaseModel):
     app_name: str = "app"
     env: str = "Development"
-    host: str | None = None
-    port: str | None = None
+    host: str = "localhost"
+    port: str = "5000"
     openapi: FlaskOpenApiConfig | None = None
     session: FlaskSessionConfig | None = None
 
     def _prepare_env_for_flask(self):
-        environ.update({"ENV": self.env})
+        environ.update(
+            FLASK_APP=self.app_name,
+            ENV=self.env,
+            FLASK_RUN_PORT=self.port,
+            FLASK_RUN_HOST=self.host,
+        )
         if self.session:
             self.session._prepare_env_for_flask()  # pyright: ignore[reportPrivateUsage]
 
@@ -132,8 +137,12 @@ class FlaskConfig(BaseModel):
             )
 
         class ConfigObject:
+            FLASK_APP = self.app_name
             ENV = self.env
             SERVER_NAME = f"{self.host}:{self.port}"
+            FLASK_RUN_PORT = self.port
+            FLASK_RUN_HOST = self.host
+            TESTING = self.env == "Testing"
 
         flask_app_config.from_object(ConfigObject)
 
