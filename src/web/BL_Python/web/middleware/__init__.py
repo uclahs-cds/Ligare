@@ -5,6 +5,7 @@ from typing import Awaitable, Callable, Dict, MutableMapping, TypeVar, cast
 from uuid import uuid4
 
 import json_logging
+from flask import Config as FlaskConfig
 from flask import Flask, Request, Response, request, session
 from flask.typing import (
     AfterRequestCallable,
@@ -80,6 +81,13 @@ def _get_correlation_id(log: Logger):
         return correlation_id
 
 
+INCOMING_REQUEST_MESSAGE = "Incoming request:\n\
+    %s %s\n\
+    Host: %s\n\
+    Remote address: %s\n\
+    Remote user: %s"
+
+
 def register_api_request_handlers(app: Flask):
     @bind_requesthandler(app, Flask.before_request)
     @inject
@@ -100,11 +108,12 @@ def register_api_request_handlers(app: Flask):
             )
 
         log.info(
-            f"Incoming request:\n\
-    {request.method} {request.url}\n\
-    Host: {request.host}\n\
-    Remote address: {request.remote_addr}\n\
-    Remote user: {request.remote_user}",
+            INCOMING_REQUEST_MESSAGE,
+            request.method,
+            request.url,
+            request.host,
+            request.remote_addr,
+            request.remote_user,
             extra={
                 "props": {
                     "correlation_id": correlation_id,

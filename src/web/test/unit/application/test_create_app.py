@@ -1,24 +1,12 @@
 from os import environ
+from test.unit.create_app import CreateApp
 
 import pytest
 from BL_Python.web.application import create_app
-from BL_Python.web.config import Config, FlaskConfig
 from pytest_mock import MockerFixture
 
 
-class TestCreateApp:
-    def _get_basic_config(self):
-        return Config(flask=FlaskConfig(app_name="test_app"))
-
-    # https://stackoverflow.com/a/55079736
-    # creates a fixture on this class called `setup_method_fixture`
-    # then tells pytest to use it for every test in the class
-    @pytest.fixture(autouse=True)
-    def setup_method_fixture(self, mocker: MockerFixture):
-        _ = mocker.patch("io.open")
-        _ = mocker.patch("toml.decoder.loads", return_value={})
-        _ = mocker.patch("BL_Python.web.application.configure_blueprint_routes")
-
+class TestCreateApp(CreateApp):
     def test__loads_config_from_toml(self, mocker: MockerFixture):
         load_config_mock = mocker.patch(
             "BL_Python.web.application.load_config",
