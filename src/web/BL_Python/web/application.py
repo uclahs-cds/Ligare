@@ -119,7 +119,7 @@ def create_app(
     # The `full_config` module cannot be overridden unless the application
     # IoC container is fiddled with. `full_config` is the instance registered
     # to `AbstractConfig`.
-    modules = application_modules + [ConfigModule(full_config)]
+    modules = application_modules + [ConfigModule(full_config, type(full_config))]
     flask_injector = configure_dependencies(app, application_modules=modules)
     app.injector = flask_injector  # pyright: ignore[reportGeneralTypeIssues]
 
