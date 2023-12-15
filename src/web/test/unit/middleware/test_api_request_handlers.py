@@ -5,42 +5,14 @@ from typing import Any, cast
 import pytest
 from BL_Python.web.middleware import (
     INCOMING_REQUEST_MESSAGE,
-    bind_requesthandler,
     register_api_request_handlers,
 )
-from flask import Flask
 from flask.testing import FlaskClient
-from mock import MagicMock
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 
 class TestApiRequestHandlers(CreateApp):
-    def test__bind_requesthandler__returns_decorated_flask_request_hook(
-        self, flask_client: FlaskClient
-    ):
-        flask_request_hook_mock = MagicMock()
-
-        wrapped_decorator = bind_requesthandler(
-            flask_client.application, flask_request_hook_mock
-        )
-        _ = wrapped_decorator(lambda: None)
-
-        assert flask_request_hook_mock.called
-
-    def test__bind_requesthandler__calls_decorated_function_when_app_is_run(
-        self, flask_client: FlaskClient
-    ):
-        wrapped_handler_decorator = bind_requesthandler(
-            flask_client.application, Flask.before_request
-        )
-        request_handler_mock = MagicMock()
-        _ = wrapped_handler_decorator(request_handler_mock)
-
-        _ = flask_client.get("/")
-
-        assert request_handler_mock.called
-
     def test__register_api_request_handlers__binds_flask_before_request(
         self, flask_client: FlaskClient, mocker: MockerFixture
     ):
