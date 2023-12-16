@@ -21,6 +21,7 @@ from .dependency_injection import AppModule
 
 CORRELATION_ID_HEADER = "X-Correlation-ID"
 HEADER_COOKIE = "Cookie"
+SET_HEADER_COOKIE = "Set-Cookie"
 
 # pyright: reportUnusedFunction=false
 
@@ -86,6 +87,10 @@ INCOMING_REQUEST_MESSAGE = "Incoming request:\n\
     Host: %s\n\
     Remote address: %s\n\
     Remote user: %s"
+
+OUTGOING_RESPONSE_MESSAGE = f"Outgoing response:\n\
+   Status code: %s\n\
+   Status: %s"
 
 
 def register_api_request_handlers(app: Flask):
@@ -178,20 +183,20 @@ def register_api_response_handlers(app: Flask):
         response_headers_safe: Dict[str, str] = dict(response.headers)
 
         if (
-            response_headers_safe.get(HEADER_COOKIE)
+            response_headers_safe.get(SET_HEADER_COOKIE)
             and config.flask
             and config.flask.session
         ):
-            response_headers_safe[HEADER_COOKIE] = re.sub(
-                rf"(Set-Cookie: {config.flask.session.cookie.name}=)[^;]+(;|$)",
+            response_headers_safe[SET_HEADER_COOKIE] = re.sub(
+                rf"({config.flask.session.cookie.name}=)[^;]+(;|$)",
                 r"\1<redacted>\2",
-                response_headers_safe[HEADER_COOKIE],
+                response_headers_safe[SET_HEADER_COOKIE],
             )
 
         log.info(
-            f"Outgoing response:\n\
-   Status code: {response.status_code}\n\
-   Status: {response.status}",
+            OUTGOING_RESPONSE_MESSAGE,
+            response.status_code,
+            response.status,
             extra={
                 "props": {
                     "correlation_id": correlation_id,
