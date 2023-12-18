@@ -27,7 +27,7 @@ class Singleton(type):
     """
 
     def __new__(
-        cls: Type[Any],
+        cls: type,
         cls_name: str,
         bases: tuple[Type[Any]],
         members: dict[str, Any],
@@ -35,16 +35,10 @@ class Singleton(type):
         _new_type: Type[Any] = type(cls_name, bases, members)
         _instance: _SingletonType | None = None
 
-        def __new__(cls: Type[Singleton], *args: Any, **kwargs: Any):
+        def __new__(cls: Any, *args: Any, **kwargs: Any):
             nonlocal _instance
             if _instance is None:
-                _instance = cast(
-                    Any,
-                    super(
-                        _new_type,
-                        cast(Any, cls),  # pyright: ignore[reportUnknownMemberType]
-                    ).__new__(cls),
-                )
+                _instance = cast(Any, super(_new_type, cls)).__new__(cls)
                 child_init = _instance.__init__
 
                 def __init__(cls: _SingletonType, *args: Any, **kwargs: Any):
