@@ -8,6 +8,18 @@ on:
     branches:
       - "**"
   workflow_dispatch:
+    inputs:
+      rewrite_dependencies:
+        description:
+          If "true" or empty CICD will rewrite BL_Python dependencies,\n
+          during the build only, to use the local filesystem checkout rather than PyPI.\n
+          If "false" CICD will not rewrite the BL_Python dependencies.
+        type: choice
+        options:
+          - true
+          - false
+        default: "true"
+        required: true
 
 jobs:
   All:
@@ -33,8 +45,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          source .github-venv/bin/activate
           python -m pip install -U pip
+          python -m pip install toml
+          REWRITE_DEPENDENCIES=${{ inputs.rewrite_dependencies }} \
+            ./.github/workflows/CICD-scripts/pyproject_dependency_rewrite.py
+          source .github-venv/bin/activate
           ./install_all.sh
 
       - name: Test with pyright

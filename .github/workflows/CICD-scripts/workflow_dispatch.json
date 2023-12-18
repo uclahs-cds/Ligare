@@ -1,0 +1,8 @@
+{
+    "description": "Use this file when testing the workflow_dispatch action locally with nektos/act.",
+
+    "action": "workflow_dispatch",
+    "inputs": {
+        "rewrite_dependencies": "false"
+    }
+}
