@@ -73,6 +73,8 @@ class TestCreateApp(CreateApp):
 
         _ = mocker.patch("toml.load", return_value=toml_load_result)
 
+        # FIXME this actually starts the application
+        # FIXME and should be moved to integration tests
         if should_fail:
             with pytest.raises(Exception):
                 _ = create_app()

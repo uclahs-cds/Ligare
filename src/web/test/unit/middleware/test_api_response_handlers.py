@@ -1,18 +1,19 @@
 import logging
 from test.unit.create_app import CreateApp
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 import pytest
 from BL_Python.web.middleware import (
+    CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
+    CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
+    CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER,
     OUTGOING_RESPONSE_MESSAGE,
     bind_requesthandler,
     register_api_request_handlers,
 )
-from flask import Flask, Request, Response
+from flask import Flask, Response
 from flask.testing import FlaskClient
 from flask_injector import FlaskInjector
-from injector import inject
-from mock import MagicMock
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
@@ -28,6 +29,22 @@ class TestApiResponseHandlers(CreateApp):
         register_api_request_handlers(flask_client.application)
 
         assert flask_before_request_mock.called
+
+    @pytest.mark.parametrize(
+        "header,value",
+        [
+            (CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, "example.com"),
+            (CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, ""),
+            (CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER, ""),
+        ],
+    )
+    def test__wrap_all_api_responses__sets_CORS_headers(
+        self, header: str, value: str, flask_client: FlaskClient, mocker: MockerFixture
+    ):
+        config = self._get_basic_config()
+        config.web.security.cors.origin = value
+        _ = mocker.patch("BL_Python.web.middleware.Config", side_effect=config)
+        _ = flask_client.get("/")
 
     def test__log_all_api_responses__logs_response_information(
         self,

@@ -5,7 +5,6 @@ from typing import Awaitable, Callable, Dict, MutableMapping, TypeVar, cast
 from uuid import uuid4
 
 import json_logging
-from flask import Config as FlaskConfig
 from flask import Flask, Request, Response, request, session
 from flask.typing import (
     AfterRequestCallable,
@@ -20,8 +19,14 @@ from ..config import Config
 from .dependency_injection import AppModule
 
 CORRELATION_ID_HEADER = "X-Correlation-ID"
-HEADER_COOKIE = "Cookie"
-SET_HEADER_COOKIE = "Set-Cookie"
+REQUEST_COOKIE_HEADER = "Cookie"
+RESPONSE_COOKIE_HEADER = "Set-Cookie"
+CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER = "Access-Control-Allow-Origin"
+CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER = "Access-Control-Allow-Credentials"
+CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER = "Access-Control-Allow-Methods"
+CONTENT_SECURITY_POLICY_HEADER = "Content-Security-Policy"
+ORIGIN_HEADER = "Origin"
+HOST_HEADER = "Host"
 
 # pyright: reportUnusedFunction=false
 
@@ -102,14 +107,14 @@ def register_api_request_handlers(app: Flask):
         request_headers_safe: Dict[str, str] = dict(request.headers)
 
         if (
-            request_headers_safe.get(HEADER_COOKIE)
+            request_headers_safe.get(REQUEST_COOKIE_HEADER)
             and config.flask
             and config.flask.session
         ):
-            request_headers_safe[HEADER_COOKIE] = re.sub(
+            request_headers_safe[REQUEST_COOKIE_HEADER] = re.sub(
                 rf"({config.flask.session.cookie.name}=)[^;]+(;|$)",
                 r"\1<redacted>\2",
-                request_headers_safe[HEADER_COOKIE],
+                request_headers_safe[REQUEST_COOKIE_HEADER],
             )
 
         log.info(
@@ -145,26 +150,26 @@ def register_api_response_handlers(app: Flask):
         if config.web.security.cors.origin:
             cors_domain = config.web.security.cors.origin
         else:
-            if not response.headers.get("Access-Control-Allow-Origin"):
-                cors_domain = request.headers.get("Origin")
+            if not response.headers.get(CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER):
+                cors_domain = request.headers.get(ORIGIN_HEADER)
                 if not cors_domain:
-                    cors_domain = request.headers.get("Host")
+                    cors_domain = request.headers.get(HOST_HEADER)
 
         if cors_domain:
-            response.headers["Access-Control-Allow-Origin"] = cors_domain
+            response.headers[CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER] = cors_domain
 
-        response.headers["Access-Control-Allow-Credentials"] = str(
+        response.headers[CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER] = str(
             config.web.security.cors.allow_credentials
         )
 
-        response.headers["Access-Control-Allow-Methods"] = ",".join(
+        response.headers[CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER] = ",".join(
             config.web.security.cors.allow_methods
         )
 
         response.headers[CORRELATION_ID_HEADER] = correlation_id
 
         if config.web.security.csp:
-            response.headers["Content-Security-Policy"] = config.web.security.csp
+            response.headers[CONTENT_SECURITY_POLICY_HEADER] = config.web.security.csp
 
         if config.flask and config.flask.openapi and config.flask.openapi.use_swagger:
             # Use a permissive CSP for the Swagger UI
@@ -174,7 +179,7 @@ def register_api_response_handlers(app: Flask):
                 and request.url_rule.endpoint == "/v1./v1_swagger_ui_index"
             ):
                 response.headers[
-                    "Content-Security-Policy"
+                    CONTENT_SECURITY_POLICY_HEADER
                 ] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'self' 'unsafe-inline'"
 
     def log_all_api_responses(response: Response, config: Config, log: Logger):
@@ -183,14 +188,14 @@ def register_api_response_handlers(app: Flask):
         response_headers_safe: Dict[str, str] = dict(response.headers)
 
         if (
-            response_headers_safe.get(SET_HEADER_COOKIE)
+            response_headers_safe.get(RESPONSE_COOKIE_HEADER)
             and config.flask
             and config.flask.session
         ):
-            response_headers_safe[SET_HEADER_COOKIE] = re.sub(
+            response_headers_safe[RESPONSE_COOKIE_HEADER] = re.sub(
                 rf"({config.flask.session.cookie.name}=)[^;]+(;|$)",
                 r"\1<redacted>\2",
-                response_headers_safe[SET_HEADER_COOKIE],
+                response_headers_safe[RESPONSE_COOKIE_HEADER],
             )
 
         log.info(
