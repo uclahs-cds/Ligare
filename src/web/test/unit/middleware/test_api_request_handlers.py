@@ -1,5 +1,4 @@
 import logging
-from test.unit.create_app import CreateApp
 from typing import Any, cast
 
 import pytest
@@ -10,6 +9,8 @@ from BL_Python.web.middleware import (
 from flask.testing import FlaskClient
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
+
+from ..create_app import CreateApp
 
 
 class TestApiRequestHandlers(CreateApp):

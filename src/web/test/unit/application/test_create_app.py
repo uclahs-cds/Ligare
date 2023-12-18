@@ -1,9 +1,10 @@
 from os import environ
-from test.unit.create_app import CreateApp
 
 import pytest
 from BL_Python.web.application import create_app
 from pytest_mock import MockerFixture
+
+from ..create_app import CreateApp
 
 
 class TestCreateApp(CreateApp):

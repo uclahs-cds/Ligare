@@ -1,4 +1,3 @@
-from test.unit.create_app import CreateApp
 from typing import Callable
 
 import pytest
@@ -8,6 +7,8 @@ from flask.testing import FlaskClient
 from mock import MagicMock
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
+
+from ..create_app import CreateApp
 
 
 class TestMiddleware(CreateApp):

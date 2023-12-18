@@ -147,6 +147,10 @@ reportUnusedCallResult = "information"
 reportMissingTypeStubs = "information"
 
 [tool.pytest.ini_options]
+pythonpath = [
+    "."
+]
+
 testpaths = [
     "test",
     "src/AWS/test",
