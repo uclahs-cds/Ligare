@@ -22,22 +22,31 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
+        id: install_python
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
+      - name: Create Venv
+        run: |
+          ${{ steps.install_python.outputs.python-path }} -m venv .github-venv
+
       - name: Install dependencies
         run: |
+          source .github-venv/bin/activate
           python -m pip install -U pip
           ./install_all.sh
 
       - name: Test with pyright
         run: |
+          echo Running pyright
+          source .github-venv/bin/activate
           pyright
 
       - name: Test with pytest and generate reports
         run: |
           echo Running pytest
+          source .github-venv/bin/activate
           pytest \
             --cov='.' \
             --junitxml pytest.xml -o junit_family=xunit2 \
@@ -58,8 +67,10 @@ jobs:
 
       - name: Check code style
         run: |
+          source .github-venv/bin/activate
           black --check src
 
       - name: Check import order
         run: |
+          source .github-venv/bin/activate
           isort --check-only src
