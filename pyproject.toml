@@ -109,6 +109,7 @@ include = [
 exclude = [
     "**/build",
     "**/.venv",
+    "**/.github-venv",
     "**/.pytest_cache",
     ".github",
     ".git",
@@ -177,7 +178,7 @@ addopts = [
 
 python_files = "test_*.py"
 
-norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv"
+norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv .github-venv"
 
 [tool.coverage.report]
 include_namespace_packages=true
@@ -185,6 +186,7 @@ include_namespace_packages=true
 [tool.coverage.run]
 omit = [
     ".venv/*",
+    ".github-venv/*",
     "*/test/*",
     "*/src/*/test/*",
     "build/*",

@@ -63,22 +63,8 @@ jobs:
         run: |
           echo Running pytest
           source .github-venv/bin/activate
-          cov_args=""
-          for module in $(
-            find \
-              src/ \
-              -maxdepth 1 \
-              -mindepth 1 \
-              -type d \
-              -not -path '*/__pycache__' \
-              -not -path '*/build' \
-              -not -path '*/*.egg-info' \
-              -printf '%P '
-          ); do
-            cov_args+="--cov=src/$module ";
-          done
           pytest \
-            $cov_args \
+            --cov=. \
             --junitxml pytest.xml -o junit_family=xunit2 \
             --cov-report xml:cov.xml \
             -k "not acceptance"
@@ -91,6 +77,7 @@ jobs:
           name: pytest-and-coverage-report
           path: |
             pytest.xml
+            cov.xml
             .coverage
             htmlcov/
           retention-days: 1
