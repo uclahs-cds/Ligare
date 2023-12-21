@@ -148,7 +148,15 @@ reportMissingTypeStubs = "information"
 
 [tool.pytest.ini_options]
 pythonpath = [
-    "."
+    ".",
+    "src/AWS",
+    "src/database",
+    "src/development",
+    "src/GitHub",
+    "src/platform",
+    "src/programming",
+    "src/testing",
+    "src/web",
 ]
 
 testpaths = [
@@ -170,6 +178,26 @@ addopts = [
 python_files = "test_*.py"
 
 norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv"
+
+[tool.coverage.report]
+include_namespace_packages=true
+
+[tool.coverage.run]
+omit = [
+    ".venv/*",
+    "*/test/*",
+    "*/src/*/test/*",
+    "build/*",
+    "*/build/*",
+    ".pytest_cache/*",
+    ".github/*",
+    ".git/*",
+    "typings/*",
+    "*/typings/*",
+    "node_modules/*",
+    "__pycache__/*",
+    "*/__pycache__/*"
+]
 
 [tool.black]
 exclude = "src/.+/(typings|build)"

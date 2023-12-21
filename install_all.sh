@@ -1,8 +1,10 @@
 #!/bin/sh
 
-python -m pip install -e .
+# use $1 to pass in -e (or any other options)
 
-python -m pip install -e \
+python -m pip install $1 .
+
+python -m pip install $1 \
     .[dev-dependencies] \
     src/AWS \
     src/database \

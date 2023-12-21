@@ -45,12 +45,13 @@ jobs:
 
       - name: Install dependencies
         run: |
+          echo Setting up dependencies
           python -m pip install -U pip
           python -m pip install toml
           REWRITE_DEPENDENCIES=${{ inputs.rewrite_dependencies }} \
             ./.github/workflows/CICD-scripts/pyproject_dependency_rewrite.py
           source .github-venv/bin/activate
-          ./install_all.sh
+          ./install_all.sh -e
 
       - name: Test with pyright
         run: |
@@ -62,9 +63,24 @@ jobs:
         run: |
           echo Running pytest
           source .github-venv/bin/activate
+          cov_args=""
+          for module in $(
+            find \
+              src/ \
+              -maxdepth 1 \
+              -mindepth 1 \
+              -type d \
+              -not -path '*/__pycache__' \
+              -not -path '*/build' \
+              -not -path '*/*.egg-info' \
+              -printf '%P '
+          ); do
+            cov_args+="--cov=src/$module ";
+          done
           pytest \
-            --cov='.' \
+            $cov_args \
             --junitxml pytest.xml -o junit_family=xunit2 \
+            --cov-report xml:cov.xml \
             -k "not acceptance"
 
           coverage html
