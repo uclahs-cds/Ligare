@@ -181,9 +181,10 @@ python_files = "test_*.py"
 norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv .github-venv"
 
 [tool.coverage.report]
-include_namespace_packages=true
+include_namespace_packages = true
 
 [tool.coverage.run]
+relative_files = true
 omit = [
     ".venv/*",
     ".github-venv/*",
