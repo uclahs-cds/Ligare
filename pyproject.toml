@@ -173,7 +173,11 @@ testpaths = [
 ]
 
 addopts = [
-    "--import-mode=importlib"
+    "--import-mode=importlib",
+    "--cov=.",
+    "--junitxml=pytest.xml",
+    "-o=junit_family=xunit2",
+    "--cov-report=xml:cov.xml"
 ]
 
 python_files = "test_*.py"

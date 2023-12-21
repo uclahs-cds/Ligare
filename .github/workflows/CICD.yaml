@@ -63,11 +63,7 @@ jobs:
         run: |
           echo Running pytest
           source .github-venv/bin/activate
-          pytest \
-            --cov=. \
-            --junitxml pytest.xml -o junit_family=xunit2 \
-            --cov-report xml:cov.xml \
-            -k "not acceptance"
+          pytest -k "not acceptance"
 
           coverage html
 
