@@ -1,8 +1,12 @@
 from typing import Callable
 
 import pytest
+from BL_Python.web.middleware import (
+    _get_correlation_id,  # pyright: ignore[reportPrivateUsage,reportUnusedImport]
+)
 from BL_Python.web.middleware import bind_errorhandler, bind_requesthandler
-from flask import Flask, Response, abort
+from flask import Flask, Response, abort, session  # pyright: ignore[reportUnusedImport]
+from flask.ctx import RequestContext
 from flask.testing import FlaskClient
 from mock import MagicMock
 from pytest_mock import MockerFixture
@@ -12,6 +16,25 @@ from ..create_app import CreateApp
 
 
 class TestMiddleware(CreateApp):
+    def test___get_correlation_id__uses_existing_correlation_id_when_already_set(self):
+        pass
+
+    def test___get_correlation_id__sets_correlation_id_when_json_logging_enabled(self):
+        pass
+
+    def test___get_correlation_id__sets_correlation_id_when_json_logging_disabled(
+        self, flask_request: RequestContext, mocker: MockerFixture
+    ):
+        ## m = mocker.patch("BL_Python.web.middleware.session")
+        # a = MagicMock()
+        # b = MagicMock()
+        # mocker.patch.object(session, "__getitem__", return_value=a)
+        # mocker.patch.object(session, "get", return_value=b)
+        # x = _get_correlation_id(MagicMock())
+        ## assert a.called
+        # assert b.called
+        pass
+
     def test__bind_requesthandler__returns_decorated_flask_request_hook(
         self, flask_client: FlaskClient
     ):

@@ -68,6 +68,11 @@ class CreateApp:
             )
             yield client
 
+    @pytest.fixture()
+    def flask_request(self, flask_client: FlaskClient):
+        with flask_client.application.test_request_context() as request_context:
+            yield request_context
+
     # https://stackoverflow.com/a/55079736
     # creates a fixture on this class called `setup_method_fixture`
     # then tells pytest to use it for every test in the class
