@@ -174,6 +174,12 @@ testpaths = [
 
 addopts = [
     "--import-mode=importlib",
+    # to debug tests without altering these options see
+    # https://pytest-cov.readthedocs.io/en/latest/debuggers.html
+    # For more information regarding doing this with VSCode see
+    # https://github.com/microsoft/vscode-python/issues/21255
+    # and
+    # https://github.com/microsoft/vscode-python/issues/21845
     "--cov=.",
     "--junitxml=pytest.xml",
     "-o=junit_family=xunit2",

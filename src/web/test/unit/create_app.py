@@ -80,4 +80,10 @@ class CreateApp:
     def setup_method_fixture(self, mocker: MockerFixture):
         _ = mocker.patch("io.open")
         _ = mocker.patch("toml.decoder.loads", return_value={})
-        _ = mocker.patch("BL_Python.web.application.configure_blueprint_routes")
+        _ = mocker.patch(
+            "BL_Python.web.application._import_blueprint_modules", return_value=[]
+        )
+        # json_logging appears not to be threadsafe
+        _ = mocker.patch("json_logging.init_flask")
+        _ = mocker.patch("json_logging.init_connexion")
+        _ = mocker.patch("json_logging.init_request_instrument")

@@ -4,7 +4,11 @@ import pytest
 from BL_Python.web.middleware import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage,reportUnusedImport]
 )
-from BL_Python.web.middleware import bind_errorhandler, bind_requesthandler
+from BL_Python.web.middleware import (
+    CORRELATION_ID_HEADER,
+    bind_errorhandler,
+    bind_requesthandler,
+)
 from flask import Flask, Response, abort, session  # pyright: ignore[reportUnusedImport]
 from flask.ctx import RequestContext
 from flask.testing import FlaskClient
@@ -26,14 +30,11 @@ class TestMiddleware(CreateApp):
         self, flask_request: RequestContext, mocker: MockerFixture
     ):
         ## m = mocker.patch("BL_Python.web.middleware.session")
-        # a = MagicMock()
-        # b = MagicMock()
-        # mocker.patch.object(session, "__getitem__", return_value=a)
-        # mocker.patch.object(session, "get", return_value=b)
-        # x = _get_correlation_id(MagicMock())
-        ## assert a.called
-        # assert b.called
-        pass
+        # mocker.patch.object(flask_request.session, "__getitem__", return_value=a)
+        # mocker.patch.object(flask_request.session, "get", return_value=b)
+        # mocker.patch.object(session, "__setitem__")
+        correlation_id = _get_correlation_id(MagicMock())
+        assert session[CORRELATION_ID_HEADER] == correlation_id
 
     def test__bind_requesthandler__returns_decorated_flask_request_hook(
         self, flask_client: FlaskClient
