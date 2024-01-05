@@ -3,8 +3,9 @@ Compound Assay Platform Flask application.
 
 Flask entry point.
 """
+import logging
 from os import environ, path
-from typing import Optional, cast
+from typing import Optional
 
 import json_logging
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
@@ -58,6 +59,9 @@ def create_app(
         name: The name of the application. Replaces the value of `FLASK_APP` if not None.
         environment: The environment in which to run Flask. Can be one of `development`, `test`, or `production`. Replaces `FLASK_ENV` if not None.
     """
+    # set up the default configuration as soon as possible
+    # also required to call before json_logging.config_root_logger()
+    logging.basicConfig(force=True)
 
     config_overrides = {}
     if environ.get("FLASK_APP"):
@@ -166,14 +170,16 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     app = connexion_app.app
     config.update_flask_config(app.config)
 
-    # flask request log handler
-    # enable_json = not environ.get("PLAINTEXT_LOG_OUTPUT")
-    # FIXME this errors in the new structure
-    json_logging.init_connexion(enable_json=True)  # enable_json)
-    json_logging.init_request_instrument(connexion_app)
-    # if enable_json:
-    #    json_logging.config_root_logger()
-    json_logging.config_root_logger()
+    enable_json_logging = config.logging.format == "JSON"
+    if enable_json_logging:
+        json_logging.init_connexion(  # pyright: ignore[reportUnknownMemberType]
+            enable_json=enable_json_logging
+        )
+        json_logging.init_request_instrument(  # pyright: ignore[reportUnknownMemberType]
+            connexion_app
+        )
+        json_logging.config_root_logger()  # pyright: ignore[reportUnknownMemberType]
+
     app.logger.setLevel(environ.get("LOGLEVEL", "INFO").upper())
 
     options: dict[str, bool | str] = {
@@ -213,9 +219,19 @@ def configure_blueprint_routes(
 
     app = Flask(config.flask.app_name)
     config.update_flask_config(app.config)
-    json_logging.init_flask(enable_json=True)
-    json_logging.init_request_instrument(app)
-    json_logging.config_root_logger()
+
+    enable_json_logging = config.logging.format == "JSON"
+    if enable_json_logging:
+        # json_logging.init_flask(enable_json=enable_json_logging)
+        # json_logging.ENABLE_JSON_LOGGING = True
+        json_logging.init_flask(  # pyright: ignore[reportUnknownMemberType]
+            enable_json=enable_json_logging
+        )
+        # json_logging.__init(framework_name="flask")
+        json_logging.init_request_instrument(  # pyright: ignore[reportUnknownMemberType]
+            app
+        )
+        json_logging.config_root_logger()  # pyright: ignore[reportUnknownMemberType]
 
     blueprint_modules = _import_blueprint_modules(app, blueprint_import_subdir)
     _register_blueprint_modules(app, blueprint_modules)

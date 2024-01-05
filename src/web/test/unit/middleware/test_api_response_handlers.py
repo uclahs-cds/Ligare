@@ -42,7 +42,7 @@ class TestApiResponseHandlers(CreateApp):
     def test__wrap_all_api_responses__sets_CORS_headers(
         self, header: str, value: str, flask_client: FlaskClient, mocker: MockerFixture
     ):
-        config = self._get_basic_config()
+        config = self._basic_config()
         config.web.security.cors.origin = value
         _ = mocker.patch("BL_Python.web.middleware.Config", side_effect=config)
         _ = flask_client.get("/")

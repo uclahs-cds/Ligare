@@ -11,7 +11,7 @@ class TestCreateApp(CreateApp):
     def test__loads_config_from_toml(self, mocker: MockerFixture):
         load_config_mock = mocker.patch(
             "BL_Python.web.application.load_config",
-            return_value=self._get_basic_config(),
+            return_value=self._basic_config(),
         )
 
         toml_filename = (
@@ -36,7 +36,7 @@ class TestCreateApp(CreateApp):
         var_value: str,
         mocker: MockerFixture,
     ):
-        config = self._get_basic_config()
+        config = self._basic_config()
         object.__setattr__(config.flask, config_var_name, var_value)
 
         environ.update({envvar_name: var_value})

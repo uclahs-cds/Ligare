@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 class LoggingConfig(BaseModel):
     log_level: str = "INFO"
+    format: Literal["plaintext", "JSON"] = "JSON"
 
 
 class WebSecurityCorsConfig(BaseModel):

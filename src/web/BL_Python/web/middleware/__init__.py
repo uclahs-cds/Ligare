@@ -1,11 +1,12 @@
 import json
 import re
+import uuid
 from logging import Logger
-from typing import Awaitable, Callable, Dict, MutableMapping, TypeVar, cast
+from typing import Awaitable, Callable, Dict, TypeVar, cast
 from uuid import uuid4
 
 import json_logging
-from flask import Flask, Request, Response, request, session
+from flask import Flask, Request, Response, request
 from flask.typing import (
     AfterRequestCallable,
     BeforeRequestCallable,
@@ -71,20 +72,50 @@ def bind_errorhandler(
     return app.errorhandler(code_or_exception)
 
 
-def _get_correlation_id(log: Logger):
-    _session = cast(MutableMapping[str, str], session)
+def _get_correlation_id(log: Logger) -> str:
+    correlation_id = _get_correlation_id_from_json_logging(log)
+
+    if not correlation_id:
+        correlation_id = _get_correlation_id_from_headers(log)
+
+    return correlation_id
+
+
+def _get_correlation_id_from_headers(log: Logger) -> str:
     try:
-        _session[CORRELATION_ID_HEADER] = json_logging.get_correlation_id(request)
-        return _session[CORRELATION_ID_HEADER]
-    except Exception as e:
-        correlation_id = _session.get(CORRELATION_ID_HEADER)
-        if not correlation_id:
+        correlation_id = request.headers.get(CORRELATION_ID_HEADER)
+
+        if correlation_id:
+            # validate format
+            _ = uuid.UUID(correlation_id)
+        else:
             correlation_id = str(uuid4())
-            session[CORRELATION_ID_HEADER] = correlation_id
-            log.warning(
-                f'`json_logging` not configured. Generated new UUID "{correlation_id}" for request correlation ID. Error: "{e}"'
+            log.info(
+                f'Generated new UUID "{correlation_id}" for {CORRELATION_ID_HEADER} request header.'
             )
+
         return correlation_id
+
+    except ValueError as e:
+        log.warning(f"Badly formatted {CORRELATION_ID_HEADER} received in request.")
+        raise e
+
+
+def _get_correlation_id_from_json_logging(log: Logger) -> str | None:
+    correlation_id: None | str
+    try:
+        correlation_id = json_logging.get_correlation_id(request)
+        # validate format
+        _ = uuid.UUID(correlation_id)
+        return correlation_id
+    except ValueError as e:
+        log.warning(f"Badly formatted {CORRELATION_ID_HEADER} received in request.")
+        raise e
+    except Exception as e:
+        log.debug(
+            f"Error received when getting {CORRELATION_ID_HEADER} header from `json_logging`. Possibly `json_logging` is not configured, and this is not an error.",
+            exc_info=e,
+        )
 
 
 INCOMING_REQUEST_MESSAGE = "Incoming request:\n\

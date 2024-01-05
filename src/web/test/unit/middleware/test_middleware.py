@@ -1,40 +1,102 @@
-from typing import Callable
+import uuid
+from typing import Callable, Literal
+from uuid import uuid4
 
 import pytest
+from BL_Python.web.config import Config
 from BL_Python.web.middleware import (
-    _get_correlation_id,  # pyright: ignore[reportPrivateUsage,reportUnusedImport]
+    _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
 from BL_Python.web.middleware import (
     CORRELATION_ID_HEADER,
     bind_errorhandler,
     bind_requesthandler,
 )
-from flask import Flask, Response, abort, session  # pyright: ignore[reportUnusedImport]
-from flask.ctx import RequestContext
+from flask import Flask, Response, abort
 from flask.testing import FlaskClient
 from mock import MagicMock
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
-from ..create_app import CreateApp
+from ..create_app import CreateApp, FlaskClientConfigurable, FlaskRequestConfigurable
 
 
 class TestMiddleware(CreateApp):
-    def test___get_correlation_id__uses_existing_correlation_id_when_already_set(self):
-        pass
-
-    def test___get_correlation_id__sets_correlation_id_when_json_logging_enabled(self):
-        pass
-
-    def test___get_correlation_id__sets_correlation_id_when_json_logging_disabled(
-        self, flask_request: RequestContext, mocker: MockerFixture
+    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    def test___register_api_response_handlers__sets_correlation_id_response_header_when_not_set_in_request_header(
+        self,
+        format: Literal["plaintext", "JSON"],
+        flask_client_configurable: FlaskClientConfigurable,
+        basic_config: Config,
     ):
-        ## m = mocker.patch("BL_Python.web.middleware.session")
-        # mocker.patch.object(flask_request.session, "__getitem__", return_value=a)
-        # mocker.patch.object(flask_request.session, "get", return_value=b)
-        # mocker.patch.object(session, "__setitem__")
-        correlation_id = _get_correlation_id(MagicMock())
-        assert session[CORRELATION_ID_HEADER] == correlation_id
+        basic_config.logging.format = format
+        flask_client = flask_client_configurable(basic_config)
+        response = flask_client.get("/")
+
+        assert response.headers[CORRELATION_ID_HEADER]
+        _ = uuid.UUID(response.headers[CORRELATION_ID_HEADER])
+
+    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    def test___register_api_response_handlers__sets_correlation_id_response_header_when_set_in_request_header(
+        self,
+        format: Literal["plaintext", "JSON"],
+        flask_client_configurable: FlaskClientConfigurable,
+        basic_config: Config,
+    ):
+        basic_config.logging.format = format
+        flask_client = flask_client_configurable(basic_config)
+        correlation_id = str(uuid4())
+        response = flask_client.get(
+            "/", headers={CORRELATION_ID_HEADER: correlation_id}
+        )
+
+        assert response.headers[CORRELATION_ID_HEADER] == correlation_id
+
+    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    def test___get_correlation_id__validates_correlation_id_when_set_in_request_headers(
+        self,
+        format: Literal["plaintext", "JSON"],
+        flask_request_configurable: FlaskRequestConfigurable,
+        basic_config: Config,
+    ):
+        basic_config.logging.format = format
+        correlation_id = "abc123"
+        with flask_request_configurable(
+            basic_config, {"headers": {CORRELATION_ID_HEADER: correlation_id}}
+        ):
+            with pytest.raises(
+                ValueError, match="^badly formed hexadecimal UUID string$"
+            ):
+                _ = _get_correlation_id(MagicMock())
+
+    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    def test___get_correlation_id__uses_existing_correlation_id_when_set_in_request_headers(
+        self,
+        format: Literal["plaintext", "JSON"],
+        flask_request_configurable: FlaskRequestConfigurable,
+        basic_config: Config,
+    ):
+        basic_config.logging.format = format
+        correlation_id = str(uuid4())
+        with flask_request_configurable(
+            basic_config, {"headers": {CORRELATION_ID_HEADER: correlation_id}}
+        ):
+            correlation_id = _get_correlation_id(MagicMock())
+            assert correlation_id == correlation_id
+
+    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    def test___get_correlation_id__sets_correlation_id(
+        self,
+        format: Literal["plaintext", "JSON"],
+        flask_request_configurable: FlaskRequestConfigurable,
+        basic_config: Config,
+    ):
+        basic_config.logging.format = format
+        with flask_request_configurable(basic_config):
+            correlation_id = _get_correlation_id(MagicMock())
+
+            assert correlation_id
+            _ = uuid.UUID(correlation_id)
 
     def test__bind_requesthandler__returns_decorated_flask_request_hook(
         self, flask_client: FlaskClient
