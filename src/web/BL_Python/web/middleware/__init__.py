@@ -2,7 +2,7 @@ import json
 import re
 import uuid
 from logging import Logger
-from typing import Awaitable, Callable, Dict, TypeVar, cast
+from typing import Awaitable, Callable, Dict, TypeVar
 from uuid import uuid4
 
 import json_logging
@@ -247,7 +247,11 @@ def register_error_handlers(app: Flask):
     def catch_all_catastrophic(error: Exception, log: Logger):
         log.exception(error)
 
-        response = {"status_code": 500, "error_msg": "Unknown error."}
+        response = {
+            "status_code": 500,
+            "error_msg": "Unknown error.",
+            "status": "Internal Server Error",
+        }
         return response, 500
 
     @bind_errorhandler(app, HTTPException)
@@ -269,7 +273,7 @@ def register_error_handlers(app: Flask):
     def unauthorized(error: Unauthorized, log: Logger):
         log.info(error)
 
-        if error.response is None:
+        if error.response is None or not isinstance(error.response, Response):
             response = {
                 "status_code": 401,
                 "error_msg": error.description,
@@ -277,7 +281,7 @@ def register_error_handlers(app: Flask):
             }
             return response, 401
 
-        response = cast(Response, error.response)
+        response = error.response
         data = {
             "status_code": response.status_code,
             "error_msg": response.data.decode(),

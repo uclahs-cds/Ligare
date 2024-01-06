@@ -2,7 +2,9 @@ import logging
 from typing import Any, cast
 
 import pytest
+from BL_Python.web.config import Config
 from BL_Python.web.middleware import (
+    CONTENT_SECURITY_POLICY_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER,
@@ -16,7 +18,7 @@ from flask_injector import FlaskInjector
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from ..create_app import CreateApp
+from ..create_app import CreateApp, FlaskClientConfigurable
 
 
 class TestApiResponseHandlers(CreateApp):
@@ -31,21 +33,53 @@ class TestApiResponseHandlers(CreateApp):
 
         assert flask_before_request_mock.called
 
+    def test__wrap_all_api_responses__sets_CSP_header(
+        self,
+        flask_client_configurable: FlaskClientConfigurable,
+        basic_config: Config,
+    ):
+        csp_value = "default-src 'self' cdn.example.com;"
+        basic_config.web.security.csp = csp_value
+        flask_client = flask_client_configurable(basic_config)
+        response = flask_client.get("/")
+        header_value = response.headers.get(CONTENT_SECURITY_POLICY_HEADER)
+        assert header_value == csp_value
+
     @pytest.mark.parametrize(
-        "header,value",
+        "header,value,config_attribute_name",
         [
-            (CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, "example.com"),
-            (CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, ""),
-            (CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER, ""),
+            (CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, "example.com", "origin"),
+            (
+                CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
+                "False",
+                "allow_credentials",
+            ),
+            (
+                CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
+                "True",
+                "allow_credentials",
+            ),
+            (CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER, ["GET"], "allow_methods"),
+            (
+                CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
+                ["POST", "OPTIONS", "GET"],
+                "allow_methods",
+            ),
         ],
     )
     def test__wrap_all_api_responses__sets_CORS_headers(
-        self, header: str, value: str, flask_client: FlaskClient, mocker: MockerFixture
+        self,
+        header: str,
+        value: str,
+        config_attribute_name: str,
+        flask_client_configurable: FlaskClientConfigurable,
+        basic_config: Config,
     ):
-        config = self._basic_config()
-        config.web.security.cors.origin = value
-        _ = mocker.patch("BL_Python.web.middleware.Config", side_effect=config)
-        _ = flask_client.get("/")
+        setattr(basic_config.web.security.cors, config_attribute_name, value)
+        flask_client = flask_client_configurable(basic_config)
+        response = flask_client.get("/")
+        header_value = response.headers.get(header)
+        assert header_value == ",".join(value) if isinstance(value, list) else value
 
     def test__log_all_api_responses__logs_response_information(
         self,
