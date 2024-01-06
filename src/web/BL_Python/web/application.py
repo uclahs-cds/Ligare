@@ -10,17 +10,6 @@ from typing import Optional
 import json_logging
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
 from BL_Python.programming.dependency_injection import ConfigModule
-
-# from CAP.app.blueprints.sso import *
-# from CAP.app.dependencies import AppModule, AppSamlModule
-# from CAP.app.handlers import (
-#    register_api_request_handlers,
-#    register_api_response_handlers,
-#    register_app_teardown_handlers,
-#    register_error_handlers,
-# )
-# from CAP.app.services.user.login_manager import LoginManager
-# from CAP.database.models.CAP import Base
 from connexion import (  # pyright: ignore[reportMissingTypeStubs] Connexion is missing py.typed file
     FlaskApp,
 )
@@ -28,7 +17,6 @@ from flask import Blueprint, Flask, url_for
 from injector import Module
 from lib_programname import get_path_executed_script
 
-# from .config import Config, ConfigBuilder, load_config
 from .config import Config
 from .middleware import (
     configure_dependencies,
