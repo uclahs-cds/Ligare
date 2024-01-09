@@ -6,7 +6,7 @@ from flask.sessions import SessionMixin
 from itsdangerous import URLSafeTimedSerializer
 
 if TYPE_CHECKING:
-    from _typeshed import ReadableBuffer
+    from _typeshed import ReadableBuffer  # pragma: no cover
 
 
 def _get_serializer(
