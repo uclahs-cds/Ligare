@@ -1,12 +1,17 @@
 from os import environ
+from typing import Any, cast
 
 import pytest
+from BL_Python.programming.config import AbstractConfig
+from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import (
     configure_blueprint_routes,
     configure_openapi,
     create_app,
 )
 from BL_Python.web.config import Config
+from flask_injector import FlaskInjector
+from pydantic import BaseModel
 from pytest_mock import MockerFixture
 
 from ..create_app import CreateApp, FlaskClientConfigurable
@@ -49,6 +54,27 @@ class TestCreateApp(CreateApp):
         assert load_config_mock.called
         assert load_config_mock.call_args and load_config_mock.call_args[0]
         assert load_config_mock.call_args[0][1] == toml_filename
+
+    def test__create_app__uses_custom_config_types(self, mocker: MockerFixture):
+        toml_filename = f"{TestCreateApp.test__create_app__uses_custom_config_types.__name__}-config.toml"
+        toml_load_result = {
+            "flask": {
+                "app_name": f"{TestCreateApp.test__create_app__uses_custom_config_types.__name__}-app_name"
+            },
+            "custom": {"foo": get_random_str(k=26)},
+        }
+
+        _ = mocker.patch("toml.load", return_value=toml_load_result)
+
+        class CustomConfig(BaseModel, AbstractConfig):
+            foo: str = get_random_str(k=26)
+
+        app = create_app(
+            config_filename=toml_filename, application_configs=[CustomConfig]
+        )
+        assert (
+            cast(FlaskInjector, cast(Any, app).injector).injector.get(CustomConfig).foo
+        ) == toml_load_result["custom"]["foo"]
 
     @pytest.mark.parametrize(
         "envvar_name,config_var_name,var_value",
