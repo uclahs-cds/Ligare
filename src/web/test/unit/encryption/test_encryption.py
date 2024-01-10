@@ -1,7 +1,5 @@
-from random import sample
-from string import ascii_letters
-
 import pytest
+from BL_Python.programming.str import get_random_str
 from BL_Python.web.encryption import (
     _EMPTY_SECRET_KEY_MESSAGE,  # pyright:ignore[reportPrivateUsage]
 )
@@ -22,8 +20,8 @@ def test__decrypt_flask_cookie__raises_exception_with_empty_secret_key():
 
 
 def test__encrypt_flask_cookie__returns_serialized_dictionary():
-    secret_key = "".join(sample(ascii_letters, k=26))
-    cookie_value = "".join(sample(ascii_letters, k=26))
+    secret_key = get_random_str(k=26)
+    cookie_value = get_random_str(k=26)
     encrypted_cookie = encrypt_flask_cookie(
         secret_key,
         {
@@ -36,8 +34,8 @@ def test__encrypt_flask_cookie__returns_serialized_dictionary():
 
 
 def test__decrypt_flask_cookie__returns_correct_cookie_value():
-    secret_key = "".join(sample(ascii_letters, k=26))
-    cookie_value = "".join(sample(ascii_letters, k=26))
+    secret_key = get_random_str(k=26)
+    cookie_value = get_random_str(k=26)
     encrypted_cookie = encrypt_flask_cookie(
         secret_key,
         {
