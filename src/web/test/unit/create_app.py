@@ -1,3 +1,6 @@
+import importlib
+import logging
+from collections import defaultdict
 from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivateUsage]
 from contextlib import ExitStack
 from typing import Any, Generator, Protocol, cast
@@ -17,6 +20,7 @@ from flask import Flask
 from flask.ctx import RequestContext
 from flask.sessions import SecureCookieSession
 from flask.testing import FlaskClient
+from mock import MagicMock
 from pytest_mock import MockerFixture
 
 
@@ -38,6 +42,8 @@ class FlaskRequestConfigurable(Protocol):
 
 
 class CreateApp:
+    _automatic_mocks: dict[str, MagicMock] = defaultdict()
+
     def _basic_config(self) -> Config:
         return Config(
             flask=FlaskConfig(
@@ -148,14 +154,39 @@ class CreateApp:
     # then tells pytest to use it for every test in the class
     @pytest.fixture(autouse=True)
     def setup_method_fixture(self, mocker: MockerFixture):
-        _ = mocker.patch("io.open")
-        _ = mocker.patch("toml.decoder.loads", return_value={})
-        _ = mocker.patch(
-            "BL_Python.web.application._import_blueprint_modules", return_value=[]
-        )
+        # pre-test execution
+
+        # the pytest log formatters need to be restored
+        # in the event json_logging changes them, otherwise
+        # some tests may fail
+        log_formatters = [handler.formatter for handler in logging.getLogger().handlers]
+
+        self._automatic_mocks = {}
+
+        mock_targets: list[tuple[str] | tuple[str, Any]] = [
+            ("io.open",),
+            ("toml.decoder.loads", {}),
+            ("BL_Python.web.application._import_blueprint_modules", []),
+        ]
+
+        for mock_target in mock_targets:
+            if len(mock_target) == 1:
+                (target_name,) = mock_target
+                mock = mocker.patch(target_name)
+            else:
+                (target_name, return_value) = mock_target
+                mock = mocker.patch(target_name)
+                mock.return_value = return_value
+
+            self._automatic_mocks[target_name] = mock
+
+        # post-test execution
+        yield
+
+        for i, handler in enumerate(logging.getLogger().handlers):
+            # this assumes handlers are in the same order
+            # so is prone to breakage
+            handler.formatter = log_formatters[i]
+
         # json_logging relies on global, so they must be reset between each test
-        json_logging._current_framework = None  # pyright: ignore[reportPrivateUsage]
-        json_logging._request_util = None  # pyright: ignore[reportPrivateUsage]
-        json_logging._default_formatter = None  # pyright: ignore[reportPrivateUsage]
-        json_logging.ENABLE_JSON_LOGGING = False
-        json_logging.ENABLE_JSON_LOGGING_DEBUG = False
+        _ = importlib.reload(json_logging)

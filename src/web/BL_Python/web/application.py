@@ -210,12 +210,9 @@ def configure_blueprint_routes(
 
     enable_json_logging = config.logging.format == "JSON"
     if enable_json_logging:
-        # json_logging.init_flask(enable_json=enable_json_logging)
-        # json_logging.ENABLE_JSON_LOGGING = True
         json_logging.init_flask(  # pyright: ignore[reportUnknownMemberType]
             enable_json=enable_json_logging
         )
-        # json_logging.__init(framework_name="flask")
         json_logging.init_request_instrument(  # pyright: ignore[reportUnknownMemberType]
             app
         )
