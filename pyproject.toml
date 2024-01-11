@@ -201,6 +201,7 @@ dynamic_context = "test_function"
 relative_files = true
 omit = [
     ".venv/*",
+    "*/.venv/*",
     ".github-venv/*",
     "*/test/*",
     "*/src/*/test/*",
