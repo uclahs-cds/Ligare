@@ -23,6 +23,13 @@ from ..create_app import CreateApp, FlaskClientConfigurable
 
 class TestCreateApp(CreateApp):
     # TODO extend blueprint and openapi tests to cover each relevant config attribute
+    def test__configure_blueprint_routes__requires_flask_config(self):
+        with pytest.raises(
+            Exception,
+            match=r"^Flask configuration is empty\. Review the `flask` section of your application's `config\.toml`\.$",
+        ):
+            _ = configure_blueprint_routes(Config())
+
     def test__configure_blueprint_routes__creates_flask_app_using_config(
         self, mocker: MockerFixture
     ):
@@ -36,13 +43,6 @@ class TestCreateApp(CreateApp):
             _ = configure_blueprint_routes(Config(flask=FlaskConfig(app_name=app_name)))
 
         flask_mock.assert_called_with(app_name)
-
-    def test__configure_blueprint_routes__requires_flask_config(self):
-        with pytest.raises(
-            Exception,
-            match=r"^Flask configuration is empty\. Review the `flask` section of your application's `config\.toml`\.$",
-        ):
-            _ = configure_blueprint_routes(Config())
 
     @pytest.mark.parametrize("filename", ["foo", "foo.py", "__main__.py"])
     def test__configure_blueprint_routes__when_discovering_blueprints_ignores_directories_in_path(
