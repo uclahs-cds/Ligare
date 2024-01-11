@@ -1,4 +1,6 @@
+import pathlib
 from os import environ
+from pathlib import Path
 from typing import Any, cast
 
 import pytest
@@ -10,6 +12,7 @@ from BL_Python.web.application import (
     create_app,
 )
 from BL_Python.web.config import Config, FlaskConfig
+from flask import Blueprint
 from flask_injector import FlaskInjector
 from mock import MagicMock
 from pydantic import BaseModel
@@ -60,31 +63,29 @@ class TestCreateApp(CreateApp):
             )
         )
         type(glob_item_mock).name = filename
-        with mocker.patch(
+
+        app_name = f"{TestCreateApp.test__configure_blueprint_routes__when_discovering_blueprints_ignores_directories_in_path.__name__}-app_name"
+
+        _path = Path
+        _ = mocker.patch(
             "pathlib.Path",
             return_value=MagicMock(
-                glob=MagicMock(
-                    return_value=[
-                        MagicMock(
-                            is_file=MagicMock(
-                                # fakes a directory
-                                return_value=False
-                            ),
-                            # fakes a non-Python filename
-                            name=filename,
-                        )
-                    ]
-                ),
+                glob=MagicMock(return_value=[glob_item_mock]),
             ),
-        ):
-            app_name = f"{TestCreateApp.test__configure_blueprint_routes__when_discovering_blueprints_ignores_directories_in_path.__name__}-app_name"
+        )
 
+        try:
             flask_app = configure_blueprint_routes(
                 Config(
                     flask=FlaskConfig(app_name=app_name),
                 ),
                 ".",
             )
+        finally:
+            # mocker doesn't appear to restore pathlib.Path correctly
+            # either through automatic cleanup, `with` statements,
+            # or `mocker.stop`.
+            pathlib.Path = _path
 
         assert not spec_lookup_mock.called
         assert flask_app.blueprints == {}
@@ -116,26 +117,97 @@ class TestCreateApp(CreateApp):
             )
         )
         type(glob_item_mock).name = filename
-        with mocker.patch(
+
+        spec_lookup_mock = mocker.patch("importlib.util.spec_from_file_location")
+        _ = mocker.patch("importlib.util.module_from_spec")
+
+        app_name = f"{TestCreateApp.test__configure_blueprint_routes__when_discovering_blueprints_registers_python_files_and_modules.__name__}-app_name"
+
+        _ = mocker.patch(
             "pathlib.Path",
             return_value=MagicMock(
                 glob=MagicMock(return_value=[glob_item_mock]),
             ),
-        ):
-            spec_lookup_mock = mocker.patch("importlib.util.spec_from_file_location")
-            _ = mocker.patch("importlib.util.module_from_spec")
+        )
 
-            app_name = f"{TestCreateApp.test__configure_blueprint_routes__when_discovering_blueprints_ignores_directories_in_path.__name__}-app_name"
-
+        _path = Path
+        try:
             flask_app = configure_blueprint_routes(
                 Config(
                     flask=FlaskConfig(app_name=app_name),
                 ),
                 ".",
             )
+        finally:
+            # mocker doesn't appear to restore pathlib.Path correctly
+            # either through automatic cleanup, `with` statements,
+            # or `mocker.stop`.
+            pathlib.Path = _path
 
         spec_lookup_mock.assert_called()
         assert flask_app.blueprints == {}
+
+    @pytest.mark.parametrize(
+        "is_file,filename",
+        [
+            (True, "foo"),
+            (True, "foo.py"),
+            (True, "__main__.py"),
+            (True, "__init__.py"),
+            (False, "__init__.py"),
+        ],
+    )
+    def test__configure_blueprint_routes__when_discovering_blueprints_registers_blueprint_modules(
+        self, is_file: bool, filename: str, mocker: MockerFixture
+    ):
+        mocker.stop(
+            self._automatic_mocks["BL_Python.web.application._import_blueprint_modules"]
+        )
+
+        _ = mocker.patch("BL_Python.web.application._get_program_dir", return_value=".")
+        _ = mocker.patch("BL_Python.web.application._get_exec_dir", return_value=".")
+        _ = mocker.patch("importlib.util.spec_from_file_location")
+        _ = mocker.patch("flask.app.Flask.register_blueprint")
+
+        glob_item_mock = MagicMock(
+            is_file=MagicMock(
+                # fakes a directory
+                return_value=is_file
+            )
+        )
+        type(glob_item_mock).name = filename
+
+        blueprint = Blueprint("foo_blueprint", "")
+        _ = mocker.patch(
+            "importlib.util.module_from_spec",
+            return_value=MagicMock(foo_blueprint=blueprint),
+        )
+
+        app_name = f"{TestCreateApp.test__configure_blueprint_routes__when_discovering_blueprints_registers_blueprint_modules.__name__}-app_name"
+
+        _path = Path
+        _ = mocker.patch(
+            "pathlib.Path",
+            return_value=MagicMock(
+                glob=MagicMock(return_value=[glob_item_mock, glob_item_mock]),
+            ),
+        )
+
+        try:
+            flask_app = configure_blueprint_routes(
+                Config(
+                    flask=FlaskConfig(app_name=app_name),
+                ),
+                ".",
+            )
+        finally:
+            # mocker doesn't appear to restore pathlib.Path correctly
+            # either through automatic cleanup, `with` statements,
+            # or `mocker.stop`.
+            pathlib.Path = _path
+
+        assert cast(MagicMock, flask_app.register_blueprint).call_count == 2
+        cast(MagicMock, flask_app.register_blueprint).assert_called_with(blueprint)
 
     def test__configure_blueprint_routes__when_discovering_blueprints_stops_when_module_load_fails(
         self, mocker: MockerFixture
@@ -156,24 +228,32 @@ class TestCreateApp(CreateApp):
         type(glob_item_mock).name = "__init__.py"
         _ = mocker.patch("importlib.util.spec_from_file_location", return_value=None)
         _ = mocker.patch("importlib.util.module_from_spec")
-        with mocker.patch(
+
+        _path = Path
+        _ = mocker.patch(
             "pathlib.Path",
             return_value=MagicMock(
                 glob=MagicMock(return_value=[glob_item_mock]),
             ),
-        ):
-            app_name = f"{TestCreateApp.test__configure_blueprint_routes__when_discovering_blueprints_ignores_directories_in_path.__name__}-app_name"
+        )
+        app_name = f"{TestCreateApp.test__configure_blueprint_routes__when_discovering_blueprints_stops_when_module_load_fails.__name__}-app_name"
 
-            with pytest.raises(
-                Exception,
-                match=rf"^Module cannot be created from path {glob_item_mock}$",
-            ):
+        with pytest.raises(
+            Exception,
+            match=rf"^Module cannot be created from path {glob_item_mock}$",
+        ):
+            try:
                 _ = configure_blueprint_routes(
                     Config(
                         flask=FlaskConfig(app_name=app_name),
                     ),
                     ".",
                 )
+            finally:
+                # mocker doesn't appear to restore pathlib.Path correctly
+                # either through automatic cleanup, `with` statements,
+                # or `mocker.stop`.
+                pathlib.Path = _path
 
     def test__configure_openapi__requires_flask_config(self):
         with pytest.raises(
