@@ -11,7 +11,7 @@ from BL_Python.web.application import (
     configure_openapi,
     create_app,
 )
-from BL_Python.web.config import Config, FlaskConfig
+from BL_Python.web.config import Config, FlaskConfig, FlaskOpenApiConfig
 from flask import Blueprint
 from flask_injector import FlaskInjector
 from mock import MagicMock
@@ -364,3 +364,39 @@ class TestCreateApp(CreateApp):
                 _ = create_app()
         else:
             _ = create_app()
+
+    @pytest.mark.parametrize("type", ["basic", "openapi"])
+    def test__create_app__configures_appropriate_app_type_based_on_config(
+        self, type: str, mocker: MockerFixture
+    ):
+        toml_filename = f"{TestCreateApp.test__create_app__configures_appropriate_app_type_based_on_config.__name__}-config.toml"
+        app_name = f"{TestCreateApp.test__create_app__configures_appropriate_app_type_based_on_config.__name__}-app_name"
+        _ = mocker.patch("BL_Python.web.application.register_error_handlers")
+        _ = mocker.patch("BL_Python.web.application.register_api_request_handlers")
+        _ = mocker.patch("BL_Python.web.application.register_api_response_handlers")
+        _ = mocker.patch("BL_Python.web.application.configure_dependencies")
+
+        if type == "basic":
+            configure_method_mock = mocker.patch(
+                "BL_Python.web.application.configure_blueprint_routes"
+            )
+            config = Config(flask=FlaskConfig(app_name=app_name))
+            _ = mocker.patch(
+                "BL_Python.web.application.load_config", return_value=config
+            )
+            _ = create_app(toml_filename)
+        elif type == "openapi":
+            configure_method_mock = mocker.patch(
+                "BL_Python.web.application.configure_openapi"
+            )
+            config = Config(
+                flask=FlaskConfig(app_name=app_name, openapi=FlaskOpenApiConfig())
+            )
+            _ = mocker.patch(
+                "BL_Python.web.application.load_config", return_value=config
+            )
+            _ = create_app(toml_filename)
+        else:
+            raise Exception(f"Invalid test parameter value '{type}'.")
+
+        configure_method_mock.assert_called_once_with(config)
