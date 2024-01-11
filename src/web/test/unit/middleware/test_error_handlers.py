@@ -3,10 +3,9 @@ from typing import Callable
 
 import pytest
 from flask import Response, abort
-from flask.testing import FlaskClient
 from werkzeug.exceptions import Unauthorized
 
-from ..create_app import CreateApp
+from ..create_app import CreateApp, FlaskClientInjector
 
 
 def _raise_custom_unauthorized_exception():
@@ -33,11 +32,11 @@ class TestErrorHandlers(CreateApp):
         expected_status_code: int,
         expected_status_msg: str,
         failure_lambda: Callable[[], Response],
-        flask_client: FlaskClient,
+        flask_client: FlaskClientInjector,
     ):
-        _ = flask_client.application.route("/")(failure_lambda)
+        _ = flask_client.client.application.route("/")(failure_lambda)
 
-        response = flask_client.get("/")
+        response = flask_client.client.get("/")
         response_dict: dict[str, str | int] = JSONDecoder().decode(response.text)
 
         assert response_dict["error_msg"]

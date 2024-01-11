@@ -5,7 +5,7 @@ Flask entry point.
 """
 import logging
 from os import environ, path
-from typing import Optional
+from typing import NamedTuple, Optional
 
 import json_logging
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
@@ -14,6 +14,7 @@ from connexion import (  # pyright: ignore[reportMissingTypeStubs] Connexion is 
     FlaskApp,
 )
 from flask import Blueprint, Flask, url_for
+from flask_injector import FlaskInjector
 from injector import Module
 from lib_programname import get_path_executed_script
 
@@ -29,6 +30,11 @@ _get_program_dir = lambda: path.dirname(get_path_executed_script())
 _get_exec_dir = lambda: path.abspath(".")
 
 
+class FlaskAppInjector(NamedTuple):
+    app: Flask
+    injector: FlaskInjector
+
+
 def create_app(
     config_filename: str = "config.toml",
     # FIXME should be a list of PydanticDataclass
@@ -39,7 +45,7 @@ def create_app(
     # just grow and grow.
     # startup_builder: IStartupBuilder,
     # config: Config,
-) -> Flask:
+) -> FlaskAppInjector:
     """
     Bootstrap the Flask applcation.
 
@@ -112,9 +118,8 @@ def create_app(
     # to `AbstractConfig`.
     modules = application_modules + [ConfigModule(full_config, type(full_config))]
     flask_injector = configure_dependencies(app, application_modules=modules)
-    app.injector = flask_injector  # pyright: ignore[reportGeneralTypeIssues]
 
-    return app
+    return FlaskAppInjector(app, flask_injector)
 
 
 def configure_openapi(config: Config, name: Optional[str] = None):

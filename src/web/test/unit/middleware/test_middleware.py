@@ -13,12 +13,16 @@ from BL_Python.web.middleware import (
     bind_requesthandler,
 )
 from flask import Flask, Response, abort
-from flask.testing import FlaskClient
 from mock import MagicMock
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
-from ..create_app import CreateApp, FlaskClientConfigurable, FlaskRequestConfigurable
+from ..create_app import (
+    CreateApp,
+    FlaskClientConfigurable,
+    FlaskClientInjector,
+    FlaskRequestConfigurable,
+)
 
 
 class TestMiddleware(CreateApp):
@@ -31,7 +35,7 @@ class TestMiddleware(CreateApp):
     ):
         basic_config.logging.format = format
         flask_client = flask_client_configurable(basic_config)
-        response = flask_client.get("/")
+        response = flask_client.client.get("/")
 
         assert response.headers[CORRELATION_ID_HEADER]
         _ = uuid.UUID(response.headers[CORRELATION_ID_HEADER])
@@ -46,7 +50,7 @@ class TestMiddleware(CreateApp):
         basic_config.logging.format = format
         flask_client = flask_client_configurable(basic_config)
         correlation_id = str(uuid4())
-        response = flask_client.get(
+        response = flask_client.client.get(
             "/", headers={CORRELATION_ID_HEADER: correlation_id}
         )
 
@@ -99,27 +103,27 @@ class TestMiddleware(CreateApp):
             _ = uuid.UUID(correlation_id)
 
     def test__bind_requesthandler__returns_decorated_flask_request_hook(
-        self, flask_client: FlaskClient
+        self, flask_client: FlaskClientInjector
     ):
         flask_request_hook_mock = MagicMock()
 
         wrapped_decorator = bind_requesthandler(
-            flask_client.application, flask_request_hook_mock
+            flask_client.client.application, flask_request_hook_mock
         )
         _ = wrapped_decorator(lambda: None)
 
         assert flask_request_hook_mock.called
 
     def test__bind_requesthandler__calls_decorated_function_when_app_is_run(
-        self, flask_client: FlaskClient
+        self, flask_client: FlaskClientInjector
     ):
         wrapped_handler_decorator = bind_requesthandler(
-            flask_client.application, Flask.before_request
+            flask_client.client.application, Flask.before_request
         )
         request_handler_mock = MagicMock()
         _ = wrapped_handler_decorator(request_handler_mock)
 
-        _ = flask_client.get("/")
+        _ = flask_client.client.get("/")
 
         assert request_handler_mock.called
 
@@ -127,12 +131,12 @@ class TestMiddleware(CreateApp):
     def test__bind_errorhandler__binds_flask_errorhandler(
         self,
         code_or_exception: type[Exception] | int,
-        flask_client: FlaskClient,
+        flask_client: FlaskClientInjector,
         mocker: MockerFixture,
     ):
         flask_errorhandler_mock = mocker.patch("flask.Flask.errorhandler")
 
-        _ = bind_errorhandler(flask_client.application, code_or_exception)
+        _ = bind_errorhandler(flask_client.client.application, code_or_exception)
 
         flask_errorhandler_mock.assert_called_with(code_or_exception)
 
@@ -153,15 +157,15 @@ class TestMiddleware(CreateApp):
         code_or_exception_type: type[Exception] | int,
         expected_exception_type: type[Exception],
         failure_lambda: Callable[[], Response],
-        flask_client: FlaskClient,
+        flask_client: FlaskClientInjector,
     ):
         application_errorhandler_mock = MagicMock()
-        _ = bind_errorhandler(flask_client.application, code_or_exception_type)(
+        _ = bind_errorhandler(flask_client.client.application, code_or_exception_type)(
             application_errorhandler_mock
         )
-        _ = flask_client.application.route("/")(failure_lambda)
+        _ = flask_client.client.application.route("/")(failure_lambda)
 
-        _ = flask_client.get("/")
+        _ = flask_client.client.get("/")
 
         assert application_errorhandler_mock.called
         assert isinstance(

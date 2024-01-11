@@ -13,23 +13,21 @@ from BL_Python.web.middleware import (
     register_api_request_handlers,
 )
 from flask import Flask, Response
-from flask.testing import FlaskClient
-from flask_injector import FlaskInjector
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from ..create_app import CreateApp, FlaskClientConfigurable
+from ..create_app import CreateApp, FlaskClientConfigurable, FlaskClientInjector
 
 
 class TestApiResponseHandlers(CreateApp):
     def test__register_api_response_handlers__binds_flask_before_request(
-        self, flask_client: FlaskClient, mocker: MockerFixture
+        self, flask_client: FlaskClientInjector, mocker: MockerFixture
     ):
         flask_before_request_mock = mocker.patch(
             "flask.sansio.scaffold.Scaffold.before_request"
         )
 
-        register_api_request_handlers(flask_client.application)
+        register_api_request_handlers(flask_client.client.application)
 
         assert flask_before_request_mock.called
 
@@ -41,7 +39,7 @@ class TestApiResponseHandlers(CreateApp):
         csp_value = "default-src 'self' cdn.example.com;"
         basic_config.web.security.csp = csp_value
         flask_client = flask_client_configurable(basic_config)
-        response = flask_client.get("/")
+        response = flask_client.client.get("/")
         header_value = response.headers.get(CONTENT_SECURITY_POLICY_HEADER)
         assert header_value == csp_value
 
@@ -77,17 +75,17 @@ class TestApiResponseHandlers(CreateApp):
     ):
         setattr(basic_config.web.security.cors, config_attribute_name, value)
         flask_client = flask_client_configurable(basic_config)
-        response = flask_client.get("/")
+        response = flask_client.client.get("/")
         header_value = response.headers.get(header)
         assert header_value == ",".join(value) if isinstance(value, list) else value
 
     def test__log_all_api_responses__logs_response_information(
         self,
-        flask_client: FlaskClient,
+        flask_client: FlaskClientInjector,
         caplog: LogCaptureFixture,
     ):
         with caplog.at_level(logging.DEBUG):
-            response = flask_client.get("/")
+            response = flask_client.client.get("/")
 
         msg = OUTGOING_RESPONSE_MESSAGE % (
             response.status_code,
@@ -100,11 +98,11 @@ class TestApiResponseHandlers(CreateApp):
     def test__log_all_api_responses__logs_extra_response_information(
         self,
         property_name: str,
-        flask_client: FlaskClient,
+        flask_client: FlaskClientInjector,
         caplog: LogCaptureFixture,
     ):
         with caplog.at_level(logging.DEBUG):
-            response = flask_client.get("/")
+            response = flask_client.client.get("/")
 
         msg = OUTGOING_RESPONSE_MESSAGE % (
             response.status_code,
@@ -122,25 +120,22 @@ class TestApiResponseHandlers(CreateApp):
 
     def test__log_all_api_responses__logs_response_headers_without_session_id(
         self,
-        flask_client: FlaskClient,
+        flask_client: FlaskClientInjector,
         caplog: LogCaptureFixture,
     ):
         wrapped_handler_decorator = bind_requesthandler(
-            flask_client.application, Flask.before_request
+            flask_client.client.application, Flask.before_request
         )
 
         def set_session_cookie():
-            response = cast(
-                FlaskInjector,
-                flask_client.application.injector,  # pyright: ignore[reportUnknownMemberType,reportGeneralTypeIssues]
-            ).injector.get(Response)
+            response = flask_client.injector.injector.get(Response)
             response.set_cookie("session", "foo")
             return response
 
         _ = wrapped_handler_decorator(set_session_cookie)
 
         with caplog.at_level(logging.DEBUG):
-            response = flask_client.get("/")
+            response = flask_client.client.get("/")
         msg = OUTGOING_RESPONSE_MESSAGE % (
             response.status_code,
             response.status,

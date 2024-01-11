@@ -13,7 +13,7 @@ from flask.typing import (
     ResponseReturnValue,
 )
 from flask_injector import FlaskInjector
-from injector import Module, inject
+from injector import Injector, Module, inject
 from werkzeug.exceptions import HTTPException, Unauthorized
 
 from ..config import Config
@@ -304,5 +304,7 @@ def configure_dependencies(
 
     # bootstrap the flask application and its dependencies
     flask_injector = FlaskInjector(app, modules)
+
+    flask_injector.injector.binder.bind(Injector, flask_injector.injector)
 
     return flask_injector

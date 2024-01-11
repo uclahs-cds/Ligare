@@ -34,8 +34,8 @@ def create_app():
     # TODO For now, create the database and tables
     # when the application starts. This behavior
     # will be removed when Alembic is integrated.
-    session = cast(Injector, app.injector.injector).get(Session)
-    cast(MetaData, Base.metadata).create_all(session.bind) # pyright: ignore[reportGeneralTypeIssues]
+    session = app.injector.injector.get(Session)
+    cast(MetaData, Base.metadata).create_all(session.bind)
 
     {#
         # TODO ideally this would use @inject w/ session: Session,
@@ -43,7 +43,7 @@ def create_app():
         sending in the dependencies to remove_db.
         For now, just resolve it directly.
     #}
-    @app.teardown_request
+    @app.app.teardown_request
     def remove_db(exception: Any):
         session = app.injector.injector.get(Session)
         session.rollback()

@@ -3,12 +3,12 @@ import logging
 from collections import defaultdict
 from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivateUsage]
 from contextlib import ExitStack
-from typing import Any, Generator, Protocol, cast
+from typing import Any, Generator, NamedTuple, Protocol, cast
 
 import json_logging
 import pytest
 from BL_Python.programming.str import get_random_str
-from BL_Python.web.application import create_app
+from BL_Python.web.application import FlaskAppInjector, create_app
 from BL_Python.web.config import (
     Config,
     FlaskConfig,
@@ -16,21 +16,26 @@ from BL_Python.web.config import (
     FlaskSessionCookieConfig,
 )
 from BL_Python.web.encryption import encrypt_flask_cookie
-from flask import Flask
 from flask.ctx import RequestContext
 from flask.sessions import SecureCookieSession
 from flask.testing import FlaskClient
+from flask_injector import FlaskInjector
 from mock import MagicMock
 from pytest_mock import MockerFixture
 
 
+class FlaskClientInjector(NamedTuple):
+    client: FlaskClient
+    injector: FlaskInjector
+
+
 class FlaskAppGetter(Protocol):
-    def __call__(self) -> Flask:
+    def __call__(self) -> FlaskAppInjector:
         ...
 
 
 class FlaskClientConfigurable(Protocol):
-    def __call__(self, config: Config) -> FlaskClient:
+    def __call__(self, config: Config) -> FlaskClientInjector:
         ...
 
 
@@ -61,7 +66,7 @@ class CreateApp:
 
     def __get_basic_flask_app(
         self, config: Config, mocker: MockerFixture
-    ) -> Generator[Flask, Any, None]:
+    ) -> Generator[FlaskAppInjector, Any, None]:
         with mocker.patch(
             "BL_Python.web.application.load_config",
             return_value=config,
@@ -72,14 +77,15 @@ class CreateApp:
     @pytest.fixture()
     def _get_basic_flask_app(
         self, basic_config: Config, mocker: MockerFixture
-    ) -> Flask:
+    ) -> FlaskAppInjector:
         return next(self.__get_basic_flask_app(basic_config, mocker))
 
     def _flask_client(
         self, flask_app_getter: FlaskAppGetter
-    ) -> Generator[FlaskClient, Any, None]:
+    ) -> Generator[FlaskClientInjector, Any, None]:
         with ExitStack() as stack:
-            client = stack.enter_context(flask_app_getter().test_client())
+            (app, injector) = flask_app_getter()
+            client = stack.enter_context(app.test_client())
             app = client.application
             flask_session_ctx_manager = cast(
                 _GeneratorContextManager[SecureCookieSession],
@@ -97,10 +103,12 @@ class CreateApp:
                 max_age=app.config['PERMANENT_SESSION_LIFETIME'] if app.config['PERMANENT_SESSION'] else None,
                 # fmt: on
             )
-            yield client
+            yield FlaskClientInjector(client, injector)
 
     @pytest.fixture()
-    def flask_client(self, _get_basic_flask_app: Flask) -> FlaskClient:
+    def flask_client(
+        self, _get_basic_flask_app: FlaskAppInjector
+    ) -> FlaskClientInjector:
         return next(self._flask_client(lambda: _get_basic_flask_app))
 
     @pytest.fixture()
@@ -143,7 +151,7 @@ class CreateApp:
         ):
             flask_client = flask_client_configurable(config)
             request_context = next(
-                self._flask_request(flask_client, request_context_args)
+                self._flask_request(flask_client[0], request_context_args)
             )
             return request_context
 
