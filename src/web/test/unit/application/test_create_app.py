@@ -52,9 +52,6 @@ class TestCreateApp(CreateApp):
             self._automatic_mocks["BL_Python.web.application._import_blueprint_modules"]
         )
 
-        _ = mocker.patch("BL_Python.web.application._get_program_dir", return_value=".")
-        _ = mocker.patch("BL_Python.web.application._get_exec_dir", return_value=".")
-
         spec_lookup_mock = mocker.patch("importlib.util.spec_from_file_location")
         glob_item_mock = MagicMock(
             is_file=MagicMock(
@@ -106,9 +103,6 @@ class TestCreateApp(CreateApp):
         mocker.stop(
             self._automatic_mocks["BL_Python.web.application._import_blueprint_modules"]
         )
-
-        _ = mocker.patch("BL_Python.web.application._get_program_dir", return_value=".")
-        _ = mocker.patch("BL_Python.web.application._get_exec_dir", return_value=".")
 
         glob_item_mock = MagicMock(
             is_file=MagicMock(
@@ -163,9 +157,6 @@ class TestCreateApp(CreateApp):
         mocker.stop(
             self._automatic_mocks["BL_Python.web.application._import_blueprint_modules"]
         )
-
-        _ = mocker.patch("BL_Python.web.application._get_program_dir", return_value=".")
-        _ = mocker.patch("BL_Python.web.application._get_exec_dir", return_value=".")
         _ = mocker.patch("importlib.util.spec_from_file_location")
         _ = mocker.patch("flask.app.Flask.register_blueprint")
 
@@ -216,9 +207,6 @@ class TestCreateApp(CreateApp):
             self._automatic_mocks["BL_Python.web.application._import_blueprint_modules"]
         )
 
-        _ = mocker.patch("BL_Python.web.application._get_program_dir", return_value=".")
-        _ = mocker.patch("BL_Python.web.application._get_exec_dir", return_value=".")
-
         glob_item_mock = MagicMock(
             is_file=MagicMock(
                 # fakes a directory
@@ -261,6 +249,29 @@ class TestCreateApp(CreateApp):
             match=r"^OpenAPI configuration is empty\. Review the `openapi` section of your application's `config\.toml`\.$",
         ):
             _ = configure_openapi(Config())
+
+    def test__configure_openapi__creates_flask_app_using_config(
+        self, mocker: MockerFixture
+    ):
+        connexion_mock = mocker.patch("BL_Python.web.application.FlaskApp")
+
+        app_name = f"{TestCreateApp.test__configure_openapi__creates_flask_app_using_config.__name__}-app_name"
+        spec_path = "."
+
+        with pytest.raises(
+            RuntimeError,
+            match=r"^app is not a valid connexion.app.Connexion app instance$",
+        ):
+            _ = configure_openapi(
+                Config(
+                    flask=FlaskConfig(
+                        app_name=app_name,
+                        openapi=FlaskOpenApiConfig(spec_path=spec_path),
+                    )
+                )
+            )
+
+        connexion_mock.assert_called_with(app_name, specification_dir=spec_path)
 
     def test__create_app__requires_flask_config(
         self, flask_client_configurable: FlaskClientConfigurable

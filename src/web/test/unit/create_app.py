@@ -175,6 +175,8 @@ class CreateApp:
             ("io.open",),
             ("toml.decoder.loads", {}),
             ("BL_Python.web.application._import_blueprint_modules", []),
+            ("BL_Python.web.application._get_program_dir", "."),
+            ("BL_Python.web.application._get_exec_dir", "."),
         ]
 
         for mock_target in mock_targets:
