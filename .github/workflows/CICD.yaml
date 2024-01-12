@@ -22,8 +22,8 @@ on:
         required: true
 
 jobs:
-  All:
-    name: Build and test BL_Python
+  Checkout:
+    name: Checkout and Setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -53,11 +53,54 @@ jobs:
           source .github-venv/bin/activate
           ./install_all.sh -e
 
+      - uses: actions/cache@v3
+        name: Cache repository build
+        id: cache-repository-build
+        with:
+          path: ${{ github.workspace }}
+          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+
+  Pyright:
+    name: Static type checking
+    runs-on: ubuntu-latest
+    needs:
+      - Checkout
+    if: ${{( always() && !cancelled() ) }}
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/cache/restore@v3
+        name: Restore repository build
+        id: restore-repository-build
+        with:
+          path: path/to/dependencies
+          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+
       - name: Test with pyright
         run: |
           echo Running pyright
           source .github-venv/bin/activate
           pyright
+
+  Pytest:
+    name: Automated testing
+    runs-on: ubuntu-latest
+    needs:
+      - Checkout
+    if: ${{( always() && !cancelled() ) }}
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/cache/restore@v3
+        name: Restore repository build
+        id: restore-repository-build
+        with:
+          path: path/to/dependencies
+          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
 
       - name: Test with pytest and generate reports
         run: |
@@ -80,6 +123,24 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+  Style:
+    name: Style and formatting
+    runs-on: ubuntu-latest
+    needs:
+      - Checkout
+    if: ${{( always() && !cancelled() ) }}
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/cache/restore@v3
+        name: Restore repository build
+        id: restore-repository-build
+        with:
+          path: path/to/dependencies
+          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+
       - name: Check code style
         run: |
           source .github-venv/bin/activate
@@ -89,3 +150,44 @@ jobs:
         run: |
           source .github-venv/bin/activate
           isort --check-only src
+
+  Final-status-check:
+    name: Check workflow success
+    runs-on: ubuntu-latest
+    needs:
+      - Checkout
+      - Pyright
+      - Pytest
+      - Style
+    # this job should run regardless of success, failure, or skips,
+    # but not if the workflow is canceled. `always()` ignores canceled,
+    # and so we check for the canceled state.
+    if: ${{( always() && !cancelled() ) }}
+    steps:
+      - name: Failure
+        # once the "needs" jobs have completed, if any of them
+        # failed, then the entire workflow is considered failed.
+        if: |
+          contains(toJSON(needs), '"result": "failure"')
+        env:
+          RANDOM_EOF: |
+            EOF`echo $RANDOM | base64`
+        run: |
+          echo One or more required jobs did not complete successfully;
+          jq -r 'keys[] as $job | "Job ID: \($job)'"\n"'    \(.[$job] | .result)"' <<${{ env.RANDOM_EOF }}
+            ${{ toJSON(needs) }}
+          ${{ env.RANDOM_EOF }}
+          exit 1;
+
+      # TODO consider uploading the repository so errors
+      # can be more easily resolved.
+      #- name: Upload repository build
+      #  uses: actions/upload-artifact@v3
+      #  with:
+      #    name: repository-build
+      #    path: ${{ github.workspace }}
+      #    retention-days: 1
+      #    if-no-files-found: error
+
+      - name: Success
+        run: echo Workflow succeeded; exit 0;
