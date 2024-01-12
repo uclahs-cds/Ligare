@@ -25,12 +25,16 @@ jobs:
   Checkout:
     name: Checkout and Setup
     runs-on: ubuntu-latest
+
+    outputs:
+      repository-build-cache-key: ${{ steps.repository-build-cache-key.outputs.cache_key }}
+
     strategy:
       matrix:
         python-version: ["3.10"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -53,12 +57,20 @@ jobs:
           source .github-venv/bin/activate
           ./install_all.sh -e
 
-      - uses: actions/cache@v3
+      - id: repository-build-cache-key
+        run: |
+          cache_key='${{ runner.os }}-${{ github.event_name != 'workflow_dispatch' || github.run_attempt }}-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}'
+          echo "cache_key=$cache_key" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache/save@v3
         name: Cache repository build
-        id: cache-repository-build
+        id: repository-build-cache
         with:
           path: ${{ github.workspace }}
-          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+          # Use the same cache between Workflow runs _except_ when the event is a workflow_dispatch.
+          # This should result in cache keys like "Linux-true-abc123" for all runs _except_ workflow_dispatch,
+          # and cache keys like "linux-123-abc123" for workflow_dispatch.
+          key: ${{ steps.repository-build-cache-key.outputs.cache_key }}
 
   Pyright:
     name: Static type checking
@@ -71,12 +83,14 @@ jobs:
         python-version: ["3.10"]
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
         with:
           path: path/to/dependencies
-          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+          key: ${{ needs.Checkout.outputs.repository-build-cache-key }}
 
       - name: Test with pyright
         run: |
@@ -95,12 +109,14 @@ jobs:
         python-version: ["3.10"]
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
         with:
           path: path/to/dependencies
-          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+          key: ${{ needs.Checkout.outputs.repository-build-cache-key }}
 
       - name: Test with pytest and generate reports
         run: |
@@ -134,12 +150,14 @@ jobs:
         python-version: ["3.10"]
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
         with:
           path: path/to/dependencies
-          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+          key: ${{ needs.Checkout.outputs.repository-build-cache-key }}
 
       - name: Check code style
         run: |
