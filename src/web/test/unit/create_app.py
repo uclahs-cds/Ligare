@@ -4,7 +4,7 @@ from collections import defaultdict
 from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivateUsage]
 from contextlib import ExitStack
 from functools import lru_cache
-from typing import Any, Callable, Generator, NamedTuple, Protocol, cast
+from typing import Any, Generator, NamedTuple, Protocol, cast
 
 import json_logging
 import pytest
