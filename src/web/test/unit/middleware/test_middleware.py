@@ -1,9 +1,9 @@
 import uuid
-from typing import Callable, Literal
+from typing import Callable, Literal, cast
 from uuid import uuid4
 
 import pytest
-from BL_Python.web.config import Config
+from BL_Python.web.config import Config, FlaskConfig, FlaskOpenApiConfig
 from BL_Python.web.middleware import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
@@ -17,37 +17,54 @@ from mock import MagicMock
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
-from ..create_app import (
-    CreateApp,
-    FlaskClientConfigurable,
-    FlaskClientInjector,
-    FlaskRequestConfigurable,
-)
+from ..create_app import CreateApp, FlaskClientConfigurable, FlaskRequestConfigurable
 
 
 class TestMiddleware(CreateApp):
-    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    @pytest.mark.parametrize(
+        "config_type,format",
+        [
+            ("basic", ["plaintext", "JSON"]),
+            ("openapi", ["plaintext", "JSON"]),
+        ],
+    )
     def test___register_api_response_handlers__sets_correlation_id_response_header_when_not_set_in_request_header(
         self,
+        config_type: str,
         format: Literal["plaintext", "JSON"],
         flask_client_configurable: FlaskClientConfigurable,
         basic_config: Config,
     ):
         basic_config.logging.format = format
+        if config_type == "openapi":
+            cast(FlaskConfig, basic_config.flask).openapi = FlaskOpenApiConfig(
+                spec_path=".", use_swagger=False
+            )
         flask_client = flask_client_configurable(basic_config)
         response = flask_client.client.get("/")
 
         assert response.headers[CORRELATION_ID_HEADER]
         _ = uuid.UUID(response.headers[CORRELATION_ID_HEADER])
 
-    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    @pytest.mark.parametrize(
+        "config_type,format",
+        [
+            ("basic", ["plaintext", "JSON"]),
+            ("openapi", ["plaintext", "JSON"]),
+        ],
+    )
     def test___register_api_response_handlers__sets_correlation_id_response_header_when_set_in_request_header(
         self,
+        config_type: str,
         format: Literal["plaintext", "JSON"],
         flask_client_configurable: FlaskClientConfigurable,
         basic_config: Config,
     ):
         basic_config.logging.format = format
+        if config_type == "openapi":
+            cast(FlaskConfig, basic_config.flask).openapi = FlaskOpenApiConfig(
+                spec_path=".", use_swagger=False
+            )
         flask_client = flask_client_configurable(basic_config)
         correlation_id = str(uuid4())
         response = flask_client.client.get(
@@ -56,14 +73,25 @@ class TestMiddleware(CreateApp):
 
         assert response.headers[CORRELATION_ID_HEADER] == correlation_id
 
-    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    @pytest.mark.parametrize(
+        "config_type,format",
+        [
+            ("basic", ["plaintext", "JSON"]),
+            ("openapi", ["plaintext", "JSON"]),
+        ],
+    )
     def test___get_correlation_id__validates_correlation_id_when_set_in_request_headers(
         self,
+        config_type: str,
         format: Literal["plaintext", "JSON"],
         flask_request_configurable: FlaskRequestConfigurable,
         basic_config: Config,
     ):
         basic_config.logging.format = format
+        if config_type == "openapi":
+            cast(FlaskConfig, basic_config.flask).openapi = FlaskOpenApiConfig(
+                spec_path=".", use_swagger=False
+            )
         correlation_id = "abc123"
         with flask_request_configurable(
             basic_config, {"headers": {CORRELATION_ID_HEADER: correlation_id}}
@@ -73,14 +101,25 @@ class TestMiddleware(CreateApp):
             ):
                 _ = _get_correlation_id(MagicMock())
 
-    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    @pytest.mark.parametrize(
+        "config_type,format",
+        [
+            ("basic", ["plaintext", "JSON"]),
+            ("openapi", ["plaintext", "JSON"]),
+        ],
+    )
     def test___get_correlation_id__uses_existing_correlation_id_when_set_in_request_headers(
         self,
+        config_type: str,
         format: Literal["plaintext", "JSON"],
         flask_request_configurable: FlaskRequestConfigurable,
         basic_config: Config,
     ):
         basic_config.logging.format = format
+        if config_type == "openapi":
+            cast(FlaskConfig, basic_config.flask).openapi = FlaskOpenApiConfig(
+                spec_path=".", use_swagger=False
+            )
         correlation_id = str(uuid4())
         with flask_request_configurable(
             basic_config, {"headers": {CORRELATION_ID_HEADER: correlation_id}}
@@ -88,25 +127,46 @@ class TestMiddleware(CreateApp):
             correlation_id = _get_correlation_id(MagicMock())
             assert correlation_id == correlation_id
 
-    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    @pytest.mark.parametrize(
+        "config_type,format",
+        [
+            ("basic", ["plaintext", "JSON"]),
+            ("openapi", ["plaintext", "JSON"]),
+        ],
+    )
     def test___get_correlation_id__sets_correlation_id(
         self,
+        config_type: str,
         format: Literal["plaintext", "JSON"],
         flask_request_configurable: FlaskRequestConfigurable,
         basic_config: Config,
     ):
         basic_config.logging.format = format
+        if config_type == "openapi":
+            cast(FlaskConfig, basic_config.flask).openapi = FlaskOpenApiConfig(
+                spec_path=".", use_swagger=False
+            )
         with flask_request_configurable(basic_config):
             correlation_id = _get_correlation_id(MagicMock())
 
             assert correlation_id
             _ = uuid.UUID(correlation_id)
 
+    @pytest.mark.parametrize("config_type", ["basic", "openapi"])
     def test__bind_requesthandler__returns_decorated_flask_request_hook(
-        self, flask_client: FlaskClientInjector
+        self,
+        config_type: str,
+        flask_client_configurable: FlaskClientConfigurable,
+        basic_config: Config,
     ):
         flask_request_hook_mock = MagicMock()
 
+        if config_type == "openapi":
+            cast(FlaskConfig, basic_config.flask).openapi = FlaskOpenApiConfig(
+                spec_path=".", use_swagger=False
+            )
+
+        flask_client = flask_client_configurable(basic_config)
         wrapped_decorator = bind_requesthandler(
             flask_client.client.application, flask_request_hook_mock
         )
@@ -114,9 +174,19 @@ class TestMiddleware(CreateApp):
 
         assert flask_request_hook_mock.called
 
+    @pytest.mark.parametrize("config_type", ["basic"])  # , "openapi"])
     def test__bind_requesthandler__calls_decorated_function_when_app_is_run(
-        self, flask_client: FlaskClientInjector
+        self,
+        config_type: str,
+        flask_client_configurable: FlaskClientConfigurable,
+        basic_config: Config,
     ):
+        if config_type == "openapi":
+            cast(FlaskConfig, basic_config.flask).openapi = FlaskOpenApiConfig(
+                spec_path=".", use_swagger=False
+            )
+
+        flask_client = flask_client_configurable(basic_config)
         wrapped_handler_decorator = bind_requesthandler(
             flask_client.client.application, Flask.before_request
         )
@@ -127,42 +197,79 @@ class TestMiddleware(CreateApp):
 
         assert request_handler_mock.called
 
-    @pytest.mark.parametrize("code_or_exception", [Exception, HTTPException, 401])
+    @pytest.mark.parametrize(
+        "code_or_exception,config_type",
+        [
+            (Exception, "basic"),
+            (HTTPException, "basic"),
+            (401, "basic"),
+            (Exception, "openapi"),
+            (HTTPException, "openapi"),
+            (401, "openapi"),
+        ],
+    )
     def test__bind_errorhandler__binds_flask_errorhandler(
         self,
         code_or_exception: type[Exception] | int,
-        flask_client: FlaskClientInjector,
+        config_type: str,
+        flask_client_configurable: FlaskClientConfigurable,
+        basic_config: Config,
         mocker: MockerFixture,
     ):
         flask_errorhandler_mock = mocker.patch("flask.Flask.errorhandler")
+
+        if config_type == "openapi":
+            cast(FlaskConfig, basic_config.flask).openapi = FlaskOpenApiConfig(
+                spec_path=".", use_swagger=False
+            )
+
+        flask_client = flask_client_configurable(basic_config)
 
         _ = bind_errorhandler(flask_client.client.application, code_or_exception)
 
         flask_errorhandler_mock.assert_called_with(code_or_exception)
 
     @pytest.mark.parametrize(
-        "code_or_exception_type,expected_exception_type,failure_lambda",
+        "code_or_exception_type,expected_exception_type,config_type,failure_lambda",
         [
             (
                 Exception,
                 ZeroDivisionError,
+                "basic",
                 lambda: 1 / 0,  # 1/0 to raise an exception (any exception)
             ),
-            (HTTPException, BadRequest, lambda: abort(400)),
-            (401, Unauthorized, lambda: abort(401)),
+            (HTTPException, BadRequest, "basic", lambda: abort(400)),
+            (401, Unauthorized, "basic", lambda: abort(401)),
+            # (
+            #    Exception,
+            #    ZeroDivisionError,
+            #    "openapi",
+            #    lambda: 1 / 0,
+            # ),
+            # (HTTPException, BadRequest, "openapi", lambda: abort(400)),
+            # (401, Unauthorized, "openapi", lambda: abort(401)),
         ],
     )
     def test__bind_errorhandler__calls_decorated_function_with_correct_error_when_error_occurs_during_request(
         self,
         code_or_exception_type: type[Exception] | int,
         expected_exception_type: type[Exception],
+        config_type: str,
         failure_lambda: Callable[[], Response],
-        flask_client: FlaskClientInjector,
+        basic_config: Config,
+        flask_client_configurable: FlaskClientConfigurable,
     ):
+        if config_type == "openapi":
+            cast(FlaskConfig, basic_config.flask).openapi = FlaskOpenApiConfig(
+                spec_path=".", use_swagger=False
+            )
+        flask_client = flask_client_configurable(basic_config)
+
         application_errorhandler_mock = MagicMock()
         _ = bind_errorhandler(flask_client.client.application, code_or_exception_type)(
             application_errorhandler_mock
         )
+        # this probably doesn't need to be done w/ connexion
         _ = flask_client.client.application.route("/")(failure_lambda)
 
         _ = flask_client.client.get("/")

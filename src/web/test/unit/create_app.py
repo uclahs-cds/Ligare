@@ -3,10 +3,12 @@ import logging
 from collections import defaultdict
 from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivateUsage]
 from contextlib import ExitStack
+from functools import lru_cache
 from typing import Any, Generator, NamedTuple, Protocol, cast
 
 import json_logging
 import pytest
+import yaml
 from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import FlaskAppInjector, create_app
 from BL_Python.web.config import (
@@ -16,6 +18,9 @@ from BL_Python.web.config import (
     FlaskSessionCookieConfig,
 )
 from BL_Python.web.encryption import encrypt_flask_cookie
+from connexion import (  # pyright: ignore[reportMissingTypeStubs] Connexion is missing py.typed file
+    FlaskApp,
+)
 from flask.ctx import RequestContext
 from flask.sessions import SecureCookieSession
 from flask.testing import FlaskClient
@@ -27,6 +32,7 @@ from pytest_mock import MockerFixture
 class FlaskClientInjector(NamedTuple):
     client: FlaskClient
     injector: FlaskInjector
+    connexion_app: FlaskApp | None = None
 
 
 class FlaskAppGetter(Protocol):
@@ -84,7 +90,7 @@ class CreateApp:
         self, flask_app_getter: FlaskAppGetter
     ) -> Generator[FlaskClientInjector, Any, None]:
         with ExitStack() as stack:
-            (app, injector) = flask_app_getter()
+            (app, injector, connexion_app) = flask_app_getter()
             client = stack.enter_context(app.test_client())
             app = client.application
             flask_session_ctx_manager = cast(
@@ -103,7 +109,7 @@ class CreateApp:
                 max_age=app.config['PERMANENT_SESSION_LIFETIME'] if app.config['PERMANENT_SESSION'] else None,
                 # fmt: on
             )
-            yield FlaskClientInjector(client, injector)
+            yield FlaskClientInjector(client, injector, connexion_app)
 
     @pytest.fixture()
     def flask_client(
@@ -157,6 +163,38 @@ class CreateApp:
 
         return _flask_request_getter
 
+    x = 0
+
+    @lru_cache
+    def _get_openapi_spec(self):
+        if self.x > 0:
+            raise Exception("FAILURE")
+        self.x = 1
+        return yaml.safe_load(
+            """openapi: 3.0.3
+servers:
+  - url: http://localhost:5000/
+    description: Test Application
+info:
+  title: "Test Application"
+  version: 3.0.3
+paths:
+  /:
+    get:
+      description: "Check whether the application is running."
+      operationId: "root"
+      parameters: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: "Application is running correctly."
+      summary: "A simple method that returns 200 as long as the application is running."
+"""
+        )
+
     # https://stackoverflow.com/a/55079736
     # creates a fixture on this class called `setup_method_fixture`
     # then tells pytest to use it for every test in the class
@@ -177,6 +215,10 @@ class CreateApp:
             ("BL_Python.web.application._import_blueprint_modules", []),
             ("BL_Python.web.application._get_program_dir", "."),
             ("BL_Python.web.application._get_exec_dir", "."),
+            (
+                "connexion.spec.Specification._load_spec_from_file",
+                self._get_openapi_spec(),
+            ),
         ]
 
         for mock_target in mock_targets:
@@ -192,6 +234,8 @@ class CreateApp:
 
         # post-test execution
         yield
+
+        self._automatic_mocks = {}
 
         for i, handler in enumerate(logging.getLogger().handlers):
             # this assumes handlers are in the same order

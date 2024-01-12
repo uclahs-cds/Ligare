@@ -33,6 +33,7 @@ _get_exec_dir = lambda: path.abspath(".")
 class FlaskAppInjector(NamedTuple):
     app: Flask
     injector: FlaskInjector
+    connexion_app: FlaskApp | None = None
 
 
 def create_app(
@@ -91,9 +92,10 @@ def create_app(
         )
 
     app: Flask
+    openapi: FlaskApp | None = None
 
     if full_config.flask.openapi is not None:
-        openapi: FlaskApp = configure_openapi(full_config)
+        openapi = configure_openapi(full_config)
         app = openapi.app
     else:
         app = configure_blueprint_routes(full_config)
@@ -119,7 +121,7 @@ def create_app(
     modules = application_modules + [ConfigModule(full_config, type(full_config))]
     flask_injector = configure_dependencies(app, application_modules=modules)
 
-    return FlaskAppInjector(app, flask_injector)
+    return FlaskAppInjector(app, flask_injector, openapi)
 
 
 def configure_openapi(config: Config, name: Optional[str] = None):
