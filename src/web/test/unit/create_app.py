@@ -4,7 +4,7 @@ from collections import defaultdict
 from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivateUsage]
 from contextlib import ExitStack
 from functools import lru_cache
-from typing import Any, Generator, NamedTuple, Protocol, cast
+from typing import Any, Callable, Generator, NamedTuple, Protocol, cast
 
 import json_logging
 import pytest
@@ -200,8 +200,11 @@ paths:
     # then tells pytest to use it for every test in the class
     @pytest.fixture(autouse=True)
     def setup_method_fixture(self, mocker: MockerFixture):
-        # pre-test execution
+        setup_artifacts = self._pre_test_setup(mocker)
+        yield
+        self._post_test_teardown(setup_artifacts)
 
+    def _pre_test_setup(self, mocker: MockerFixture):
         # the pytest log formatters need to be restored
         # in the event json_logging changes them, otherwise
         # some tests may fail
@@ -232,9 +235,9 @@ paths:
 
             self._automatic_mocks[target_name] = mock
 
-        # post-test execution
-        yield
+        return log_formatters
 
+    def _post_test_teardown(self, log_formatters: list[logging.Formatter | None]):
         self._automatic_mocks = {}
 
         for i, handler in enumerate(logging.getLogger().handlers):
