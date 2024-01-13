@@ -42,7 +42,7 @@ jobs:
           echo "cache_key=$cache_key" >> $GITHUB_OUTPUT
 
       - uses: actions/cache@v3
-        name: Cache repository build
+        name: Check repository build cache
         id: repository-build-cache
         with:
           path: ${{ github.workspace }}
@@ -52,7 +52,7 @@ jobs:
           key: ${{ steps.repository-build-cache-key.outputs.cache_key }}
 
       - name: Set up Python ${{ matrix.python-version }}
-        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != true }}
+        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != 'true' }}
         uses: actions/setup-python@v4
         id: install_python
         with:
@@ -60,12 +60,12 @@ jobs:
           cache: "pip"
 
       - name: Create Venv
-        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != true }}
+        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != 'true' }}
         run: |
           ${{ steps.install_python.outputs.python-path }} -m venv .github-venv
 
       - name: Install dependencies
-        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != true }}
+        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != 'true' }}
         run: |
           echo Setting up dependencies
           python -m pip install -U pip
