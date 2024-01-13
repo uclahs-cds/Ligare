@@ -36,33 +36,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        id: install_python
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: "pip"
-
-      - name: Create Venv
-        run: |
-          ${{ steps.install_python.outputs.python-path }} -m venv .github-venv
-
-      - name: Install dependencies
-        run: |
-          echo Setting up dependencies
-          python -m pip install -U pip
-          python -m pip install toml
-          REWRITE_DEPENDENCIES=${{ inputs.rewrite_dependencies }} \
-            ./.github/workflows/CICD-scripts/pyproject_dependency_rewrite.py
-          source .github-venv/bin/activate
-          ./install_all.sh -e
-
       - id: repository-build-cache-key
         run: |
           cache_key='${{ runner.os }}-${{ github.event_name != 'workflow_dispatch' || github.run_attempt }}-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}'
           echo "cache_key=$cache_key" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache/save@v3
+      - uses: actions/cache@v3
         name: Cache repository build
         id: repository-build-cache
         with:
@@ -71,6 +50,30 @@ jobs:
           # This should result in cache keys like "Linux-true-abc123" for all runs _except_ workflow_dispatch,
           # and cache keys like "linux-123-abc123" for workflow_dispatch.
           key: ${{ steps.repository-build-cache-key.outputs.cache_key }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != true }}
+        uses: actions/setup-python@v4
+        id: install_python
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Create Venv
+        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != true }}
+        run: |
+          ${{ steps.install_python.outputs.python-path }} -m venv .github-venv
+
+      - name: Install dependencies
+        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != true }}
+        run: |
+          echo Setting up dependencies
+          python -m pip install -U pip
+          python -m pip install toml
+          REWRITE_DEPENDENCIES=${{ inputs.rewrite_dependencies }} \
+            ./.github/workflows/CICD-scripts/pyproject_dependency_rewrite.py
+          source .github-venv/bin/activate
+          ./install_all.sh -e
 
   Pyright:
     name: Static type checking
@@ -83,14 +86,13 @@ jobs:
         python-version: ["3.10"]
 
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
         with:
-          path: path/to/dependencies
           key: ${{ needs.Checkout.outputs.repository-build-cache-key }}
+          path: ${{ github.workspace }}
+          fail-on-cache-miss: true
 
       - name: Test with pyright
         run: |
@@ -109,14 +111,13 @@ jobs:
         python-version: ["3.10"]
 
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
         with:
-          path: path/to/dependencies
           key: ${{ needs.Checkout.outputs.repository-build-cache-key }}
+          path: ${{ github.workspace }}
+          fail-on-cache-miss: true
 
       - name: Test with pytest and generate reports
         run: |
@@ -150,14 +151,13 @@ jobs:
         python-version: ["3.10"]
 
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
         with:
-          path: path/to/dependencies
           key: ${{ needs.Checkout.outputs.repository-build-cache-key }}
+          path: ${{ github.workspace }}
+          fail-on-cache-miss: true
 
       - name: Check code style
         run: |
