@@ -30,22 +30,63 @@ from pytest_mock import MockerFixture
 
 
 class FlaskClientInjector(NamedTuple):
+    """
+    Flask test client and IoC container for the application
+    created by PyTest fixtures.
+    """
+
     client: FlaskClient
     injector: FlaskInjector
     connexion_app: FlaskApp | None = None
 
 
 class FlaskAppGetter(Protocol):
+    """
+    A callable that instantiates a Flask application
+    and returns the application with its IoC container.
+    """
+
     def __call__(self) -> FlaskAppInjector:
         ...
 
 
 class FlaskClientConfigurable(Protocol):
+    """
+    Get a Flask test client using the specified application configuration.
+
+    Args
+    ------
+        config: `Config` The custom application configuration used to instantiate the Flask app.
+
+    Returns
+    ------
+        `FlaskClientInjector`
+    """
+
     def __call__(self, config: Config) -> FlaskClientInjector:
         ...
 
 
 class FlaskRequestConfigurable(Protocol):
+    """
+    Get a Flask request context, creating a Flask test client
+    that uses the specified application configuration and,
+    optionally, specific request context arguments.
+
+    This creates the Flask test client using the `FlaskClientConfigurable` fixture.
+
+    Args
+    ------
+        config: `Config` The custom application configuration used to instantiate the Flask app.
+        request_context_args: `dict[Any, Any] | None = None` The optional request context arguments
+            set up in the request context. These may contain, for example, request headers,
+            authentication credentials, etc.
+
+    Returns
+    ------
+        `RequestContext`
+    """
+
     def __call__(
         self, config: Config, request_context_args: dict[Any, Any] | None = None
     ) -> RequestContext:
