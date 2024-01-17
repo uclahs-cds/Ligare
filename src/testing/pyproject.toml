@@ -43,8 +43,8 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 [tool.setuptools.package-dir]
 "BL_Python.testing" = "BL_Python/testing"
 
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+exclude = ["build*"]
 
 [tool.setuptools.package-data]
 "BL_Python.testing" = ["py.typed"]
