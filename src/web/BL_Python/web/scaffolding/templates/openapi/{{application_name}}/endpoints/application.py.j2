@@ -5,7 +5,8 @@ from logging import Logger
 from injector import inject
 
 
-@inject
-def healthcheck(log: Logger):
-    log.info("Healthcheck")
+# FIXME get injector working with connexion
+#@inject
+def healthcheck()#log: Logger):
+    #log.info("Healthcheck")
     return "healthcheck: '{{application_name}}' is running"

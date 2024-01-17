@@ -25,6 +25,7 @@ def create_app():
     from BL_Python.web.application import create_app as _create_app
     # fmt: off
     app = _create_app(
+        config_filename="{{application_name}}/config.toml",
         application_configs=application_configs,
         application_modules=application_modules
     )

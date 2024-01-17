@@ -33,6 +33,7 @@ dependencies = [
     "Flask",
     "flask-injector",
     "connexion",
+    "connexion[uvicorn]",
     "swagger_ui_bundle",
     "python-dotenv",
     "json-logging",

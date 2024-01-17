@@ -4,9 +4,20 @@ requires = ["setuptools>=42", "wheel"]
 
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"*" = ["*.toml", "*.yaml"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/markdown"}
+
 [project]
 name = "{{application_name}}"
 version = "0.0.1"
+dynamic = ["readme"]
+
 dependencies = [
     "BL_Python.web",
 {% if 'database' in module %}

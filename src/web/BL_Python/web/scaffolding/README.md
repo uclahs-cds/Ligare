@@ -102,4 +102,4 @@ There is currently only one such callback:
 
 This method can modify the scaffold configuration or do anything else necessary for the module and the other templates to render correctly.
 
-For an example, take a look at `modules/database/__hook__.py`. This module prompts the user for a database connection string and adds the value to the scaffold configuration key `module.database`. This is then utilized in the templates `basic/config.toml.j2` and `openapi/config.toml.j2`.
+For an example, take a look at `modules/database/__hook__.py`. This module prompts the user for a database connection string and adds the value to the scaffold configuration key `module.database`. This is then utilized in the templates `basic/{{application_name}}/config.toml.j2` and `openapi/{{application_name}}/config.toml.j2`.

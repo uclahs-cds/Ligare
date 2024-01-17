@@ -184,19 +184,19 @@ def configure_openapi(config: Config, name: Optional[str] = None):
 
     _ = connexion_app.add_api(  # pyright: ignore[reportUnknownMemberType]
         f"{config.flask.app_name}/{config.flask.openapi.spec_path}",
-        base_path="/",
+        # base_path="/",
         validate_responses=config.flask.openapi.validate_responses,
         options=options,
     )
 
-    if config.flask.openapi.use_swagger:
-        # App context needed for url_for.
-        # This can only run after connexion is instantiated
-        # because it registers the swagger UI url.
-        with app.app_context():
-            app.logger.info(
-                f"Swagger UI can be accessed at {url_for('/./_swagger_ui_index', _external=True)}"
-            )
+    # if config.flask.openapi.use_swagger:
+    #    # App context needed for url_for.
+    #    # This can only run after connexion is instantiated
+    #    # because it registers the swagger UI url.
+    #    with app.app_context():
+    #        app.logger.info(
+    #            f"Swagger UI can be accessed at {url_for('/./_swagger_ui_index', _external=True)}"
+    #        )
 
     return connexion_app
 

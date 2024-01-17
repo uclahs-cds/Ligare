@@ -11,6 +11,12 @@ host = "127.0.0.1"
 # FIXME this should be an int
 port = "5000"
 
+[flask.openapi]
+spec_path = 'openapi.yaml'
+validate_responses = false
+use_swagger = true
+swagger_url = "/"
+
 [flask.session]
 permanent = true
 lifetime = 86400
@@ -20,10 +26,11 @@ refresh_each_request = true
 httponly = true
 secure = true
 samesite = 'none'
-secret_key = 'abc123'
+secret_key = '123abc'
 
 [logging]
 log_level = 'INFO'
+format = 'JSON'
 
 [web.security.cors]
 origin = 'http://localhost:5000'
