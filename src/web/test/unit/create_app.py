@@ -62,7 +62,7 @@ T_flask_client = TypeVar("T_flask_client", bound=TFlaskClient, contravariant=Tru
 
 
 @dataclass
-class FlaskClientInjector(Generic[T_flask_client]):
+class ClientInjector(Generic[T_flask_client]):
     """
     Flask test client and IoC container for the application
     created by PyTest fixtures.
@@ -85,7 +85,7 @@ class AppGetter(Protocol, Generic[T_flask_app]):
 TAppInitHook = Callable[[FlaskAppInjector[T_flask_app]], None] | None
 
 
-class ClientAppConfigurable(Protocol[T_flask_app, T_flask_client]):
+class ClientInjectorConfigurable(Protocol[T_flask_app, T_flask_client]):
     """
     Get a Flask test client using the specified application configuration.
 
@@ -107,12 +107,14 @@ class ClientAppConfigurable(Protocol[T_flask_app, T_flask_client]):
         self,
         config: Config,
         app_init_hook: TAppInitHook[T_flask_app] | None = None,
-    ) -> FlaskClientInjector[T_flask_client]:
+    ) -> ClientInjector[T_flask_client]:
         ...
 
 
-FlaskClientAppConfigurable = ClientAppConfigurable[Flask, FlaskClient]
-OpenAPIClientAppConfigurable = ClientAppConfigurable[FlaskApp, TestClient]
+FlaskClientInjectorConfigurable = ClientInjectorConfigurable[Flask, FlaskClient]
+OpenAPIClientInjectorConfigurable = ClientInjectorConfigurable[FlaskApp, TestClient]
+FlaskClientInjector = ClientInjector[FlaskClient]
+OpenAPIClientInjector = ClientInjector[TestClient]
 
 
 class RequestConfigurable(Protocol):
@@ -247,7 +249,7 @@ class CreateApp:
 
     def _flask_client(
         self, flask_app_getter: AppGetter[Flask]
-    ) -> Generator[FlaskClientInjector[FlaskClient], Any, None]:
+    ) -> Generator[ClientInjector[FlaskClient], Any, None]:
         with ExitStack() as stack:
             result = flask_app_getter()
             app = result.app
@@ -280,11 +282,11 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
                 # fmt: on
             )
 
-            yield FlaskClientInjector(client, result.injector)  # , connexion_app)
+            yield ClientInjector(client, result.injector)  # , connexion_app)
 
     def _openapi_client(
         self, flask_app_getter: AppGetter[FlaskApp]
-    ) -> Generator[FlaskClientInjector[TestClient], Any, None]:
+    ) -> Generator[ClientInjector[TestClient], Any, None]:
         with ExitStack() as stack:
             result = flask_app_getter()
             app = result.app
@@ -310,18 +312,18 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
                 #                )
                 # pass
             # app = cast(Flask, client.app.app)
-            yield FlaskClientInjector(client, result.injector)  # , connexion_app)
+            yield ClientInjector(client, result.injector)  # , connexion_app)
 
     @pytest.fixture()
     def flask_client(
         self, _get_basic_flask_app: FlaskAppInjector[Flask]
-    ) -> FlaskClientInjector[FlaskClient]:
+    ) -> ClientInjector[FlaskClient]:
         return next(self._flask_client(lambda: _get_basic_flask_app))
 
     @pytest.fixture()
     def openapi_client(
         self, _get_openapi_app: FlaskAppInjector[FlaskApp]
-    ) -> FlaskClientInjector[TestClient]:
+    ) -> ClientInjector[TestClient]:
         return next(self._openapi_client(lambda: _get_openapi_app))
 
     def _client_configurable(
@@ -332,7 +334,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
         ],
         client_getter: Callable[
             [AppGetter[T_flask_app]],
-            Generator[FlaskClientInjector[T_flask_client], Any, None],
+            Generator[ClientInjector[T_flask_client], Any, None],
         ],
     ):
         def _client_getter(
@@ -348,7 +350,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
     @pytest.fixture()
     def flask_client_configurable(
         self, mocker: MockerFixture
-    ) -> FlaskClientAppConfigurable:
+    ) -> FlaskClientInjectorConfigurable:
         return self._client_configurable(
             mocker, self.__get_basic_flask_app, self._flask_client
         )
@@ -356,7 +358,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
     @pytest.fixture()
     def openapi_client_configurable(
         self, mocker: MockerFixture
-    ) -> OpenAPIClientAppConfigurable:
+    ) -> OpenAPIClientInjectorConfigurable:
         return self._client_configurable(
             mocker, self.__get_openapi_app, self._openapi_client
         )
@@ -381,7 +383,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
     @pytest.fixture()
     def flask_request_configurable(
         self,
-        flask_client_configurable: FlaskClientAppConfigurable,
+        flask_client_configurable: FlaskClientInjectorConfigurable,
     ) -> RequestConfigurable:
         def _flask_request_getter(
             config: Config, request_context_args: dict[Any, Any] | None = None
