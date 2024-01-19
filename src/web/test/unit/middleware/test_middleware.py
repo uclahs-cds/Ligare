@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 import toml
+from BL_Python.web.application import FlaskAppInjector
 from BL_Python.web.config import Config, FlaskConfig, FlaskOpenApiConfig
 from BL_Python.web.middleware import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
@@ -14,6 +15,7 @@ from BL_Python.web.middleware import (
     bind_errorhandler,
     bind_requesthandler,
 )
+from connexion import FlaskApp
 from flask import Flask, Response, abort
 from flask.testing import FlaskClient
 from mock import MagicMock
@@ -21,9 +23,11 @@ from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
 from ..create_app import (
+    ClientConfigurable,
     CreateApp,
-    FlaskClientConfigurable,
-    FlaskRequestConfigurable,
+    FlaskClientInjector,
+    OpenAPIClientConfigurable,
+    RequestConfigurable,
     TestClient,
     TFlaskClient,
 )
@@ -41,7 +45,7 @@ class TestMiddleware(CreateApp):
         self,
         config_type: str,
         format: Literal["plaintext", "JSON"],
-        flask_client_configurable: FlaskClientConfigurable[TFlaskClient],
+        flask_client_configurable: ClientConfigurable[TFlaskClient],
         basic_config: Config,
     ):
         basic_config.logging.format = format
@@ -66,7 +70,7 @@ class TestMiddleware(CreateApp):
         self,
         config_type: str,
         format: Literal["plaintext", "JSON"],
-        flask_client_configurable: FlaskClientConfigurable[TFlaskClient],
+        flask_client_configurable: ClientConfigurable[TFlaskClient],
         basic_config: Config,
     ):
         basic_config.logging.format = format
@@ -93,7 +97,7 @@ class TestMiddleware(CreateApp):
         self,
         config_type: str,
         format: Literal["plaintext", "JSON"],
-        flask_request_configurable: FlaskRequestConfigurable,
+        flask_request_configurable: RequestConfigurable,
         basic_config: Config,
     ):
         basic_config.logging.format = format
@@ -121,7 +125,7 @@ class TestMiddleware(CreateApp):
         self,
         config_type: str,
         format: Literal["plaintext", "JSON"],
-        flask_request_configurable: FlaskRequestConfigurable,
+        flask_request_configurable: RequestConfigurable,
         basic_config: Config,
     ):
         basic_config.logging.format = format
@@ -147,7 +151,7 @@ class TestMiddleware(CreateApp):
         self,
         config_type: str,
         format: Literal["plaintext", "JSON"],
-        flask_request_configurable: FlaskRequestConfigurable,
+        flask_request_configurable: RequestConfigurable,
         basic_config: Config,
     ):
         basic_config.logging.format = format
@@ -165,7 +169,7 @@ class TestMiddleware(CreateApp):
     def test__bind_requesthandler__returns_decorated_flask_request_hook(
         self,
         config_type: str,
-        flask_client_configurable: FlaskClientConfigurable[TFlaskClient],
+        flask_client_configurable: ClientConfigurable[TFlaskClient],
         basic_config: Config,
     ):
         flask_request_hook_mock = MagicMock()
@@ -192,7 +196,7 @@ class TestMiddleware(CreateApp):
     def test__bind_requesthandler__calls_decorated_function_when_app_is_run(
         self,
         config_type: str,
-        flask_client_configurable: FlaskClientConfigurable[FlaskClient],
+        flask_client_configurable: ClientConfigurable[FlaskClient],
         basic_config: Config,
     ):
         if config_type == "openapi":
@@ -226,7 +230,7 @@ class TestMiddleware(CreateApp):
         self,
         code_or_exception: type[Exception] | int,
         config_type: str,
-        flask_client_configurable: FlaskClientConfigurable[TFlaskClient],
+        flask_client_configurable: ClientConfigurable[TFlaskClient],
         basic_config: Config,
         mocker: MockerFixture,
     ):
@@ -261,7 +265,7 @@ class TestMiddleware(CreateApp):
         expected_exception_type: type[Exception],
         failure_lambda: Callable[[], Response],
         basic_config: Config,
-        flask_client_configurable: FlaskClientConfigurable[FlaskClient],
+        flask_client_configurable: ClientConfigurable[FlaskClient],
     ):
         flask_client = flask_client_configurable(basic_config)
 
@@ -297,7 +301,7 @@ class TestMiddleware(CreateApp):
         expected_exception_type: type[Exception],
         failure_lambda: Callable[[], Response],
         openapi_config: Config,
-        flask_client_configurable: FlaskClientConfigurable[TestClient],
+        openapi_client_configurable: OpenAPIClientConfigurable,
         mocker: MockerFixture,
     ):
         # fake_config_dict: AnyDict = {
@@ -307,11 +311,13 @@ class TestMiddleware(CreateApp):
         # The resolver in Connexion uses importlib to find operations
         # in the OpenAPI spec. Instead, just replace `import_module`
         # with this method as the return value. Connexion also
-        # requires that the `root` attribute exists.
+        # requires that the `root` attribute exists because that is
+        # the name of the OperationID in the fake OpenAPI spec.
         def fake_operation_method():
             return "Hello"
 
         fake_operation_method.root = "/"
+
         _ = mocker.patch(
             "connexion.utils.importlib",
             spec=importlib,
@@ -323,16 +329,17 @@ class TestMiddleware(CreateApp):
             return_value=toml.dumps(openapi_config.model_dump()),
         )
 
-        # FIXME need a fixture to create a Connexion test client?
-        flask_client = flask_client_configurable(openapi_config)
-
         application_errorhandler_mock = MagicMock()
-        _ = bind_errorhandler(flask_client.client.app, code_or_exception_type)(
-            application_errorhandler_mock
-        )
+
+        def app_init_hook(app: FlaskAppInjector[FlaskApp]):
+            _ = bind_errorhandler(app.app, code_or_exception_type)(
+                application_errorhandler_mock
+            )
+            # _ = app.app.route("/")(failure_lambda)
+
+        flask_client = openapi_client_configurable(openapi_config, app_init_hook)
 
         # this probably doesn't need to be done w/ connexion
-        _ = flask_client.route("/")(failure_lambda)
 
         _ = flask_client.client.get("/")
 

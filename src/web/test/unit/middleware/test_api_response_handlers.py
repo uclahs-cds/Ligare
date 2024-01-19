@@ -17,7 +17,7 @@ from flask.testing import FlaskClient
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from ..create_app import CreateApp, FlaskClientConfigurable, FlaskClientInjector
+from ..create_app import ClientConfigurable, CreateApp, FlaskClientInjector
 
 
 class TestApiResponseHandlers(CreateApp):
@@ -34,7 +34,7 @@ class TestApiResponseHandlers(CreateApp):
 
     def test__wrap_all_api_responses__sets_CSP_header(
         self,
-        flask_client_configurable: FlaskClientConfigurable[FlaskClient],
+        flask_client_configurable: ClientConfigurable[FlaskClient],
         basic_config: Config,
     ):
         csp_value = "default-src 'self' cdn.example.com;"
@@ -71,7 +71,7 @@ class TestApiResponseHandlers(CreateApp):
         header: str,
         value: str,
         config_attribute_name: str,
-        flask_client_configurable: FlaskClientConfigurable[FlaskClient],
+        flask_client_configurable: ClientConfigurable[FlaskClient],
         basic_config: Config,
     ):
         setattr(basic_config.web.security.cors, config_attribute_name, value)
