@@ -5,22 +5,19 @@ from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivate
 from contextlib import ExitStack
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generator,
-    Generic,
-    Protocol,
-    TypeVar,
-    cast,
-)
+from typing import Any, Callable, Generator, Generic, Protocol, TypeVar, cast
 
 import json_logging
 import pytest
 import yaml
 from BL_Python.programming.str import get_random_str
-from BL_Python.web.application import FlaskAppInjector, T_flask_app, create_app
+from BL_Python.web.application import (
+    App,
+    AppInjector,
+    FlaskAppInjector,
+    OpenAPIAppInjector,
+    T_app,
+)
 from BL_Python.web.config import (
     Config,
     FlaskConfig,
@@ -29,6 +26,8 @@ from BL_Python.web.config import (
     FlaskSessionCookieConfig,
 )
 from BL_Python.web.encryption import encrypt_flask_cookie
+from connexion import FlaskApp
+from connexion.apps.abstract import TestClient
 from flask import Flask, Request, Response
 from flask.ctx import RequestContext
 from flask.sessions import SecureCookieSession
@@ -37,28 +36,8 @@ from flask_injector import FlaskInjector
 from mock import MagicMock
 from pytest_mock import MockerFixture
 
-# fmt: off
-if TYPE_CHECKING:
-    from typing_extensions import override
-
-    from connexion import FlaskApp as _FlaskApp # isort: skip
-    from connexion.apps.abstract import TestClient as _TestClient # isort: skip
-    # In BL_Python.web `app` is always a Flask application
-    class TestClient(_TestClient):
-        app: Flask
-    # Connexion does not specify kwargs type
-    class FlaskApp(_FlaskApp):
-        @override
-        def test_client(self, **kwargs: Any) -> TestClient:
-            ...
-else:
-    from connexion import FlaskApp
-    from connexion.apps.abstract import TestClient
-# fmt: on
-
-
 TFlaskClient = FlaskClient | TestClient
-T_flask_client = TypeVar("T_flask_client", bound=TFlaskClient, contravariant=True)
+T_flask_client = TypeVar("T_flask_client", bound=TFlaskClient)
 
 
 @dataclass
@@ -72,20 +51,20 @@ class ClientInjector(Generic[T_flask_client]):
     injector: FlaskInjector
 
 
-class AppGetter(Protocol, Generic[T_flask_app]):
+class AppGetter(Protocol[T_app]):
     """
     A callable that instantiates a Flask application
     and returns the application with its IoC container.
     """
 
-    def __call__(self) -> FlaskAppInjector[T_flask_app]:
+    def __call__(self) -> AppInjector[T_app]:
         ...
 
 
-TAppInitHook = Callable[[FlaskAppInjector[T_flask_app]], None] | None
+TAppInitHook = Callable[[AppInjector[T_app]], None] | None
 
 
-class ClientInjectorConfigurable(Protocol[T_flask_app, T_flask_client]):
+class ClientInjectorConfigurable(Protocol[T_app, T_flask_client]):
     """
     Get a Flask test client using the specified application configuration.
 
@@ -106,7 +85,7 @@ class ClientInjectorConfigurable(Protocol[T_flask_app, T_flask_client]):
     def __call__(
         self,
         config: Config,
-        app_init_hook: TAppInitHook[T_flask_app] | None = None,
+        app_init_hook: TAppInitHook[T_app] | None = None,
     ) -> ClientInjector[T_flask_client]:
         ...
 
@@ -115,6 +94,7 @@ FlaskClientInjectorConfigurable = ClientInjectorConfigurable[Flask, FlaskClient]
 OpenAPIClientInjectorConfigurable = ClientInjectorConfigurable[FlaskApp, TestClient]
 FlaskClientInjector = ClientInjector[FlaskClient]
 OpenAPIClientInjector = ClientInjector[TestClient]
+OpenAPIAppInitHook = TAppInitHook[FlaskApp]
 
 
 class RequestConfigurable(Protocol):
@@ -207,7 +187,7 @@ class CreateApp:
 
     def __get_basic_flask_app(
         self, config: Config, mocker: MockerFixture
-    ) -> Generator[FlaskAppInjector[Flask], Any, None]:
+    ) -> Generator[FlaskAppInjector, Any, None]:
         # prevents the creation of a Connexion application
         if config.flask is not None:
             config.flask.openapi = None
@@ -216,12 +196,12 @@ class CreateApp:
             "BL_Python.web.application.load_config",
             return_value=config,
         ):
-            app = cast(FlaskAppInjector[Flask], create_app())
+            app = App[Flask].create()
             yield app
 
     def __get_openapi_app(
         self, config: Config, mocker: MockerFixture
-    ) -> Generator[FlaskAppInjector[FlaskApp], Any, None]:
+    ) -> Generator[OpenAPIAppInjector, Any, None]:
         # prevents the creation of a Connexion application
         if config.flask is None or config.flask.openapi is None:
             raise Exception(
@@ -232,19 +212,19 @@ class CreateApp:
             "BL_Python.web.application.load_config",
             return_value=config,
         ):
-            app = cast(FlaskAppInjector[FlaskApp], create_app())
+            app = App[FlaskApp].create()
             yield app
 
     @pytest.fixture()
     def _get_basic_flask_app(
         self, basic_config: Config, mocker: MockerFixture
-    ) -> FlaskAppInjector[Flask]:
+    ) -> FlaskAppInjector:
         return next(self.__get_basic_flask_app(basic_config, mocker))
 
     @pytest.fixture()
     def _get_openapi_app(
         self, openapi_config: Config, mocker: MockerFixture
-    ) -> FlaskAppInjector[FlaskApp]:
+    ) -> OpenAPIAppInjector:
         return next(self.__get_openapi_app(openapi_config, mocker))
 
     def _flask_client(
@@ -316,13 +296,13 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
 
     @pytest.fixture()
     def flask_client(
-        self, _get_basic_flask_app: FlaskAppInjector[Flask]
+        self, _get_basic_flask_app: FlaskAppInjector
     ) -> ClientInjector[FlaskClient]:
         return next(self._flask_client(lambda: _get_basic_flask_app))
 
     @pytest.fixture()
     def openapi_client(
-        self, _get_openapi_app: FlaskAppInjector[FlaskApp]
+        self, _get_openapi_app: AppInjector[FlaskApp]
     ) -> ClientInjector[TestClient]:
         return next(self._openapi_client(lambda: _get_openapi_app))
 
@@ -330,15 +310,15 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
         self,
         mocker: MockerFixture,
         app_getter: Callable[
-            [Config, MockerFixture], Generator[FlaskAppInjector[T_flask_app], Any, None]
+            [Config, MockerFixture], Generator[AppInjector[T_app], Any, None]
         ],
         client_getter: Callable[
-            [AppGetter[T_flask_app]],
+            [AppGetter[T_app]],
             Generator[ClientInjector[T_flask_client], Any, None],
         ],
     ):
         def _client_getter(
-            config: Config, app_init_hook: TAppInitHook[T_flask_app] | None = None
+            config: Config, app_init_hook: TAppInitHook[T_app] | None = None
         ):
             application_result = next(app_getter(config, mocker))
             if app_init_hook is not None:

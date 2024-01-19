@@ -86,7 +86,7 @@ class AbstractApp:
         ...
     def add_middleware(
         self,
-        middleware_class: t.Type[ASGIApp],
+        middleware_class: t.Type[ASGIApp] | t.Any,
         position: MiddlewarePosition = ...,
         **options: t.Any,
     ) -> None:

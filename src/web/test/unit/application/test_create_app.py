@@ -6,13 +6,9 @@ from typing import Any, cast
 import pytest
 from BL_Python.programming.config import AbstractConfig
 from BL_Python.programming.str import get_random_str
-from BL_Python.web.application import (
-    configure_blueprint_routes,
-    configure_openapi,
-    create_app,
-)
+from BL_Python.web.application import App, configure_blueprint_routes, configure_openapi
 from BL_Python.web.config import Config, FlaskConfig, FlaskOpenApiConfig
-from flask import Blueprint
+from flask import Blueprint, Flask
 from flask_injector import FlaskInjector
 from mock import MagicMock
 from pydantic import BaseModel
@@ -290,7 +286,7 @@ class TestCreateApp(CreateApp):
         )
 
         toml_filename = f"{TestCreateApp.test__create_app__loads_config_from_toml.__name__}-config.toml"
-        _ = create_app(config_filename=toml_filename)
+        _ = App[Flask].create(config_filename=toml_filename)
         assert load_config_mock.called
         assert load_config_mock.call_args and load_config_mock.call_args[0]
         assert load_config_mock.call_args[0][1] == toml_filename
@@ -309,7 +305,7 @@ class TestCreateApp(CreateApp):
         class CustomConfig(BaseModel, AbstractConfig):
             foo: str = get_random_str(k=26)
 
-        app = create_app(
+        app = App[Flask].create(
             config_filename=toml_filename, application_configs=[CustomConfig]
         )
         assert (
@@ -337,7 +333,7 @@ class TestCreateApp(CreateApp):
         _ = mocker.patch(
             "BL_Python.web.application.load_config", return_value=basic_config
         )
-        _ = create_app()
+        _ = App[Flask].create()
 
         assert object.__getattribute__(basic_config.flask, config_var_name) == var_value
 
@@ -372,9 +368,9 @@ class TestCreateApp(CreateApp):
 
         if should_fail:
             with pytest.raises(Exception):
-                _ = create_app()
+                _ = App[Flask].create()
         else:
-            _ = create_app()
+            _ = App[Flask].create()
 
     @pytest.mark.parametrize("type", ["basic", "openapi"])
     def test__create_app__configures_appropriate_app_type_based_on_config(
@@ -395,7 +391,7 @@ class TestCreateApp(CreateApp):
             _ = mocker.patch(
                 "BL_Python.web.application.load_config", return_value=config
             )
-            _ = create_app(toml_filename)
+            _ = App[Flask].create(config_filename=toml_filename)
         elif type == "openapi":
             configure_method_mock = mocker.patch(
                 "BL_Python.web.application.configure_openapi"
@@ -406,7 +402,7 @@ class TestCreateApp(CreateApp):
             _ = mocker.patch(
                 "BL_Python.web.application.load_config", return_value=config
             )
-            _ = create_app(toml_filename)
+            _ = App[Flask].create(config_filename=toml_filename)
         else:
             raise Exception(f"Invalid test parameter value '{type}'.")
 

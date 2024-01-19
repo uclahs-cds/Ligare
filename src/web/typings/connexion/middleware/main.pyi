@@ -6,7 +6,7 @@ import enum
 import pathlib
 import typing as t
 from dataclasses import dataclass
-from starlette.types import ASGIApp, Receive, Scope, Send
+
 from connexion.jsonifier import Jsonifier
 from connexion.lifecycle import ConnexionRequest, ConnexionResponse
 from connexion.middleware.lifespan import Lifespan
@@ -14,8 +14,10 @@ from connexion.options import SwaggerUIOptions
 from connexion.resolver import Resolver
 from connexion.types import MaybeAwaitable
 from connexion.uri_parsing import AbstractURIParser
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 logger = ...
+
 @dataclass
 class _Options:
     """
@@ -30,6 +32,7 @@ class _Options:
     methods. This is necessary for this class to be able to differentiate between missing and
     falsy arguments.
     """
+
     arguments: t.Optional[dict] = ...
     auth_all_paths: t.Optional[bool] = ...
     jsonifier: t.Optional[Jsonifier] = ...
@@ -43,9 +46,8 @@ class _Options:
     validate_responses: t.Optional[bool] = ...
     validator_map: t.Optional[dict] = ...
     security_map: t.Optional[dict] = ...
-    def __post_init__(self): # -> None:
+    def __post_init__(self):  # -> None:
         ...
-    
     def replace(self, **changes) -> _Options:
         """Update mechanism to overwrite the options. None values are discarded.
 
@@ -54,11 +56,10 @@ class _Options:
         :return: An new _Options object with updated arguments.
         """
         ...
-    
-
 
 class MiddlewarePosition(enum.Enum):
     """Positions to insert a middleware"""
+
     BEFORE_EXCEPTION = ...
     BEFORE_SWAGGER = ...
     BEFORE_ROUTING = ...
@@ -66,18 +67,35 @@ class MiddlewarePosition(enum.Enum):
     BEFORE_VALIDATION = ...
     BEFORE_CONTEXT = ...
 
-
 class API:
-    def __init__(self, specification, *, base_path, **kwargs) -> None:
-        ...
-    
-
+    def __init__(self, specification, *, base_path, **kwargs) -> None: ...
 
 class ConnexionMiddleware:
     """The main Connexion middleware, which wraps a list of specialized middlewares around the
     provided application."""
+
     default_middlewares = ...
-    def __init__(self, app: ASGIApp, *, import_name: t.Optional[str] = ..., lifespan: t.Optional[Lifespan] = ..., middlewares: t.Optional[t.List[ASGIApp]] = ..., specification_dir: t.Union[pathlib.Path, str] = ..., arguments: t.Optional[dict] = ..., auth_all_paths: t.Optional[bool] = ..., jsonifier: t.Optional[Jsonifier] = ..., pythonic_params: t.Optional[bool] = ..., resolver: t.Optional[t.Union[Resolver, t.Callable]] = ..., resolver_error: t.Optional[int] = ..., strict_validation: t.Optional[bool] = ..., swagger_ui_options: t.Optional[SwaggerUIOptions] = ..., uri_parser_class: t.Optional[AbstractURIParser] = ..., validate_responses: t.Optional[bool] = ..., validator_map: t.Optional[dict] = ..., security_map: t.Optional[dict] = ...) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        import_name: t.Optional[str] = ...,
+        lifespan: t.Optional[Lifespan] = ...,
+        middlewares: t.Optional[t.List[ASGIApp]] = ...,
+        specification_dir: t.Union[pathlib.Path, str] = ...,
+        arguments: t.Optional[dict] = ...,
+        auth_all_paths: t.Optional[bool] = ...,
+        jsonifier: t.Optional[Jsonifier] = ...,
+        pythonic_params: t.Optional[bool] = ...,
+        resolver: t.Optional[t.Union[Resolver, t.Callable]] = ...,
+        resolver_error: t.Optional[int] = ...,
+        strict_validation: t.Optional[bool] = ...,
+        swagger_ui_options: t.Optional[SwaggerUIOptions] = ...,
+        uri_parser_class: t.Optional[AbstractURIParser] = ...,
+        validate_responses: t.Optional[bool] = ...,
+        validator_map: t.Optional[dict] = ...,
+        security_map: t.Optional[dict] = ...,
+    ) -> None:
         """
         :param import_name: The name of the package or module that this object belongs to. If you
             are using a single module, __name__ is always the correct value. If you however are
@@ -111,8 +129,13 @@ class ConnexionMiddleware:
             :obj:`security.SECURITY_HANDLERS`.
         """
         ...
-    
-    def add_middleware(self, middleware_class: t.Type[ASGIApp], *, position: MiddlewarePosition = ..., **options: t.Any) -> None:
+    def add_middleware(
+        self,
+        middleware_class: t.Type[ASGIApp] | t.Any,
+        *,
+        position: MiddlewarePosition = ...,
+        **options: t.Any,
+    ) -> None:
         """Add a middleware to the stack on the specified position.
 
         :param middleware_class: Middleware class to add
@@ -120,8 +143,26 @@ class ConnexionMiddleware:
         :param options: Options to pass to the middleware_class on initialization
         """
         ...
-    
-    def add_api(self, specification: t.Union[pathlib.Path, str, dict], *, base_path: t.Optional[str] = ..., name: t.Optional[str] = ..., arguments: t.Optional[dict] = ..., auth_all_paths: t.Optional[bool] = ..., jsonifier: t.Optional[Jsonifier] = ..., pythonic_params: t.Optional[bool] = ..., resolver: t.Optional[t.Union[Resolver, t.Callable]] = ..., resolver_error: t.Optional[int] = ..., strict_validation: t.Optional[bool] = ..., swagger_ui_options: t.Optional[SwaggerUIOptions] = ..., uri_parser_class: t.Optional[AbstractURIParser] = ..., validate_responses: t.Optional[bool] = ..., validator_map: t.Optional[dict] = ..., security_map: t.Optional[dict] = ..., **kwargs) -> None:
+    def add_api(
+        self,
+        specification: t.Union[pathlib.Path, str, dict],
+        *,
+        base_path: t.Optional[str] = ...,
+        name: t.Optional[str] = ...,
+        arguments: t.Optional[dict] = ...,
+        auth_all_paths: t.Optional[bool] = ...,
+        jsonifier: t.Optional[Jsonifier] = ...,
+        pythonic_params: t.Optional[bool] = ...,
+        resolver: t.Optional[t.Union[Resolver, t.Callable]] = ...,
+        resolver_error: t.Optional[int] = ...,
+        strict_validation: t.Optional[bool] = ...,
+        swagger_ui_options: t.Optional[SwaggerUIOptions] = ...,
+        uri_parser_class: t.Optional[AbstractURIParser] = ...,
+        validate_responses: t.Optional[bool] = ...,
+        validator_map: t.Optional[dict] = ...,
+        security_map: t.Optional[dict] = ...,
+        **kwargs,
+    ) -> None:
         """
         Register een API represented by a single OpenAPI specification on this middleware.
         Multiple APIs can be registered on a single middleware.
@@ -161,8 +202,13 @@ class ConnexionMiddleware:
         :return: The Api registered on the wrapped application.
         """
         ...
-    
-    def add_error_handler(self, code_or_exception: t.Union[int, t.Type[Exception]], function: t.Callable[[ConnexionRequest, Exception], MaybeAwaitable[ConnexionResponse]]) -> None:
+    def add_error_handler(
+        self,
+        code_or_exception: t.Union[int, t.Type[Exception]],
+        function: t.Callable[
+            [ConnexionRequest, Exception], MaybeAwaitable[ConnexionResponse]
+        ],
+    ) -> None:
         """
         Register a callable to handle application errors.
 
@@ -171,8 +217,7 @@ class ConnexionMiddleware:
         :param function: Callable that will handle exception, may be async.
         """
         ...
-    
-    def run(self, import_string: str = ..., **kwargs): # -> None:
+    def run(self, import_string: str = ..., **kwargs):  # -> None:
         """Run the application using uvicorn.
 
         :param import_string: application as import string (eg. "main:app"). This is needed to run
@@ -180,9 +225,4 @@ class ConnexionMiddleware:
         :param kwargs: kwargs to pass to `uvicorn.run`.
         """
         ...
-    
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        ...
-    
-
-
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None: ...

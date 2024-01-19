@@ -6,14 +6,12 @@ Flask entry point.
 import logging
 from dataclasses import dataclass
 from os import environ, path
-from typing import Generic, Optional, TypeVar
+from typing import Generic, Optional, TypeVar, cast
 
 import json_logging
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
 from BL_Python.programming.dependency_injection import ConfigModule
-from connexion import (  # pyright: ignore[reportMissingTypeStubs] Connexion is missing py.typed file
-    FlaskApp,
-)
+from connexion import FlaskApp
 from flask import Blueprint, Flask
 from flask_injector import FlaskInjector
 from injector import Module
@@ -30,33 +28,64 @@ from .middleware.dependency_injection import configure_dependencies
 _get_program_dir = lambda: path.dirname(get_path_executed_script())
 _get_exec_dir = lambda: path.abspath(".")
 
-TFlaskApp = Flask | FlaskApp
-T_flask_app = TypeVar("T_flask_app", bound=TFlaskApp, covariant=True)
+TApp = Flask | FlaskApp
+T_app = TypeVar("T_app", bound=TApp, covariant=True)
 
 
 @dataclass
-class FlaskAppInjector(Generic[T_flask_app]):
-    app: T_flask_app
+class AppInjector(Generic[T_app]):
+    app: T_app
     injector: FlaskInjector
+
+
+FlaskAppInjector = AppInjector[Flask]
+OpenAPIAppInjector = AppInjector[FlaskApp]
+
+
+# In Python 3.12 we can use generics in functions,
+# but we target >= Python 3.10. This is one way
+# around that limitation.
+class App(Generic[T_app]):
+    """
+    Create a new generic type for the application instance.
+
+    Type Args:
+        T_app: Either `Flask` or `FlaskApp`
+    """
+    @staticmethod
+    def create(
+        config_filename: str = "config.toml",
+        # FIXME should be a list of PydanticDataclass
+        application_configs: list[type[AbstractConfig]] | None = None,
+        application_modules: list[Module] | None = None,
+    ):
+        """
+        Bootstrap the Flask applcation.
+
+        Args:
+            config_filename: The name of the TOML file to load configuration information from.
+            application_config: A list of Pydantic objects to store configuration information from the TOML file.
+            application_modules: Modules the application will use for the application lifetime.
+        """
+        return cast(
+            AppInjector[T_app],
+            create_app(config_filename, application_configs, application_modules),
+        )
 
 
 def create_app(
     config_filename: str = "config.toml",
     # FIXME should be a list of PydanticDataclass
     application_configs: list[type[AbstractConfig]] | None = None,
-    application_modules: list[Module] | None = None
+    application_modules: list[Module] | None = None,
     # FIXME eventually should replace with builders
     # and configurators so this list of params doesn't
     # just grow and grow.
     # startup_builder: IStartupBuilder,
     # config: Config,
-) -> FlaskAppInjector[TFlaskApp]:
+) -> AppInjector[TApp]:
     """
-    Bootstrap the Flask applcation.
-
-    Args:
-        name: The name of the application. Replaces the value of `FLASK_APP` if not None.
-        environment: The environment in which to run Flask. Can be one of `development`, `test`, or `production`. Replaces `FLASK_ENV` if not None.
+    Do not use this method directly. Instead, use `App[T_app].create()`
     """
     # set up the default configuration as soon as possible
     # also required to call before json_logging.config_root_logger()
@@ -125,7 +154,7 @@ def create_app(
     modules = application_modules + [ConfigModule(full_config, type(full_config))]
     flask_injector = configure_dependencies(app, application_modules=modules)
 
-    return FlaskAppInjector(app, flask_injector)  # , openapi)
+    return AppInjector(app, flask_injector)
 
 
 def configure_openapi(config: Config, name: Optional[str] = None):
