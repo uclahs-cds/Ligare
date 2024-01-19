@@ -18,7 +18,7 @@ from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
 
-from ..create_app import ClientConfigurable, CreateApp, TFlaskClient
+from ..create_app import CreateApp, FlaskClientAppConfigurable
 
 
 class TestCreateApp(CreateApp):
@@ -274,7 +274,7 @@ class TestCreateApp(CreateApp):
         connexion_mock.assert_called_with(app_name, specification_dir=spec_path)
 
     def test__create_app__requires_flask_config(
-        self, flask_client_configurable: ClientConfigurable[TFlaskClient]
+        self, flask_client_configurable: FlaskClientAppConfigurable
     ):
         with pytest.raises(
             Exception,

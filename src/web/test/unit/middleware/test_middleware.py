@@ -23,13 +23,10 @@ from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
 from ..create_app import (
-    ClientConfigurable,
     CreateApp,
-    FlaskClientInjector,
-    OpenAPIClientConfigurable,
+    FlaskClientAppConfigurable,
+    OpenAPIClientAppConfigurable,
     RequestConfigurable,
-    TestClient,
-    TFlaskClient,
 )
 
 
@@ -45,7 +42,7 @@ class TestMiddleware(CreateApp):
         self,
         config_type: str,
         format: Literal["plaintext", "JSON"],
-        flask_client_configurable: ClientConfigurable[TFlaskClient],
+        flask_client_configurable: FlaskClientAppConfigurable,
         basic_config: Config,
     ):
         basic_config.logging.format = format
@@ -70,7 +67,7 @@ class TestMiddleware(CreateApp):
         self,
         config_type: str,
         format: Literal["plaintext", "JSON"],
-        flask_client_configurable: ClientConfigurable[TFlaskClient],
+        flask_client_configurable: FlaskClientAppConfigurable,
         basic_config: Config,
     ):
         basic_config.logging.format = format
@@ -169,7 +166,7 @@ class TestMiddleware(CreateApp):
     def test__bind_requesthandler__returns_decorated_flask_request_hook(
         self,
         config_type: str,
-        flask_client_configurable: ClientConfigurable[TFlaskClient],
+        flask_client_configurable: FlaskClientAppConfigurable,
         basic_config: Config,
     ):
         flask_request_hook_mock = MagicMock()
@@ -196,7 +193,7 @@ class TestMiddleware(CreateApp):
     def test__bind_requesthandler__calls_decorated_function_when_app_is_run(
         self,
         config_type: str,
-        flask_client_configurable: ClientConfigurable[FlaskClient],
+        flask_client_configurable: FlaskClientAppConfigurable,
         basic_config: Config,
     ):
         if config_type == "openapi":
@@ -230,7 +227,7 @@ class TestMiddleware(CreateApp):
         self,
         code_or_exception: type[Exception] | int,
         config_type: str,
-        flask_client_configurable: ClientConfigurable[TFlaskClient],
+        flask_client_configurable: FlaskClientAppConfigurable,
         basic_config: Config,
         mocker: MockerFixture,
     ):
@@ -265,7 +262,7 @@ class TestMiddleware(CreateApp):
         expected_exception_type: type[Exception],
         failure_lambda: Callable[[], Response],
         basic_config: Config,
-        flask_client_configurable: ClientConfigurable[FlaskClient],
+        flask_client_configurable: FlaskClientAppConfigurable,
     ):
         flask_client = flask_client_configurable(basic_config)
 
@@ -301,7 +298,7 @@ class TestMiddleware(CreateApp):
         expected_exception_type: type[Exception],
         failure_lambda: Callable[[], Response],
         openapi_config: Config,
-        openapi_client_configurable: OpenAPIClientConfigurable,
+        openapi_client_configurable: OpenAPIClientAppConfigurable,
         mocker: MockerFixture,
     ):
         # fake_config_dict: AnyDict = {

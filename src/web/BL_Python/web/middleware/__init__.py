@@ -3,7 +3,6 @@ import re
 import uuid
 from logging import Logger
 from typing import Any, Awaitable, Callable, Dict, TypeVar
-from urllib import response
 from uuid import uuid4
 
 import json_logging

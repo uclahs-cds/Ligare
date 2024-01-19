@@ -6,7 +6,7 @@ Flask entry point.
 import logging
 from dataclasses import dataclass
 from os import environ, path
-from typing import Generic, NamedTuple, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 import json_logging
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
@@ -14,7 +14,7 @@ from BL_Python.programming.dependency_injection import ConfigModule
 from connexion import (  # pyright: ignore[reportMissingTypeStubs] Connexion is missing py.typed file
     FlaskApp,
 )
-from flask import Blueprint, Flask, url_for
+from flask import Blueprint, Flask
 from flask_injector import FlaskInjector
 from injector import Module
 from lib_programname import get_path_executed_script
@@ -31,7 +31,8 @@ _get_program_dir = lambda: path.dirname(get_path_executed_script())
 _get_exec_dir = lambda: path.abspath(".")
 
 TFlaskApp = Flask | FlaskApp
-T_flask_app = TypeVar("T_flask_app", bound=TFlaskApp)
+T_flask_app = TypeVar("T_flask_app", bound=TFlaskApp, covariant=True)
+
 
 @dataclass
 class FlaskAppInjector(Generic[T_flask_app]):
