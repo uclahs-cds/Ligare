@@ -2,22 +2,24 @@ import json
 import re
 import uuid
 from logging import Logger
-from typing import Awaitable, Callable, Dict, TypeVar
+from typing import Any, Awaitable, Callable, Dict, TypeVar
+from urllib import response
 from uuid import uuid4
 
 import json_logging
+from connexion import FlaskApp
+from connexion.lifecycle import ConnexionRequest, ConnexionResponse
+from connexion.types import MaybeAwaitable
 from flask import Flask, Request, Response, request
 from flask.typing import (
     AfterRequestCallable,
     BeforeRequestCallable,
     ResponseReturnValue,
 )
-from flask_injector import FlaskInjector
-from injector import Injector, Module, inject
+from injector import inject
 from werkzeug.exceptions import HTTPException, Unauthorized
 
 from ..config import Config
-from .dependency_injection import AppModule
 
 CORRELATION_ID_HEADER = "X-Correlation-ID"
 REQUEST_COOKIE_HEADER = "Cookie"
@@ -51,12 +53,18 @@ ErrorHandlerCallable = (
     Callable[..., ResponseReturnValue] | Callable[..., Awaitable[ResponseReturnValue]]
 )
 T_error_handler = TypeVar("T_error_handler", bound=ErrorHandlerCallable)
+T_Connexion_error_handler = Callable[
+    [ConnexionRequest, Exception], MaybeAwaitable[ConnexionResponse]
+]
+
+TFlaskApp = Flask | FlaskApp
+T_flask_app = TypeVar("T_flask_app", bound=TFlaskApp)
 
 
 def bind_requesthandler(
-    app: Flask,
+    app: T_flask_app,
     flask_app_handler: Callable[
-        [Flask, Callable[..., Response | None]], T_request_callable
+        [T_flask_app, Callable[..., Response | None]], T_request_callable
     ],
 ):
     def wrapper(request_callable: Callable[..., Response | None]) -> T_request_callable:
@@ -66,10 +74,16 @@ def bind_requesthandler(
 
 
 def bind_errorhandler(
-    app: Flask,
+    app: TFlaskApp,
     code_or_exception: type[Exception] | int,
-) -> Callable[[T_error_handler], T_error_handler]:
-    return app.errorhandler(code_or_exception)
+) -> (
+    Callable[[T_error_handler], T_error_handler | None]
+    | Callable[[T_Connexion_error_handler], T_Connexion_error_handler | None]
+):
+    if isinstance(app, Flask):
+        return app.errorhandler(code_or_exception)
+    else:
+        return lambda f: app.add_error_handler(code_or_exception, f)
 
 
 def _get_correlation_id(log: Logger) -> str:
@@ -129,120 +143,168 @@ OUTGOING_RESPONSE_MESSAGE = f"Outgoing response:\n\
    Status: %s"
 
 
-def register_api_request_handlers(app: Flask):
-    @bind_requesthandler(app, Flask.before_request)
-    @inject
-    def log_all_api_requests(request: Request, config: Config, log: Logger):
-        correlation_id = _get_correlation_id(log)
+@inject
+def _log_all_api_requests(request: Request, config: Config, log: Logger):
+    correlation_id = _get_correlation_id(log)
 
-        request_headers_safe: Dict[str, str] = dict(request.headers)
+    request_headers_safe: Dict[str, str] = dict(request.headers)
 
-        if (
-            request_headers_safe.get(REQUEST_COOKIE_HEADER)
-            and config.flask
-            and config.flask.session
-        ):
-            request_headers_safe[REQUEST_COOKIE_HEADER] = re.sub(
-                rf"({config.flask.session.cookie.name}=)[^;]+(;|$)",
-                r"\1<redacted>\2",
-                request_headers_safe[REQUEST_COOKIE_HEADER],
-            )
-
-        log.info(
-            INCOMING_REQUEST_MESSAGE,
-            request.method,
-            request.url,
-            request.host,
-            request.remote_addr,
-            request.remote_user,
-            extra={
-                "props": {
-                    "correlation_id": correlation_id,
-                    "headers": request_headers_safe,
-                }
-            },
+    if (
+        request_headers_safe.get(REQUEST_COOKIE_HEADER)
+        and config.flask
+        and config.flask.session
+    ):
+        request_headers_safe[REQUEST_COOKIE_HEADER] = re.sub(
+            rf"({config.flask.session.cookie.name}=)[^;]+(;|$)",
+            r"\1<redacted>\2",
+            request_headers_safe[REQUEST_COOKIE_HEADER],
         )
 
+    log.info(
+        INCOMING_REQUEST_MESSAGE,
+        request.method,
+        request.url,
+        request.host,
+        request.remote_addr,
+        request.remote_user,
+        extra={
+            "props": {
+                "correlation_id": correlation_id,
+                "headers": request_headers_safe,
+            }
+        },
+    )
 
-def register_api_response_handlers(app: Flask):
+
+@inject
+def _ordered_api_response_handers(response: Response, config: Config, log: Logger):
+    _wrap_all_api_responses(response, config, log)
+    _log_all_api_responses(response, config, log)
+    return response
+
+
+def _wrap_all_api_responses(response: Response, config: Config, log: Logger):
+    correlation_id = _get_correlation_id(log)
+
+    cors_domain: str | None = None
+    if config.web.security.cors.origin:
+        cors_domain = config.web.security.cors.origin
+    else:
+        if not response.headers.get(CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER):
+            cors_domain = request.headers.get(ORIGIN_HEADER)
+            if not cors_domain:
+                cors_domain = request.headers.get(HOST_HEADER)
+
+    if cors_domain:
+        response.headers[CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER] = cors_domain
+
+    response.headers[CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER] = str(
+        config.web.security.cors.allow_credentials
+    )
+
+    response.headers[CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER] = ",".join(
+        config.web.security.cors.allow_methods
+    )
+
+    response.headers[CORRELATION_ID_HEADER] = correlation_id
+
+    if config.web.security.csp:
+        response.headers[CONTENT_SECURITY_POLICY_HEADER] = config.web.security.csp
+
+    if config.flask and config.flask.openapi and config.flask.openapi.use_swagger:
+        # Use a permissive CSP for the Swagger UI
+        # https://github.com/swagger-api/swagger-ui/issues/7540
+        if request.path.startswith("/ui/") or (
+            request.url_rule and request.url_rule.endpoint == "/v1./v1_swagger_ui_index"
+        ):
+            response.headers[
+                CONTENT_SECURITY_POLICY_HEADER
+            ] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'self' 'unsafe-inline'"
+
+
+def _log_all_api_responses(response: Response, config: Config, log: Logger):
+    correlation_id = _get_correlation_id(log)
+
+    response_headers_safe: Dict[str, str] = dict(response.headers)
+
+    if (
+        response_headers_safe.get(RESPONSE_COOKIE_HEADER)
+        and config.flask
+        and config.flask.session
+    ):
+        response_headers_safe[RESPONSE_COOKIE_HEADER] = re.sub(
+            rf"({config.flask.session.cookie.name}=)[^;]+(;|$)",
+            r"\1<redacted>\2",
+            response_headers_safe[RESPONSE_COOKIE_HEADER],
+        )
+
+    log.info(
+        OUTGOING_RESPONSE_MESSAGE,
+        response.status_code,
+        response.status,
+        extra={
+            "props": {
+                "correlation_id": correlation_id,
+                "headers": response_headers_safe,
+            }
+        },
+    )
+
+
+class RequestMiddleware:
+    _app: Flask
+
+    def __init__(self, app: Flask) -> None:
+        self._app = app
+
+    # @inject
+    #    def __call__(
+    #        self,
+    #        request: Request,
+    #        next_middleware: Callable[[Request], Response],
+    #        # config: Config,
+    #        # log: Logger,
+    #    ) -> Any:
+    #        # before request processing
+    #        _log_all_api_requests(request, config, log)
+    #
+    #        # continue processing request
+    #        response = next_middleware(request)
+    #
+    #        # after request processing
+    #        return _ordered_api_response_handers(response, config, log)
+
+    def __call__(
+        self, environ: dict[Any, Any], start_response: Callable[[Request], Response]
+    ) -> Any:
+        from flask import request
+
+        # before request processing
+        _log_all_api_requests(request, None, None)  # , config, log)
+
+        # continue processing request
+        response = start_response(request)
+
+        # after request processing
+        return _ordered_api_response_handers(response, None, None)  # , config, log)
+
+
+def register_api_request_handlers(app: TFlaskApp):
+    if isinstance(app, Flask):
+        bind_requesthandler(app, Flask.before_request)(_log_all_api_requests)
+    else:
+        app.app.wsgi_app = RequestMiddleware(app.app.wsgi_app)
+        # app.add_middleware(middleware_class=RequestMiddleware)
+
+
+def register_api_response_handlers(app: TFlaskApp):
     # TODO consider moving request/response logging to the WSGI app
     # apparently Flask may not call this if unhandled exceptions occur
-    @bind_requesthandler(app, Flask.after_request)
-    @inject
-    def ordered_api_response_handers(response: Response, config: Config, log: Logger):
-        wrap_all_api_responses(response, config, log)
-        log_all_api_responses(response, config, log)
-        return response
-
-    def wrap_all_api_responses(response: Response, config: Config, log: Logger):
-        correlation_id = _get_correlation_id(log)
-
-        cors_domain: str | None = None
-        if config.web.security.cors.origin:
-            cors_domain = config.web.security.cors.origin
-        else:
-            if not response.headers.get(CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER):
-                cors_domain = request.headers.get(ORIGIN_HEADER)
-                if not cors_domain:
-                    cors_domain = request.headers.get(HOST_HEADER)
-
-        if cors_domain:
-            response.headers[CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER] = cors_domain
-
-        response.headers[CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER] = str(
-            config.web.security.cors.allow_credentials
-        )
-
-        response.headers[CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER] = ",".join(
-            config.web.security.cors.allow_methods
-        )
-
-        response.headers[CORRELATION_ID_HEADER] = correlation_id
-
-        if config.web.security.csp:
-            response.headers[CONTENT_SECURITY_POLICY_HEADER] = config.web.security.csp
-
-        if config.flask and config.flask.openapi and config.flask.openapi.use_swagger:
-            # Use a permissive CSP for the Swagger UI
-            # https://github.com/swagger-api/swagger-ui/issues/7540
-            if request.path.startswith("/ui/") or (
-                request.url_rule
-                and request.url_rule.endpoint == "/v1./v1_swagger_ui_index"
-            ):
-                response.headers[
-                    CONTENT_SECURITY_POLICY_HEADER
-                ] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'self' 'unsafe-inline'"
-
-    def log_all_api_responses(response: Response, config: Config, log: Logger):
-        correlation_id = _get_correlation_id(log)
-
-        response_headers_safe: Dict[str, str] = dict(response.headers)
-
-        if (
-            response_headers_safe.get(RESPONSE_COOKIE_HEADER)
-            and config.flask
-            and config.flask.session
-        ):
-            response_headers_safe[RESPONSE_COOKIE_HEADER] = re.sub(
-                rf"({config.flask.session.cookie.name}=)[^;]+(;|$)",
-                r"\1<redacted>\2",
-                response_headers_safe[RESPONSE_COOKIE_HEADER],
-            )
-
-        log.info(
-            OUTGOING_RESPONSE_MESSAGE,
-            response.status_code,
-            response.status,
-            extra={
-                "props": {
-                    "correlation_id": correlation_id,
-                    "headers": response_headers_safe,
-                }
-            },
-        )
+    if isinstance(app, Flask):
+        bind_requesthandler(app, Flask.after_request)(_ordered_api_response_handers)
 
 
-def register_error_handlers(app: Flask):
+def register_error_handlers(app: TFlaskApp):
     @bind_errorhandler(app, Exception)
     def catch_all_catastrophic(error: Exception, log: Logger):
         log.exception(error)
@@ -289,22 +351,3 @@ def register_error_handlers(app: Flask):
         }
         response.data = json.dumps(data)
         return response
-
-
-def configure_dependencies(
-    app: Flask,
-    application_modules: list[Module] | None = None,
-):
-    """
-    Configures dependency injection and registers all Flask
-    application dependencies. The FlaskInjector instance
-    can be used to bootstrap and start the Flask application.
-    """
-    modules = [AppModule(app)] + (application_modules if application_modules else [])
-
-    # bootstrap the flask application and its dependencies
-    flask_injector = FlaskInjector(app, modules)
-
-    flask_injector.injector.binder.bind(Injector, flask_injector.injector)
-
-    return flask_injector

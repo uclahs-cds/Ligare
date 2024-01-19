@@ -5,6 +5,7 @@ from BL_Python.web.encryption import (
 )
 from BL_Python.web.encryption import decrypt_flask_cookie, encrypt_flask_cookie
 from BL_Python.web.middleware.dependency_injection import AppModule
+from flask import Flask
 from injector import Injector
 from mock import MagicMock
 
@@ -54,7 +55,7 @@ def test__decrypt_flask_cookie__returns_correct_cookie_value():
 
 
 def test__AppModule__binds_extra_dependencies():
-    flask_mock = MagicMock()
+    flask_mock = MagicMock(spec=Flask)
     flask_mock.name = f"{test__AppModule__binds_extra_dependencies.__name__}-app_name"
     flask_mock.config = {}
     flask_mock.configure_mock()

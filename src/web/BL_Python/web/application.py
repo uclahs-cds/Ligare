@@ -4,8 +4,9 @@ Compound Assay Platform Flask application.
 Flask entry point.
 """
 import logging
+from dataclasses import dataclass
 from os import environ, path
-from typing import NamedTuple, Optional
+from typing import Generic, NamedTuple, Optional, TypeVar
 
 import json_logging
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
@@ -20,20 +21,22 @@ from lib_programname import get_path_executed_script
 
 from .config import Config
 from .middleware import (
-    configure_dependencies,
     register_api_request_handlers,
     register_api_response_handlers,
     register_error_handlers,
 )
+from .middleware.dependency_injection import configure_dependencies
 
 _get_program_dir = lambda: path.dirname(get_path_executed_script())
 _get_exec_dir = lambda: path.abspath(".")
 
+TFlaskApp = Flask | FlaskApp
+T_flask_app = TypeVar("T_flask_app", bound=TFlaskApp)
 
-class FlaskAppInjector(NamedTuple):
-    app: Flask
+@dataclass
+class FlaskAppInjector(Generic[T_flask_app]):
+    app: T_flask_app
     injector: FlaskInjector
-    connexion_app: FlaskApp | None = None
 
 
 def create_app(
@@ -46,7 +49,7 @@ def create_app(
     # just grow and grow.
     # startup_builder: IStartupBuilder,
     # config: Config,
-) -> FlaskAppInjector:
+) -> FlaskAppInjector[TFlaskApp]:
     """
     Bootstrap the Flask applcation.
 
@@ -91,12 +94,12 @@ def create_app(
             "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar."
         )
 
-    app: Flask
-    openapi: FlaskApp | None = None
+    app: Flask | FlaskApp
+    # openapi: FlaskApp | None = None
 
     if full_config.flask.openapi is not None:
         openapi = configure_openapi(full_config)
-        app = openapi.app
+        app = openapi  # .app
     else:
         app = configure_blueprint_routes(full_config)
 
@@ -121,7 +124,7 @@ def create_app(
     modules = application_modules + [ConfigModule(full_config, type(full_config))]
     flask_injector = configure_dependencies(app, application_modules=modules)
 
-    return FlaskAppInjector(app, flask_injector, openapi)
+    return FlaskAppInjector(app, flask_injector)  # , openapi)
 
 
 def configure_openapi(config: Config, name: Optional[str] = None):
@@ -189,6 +192,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         options=options,
     )
 
+    # FIXME what's the new way to get this URL?
     # if config.flask.openapi.use_swagger:
     #    # App context needed for url_for.
     #    # This can only run after connexion is instantiated

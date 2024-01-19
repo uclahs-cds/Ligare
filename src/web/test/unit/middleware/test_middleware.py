@@ -1,8 +1,10 @@
+import importlib
 import uuid
 from typing import Callable, Literal, cast
 from uuid import uuid4
 
 import pytest
+import toml
 from BL_Python.web.config import Config, FlaskConfig, FlaskOpenApiConfig
 from BL_Python.web.middleware import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
@@ -13,11 +15,18 @@ from BL_Python.web.middleware import (
     bind_requesthandler,
 )
 from flask import Flask, Response, abort
+from flask.testing import FlaskClient
 from mock import MagicMock
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
-from ..create_app import CreateApp, FlaskClientConfigurable, FlaskRequestConfigurable
+from ..create_app import (
+    CreateApp,
+    FlaskClientConfigurable,
+    FlaskRequestConfigurable,
+    TestClient,
+    TFlaskClient,
+)
 
 
 class TestMiddleware(CreateApp):
@@ -32,7 +41,7 @@ class TestMiddleware(CreateApp):
         self,
         config_type: str,
         format: Literal["plaintext", "JSON"],
-        flask_client_configurable: FlaskClientConfigurable,
+        flask_client_configurable: FlaskClientConfigurable[TFlaskClient],
         basic_config: Config,
     ):
         basic_config.logging.format = format
@@ -57,7 +66,7 @@ class TestMiddleware(CreateApp):
         self,
         config_type: str,
         format: Literal["plaintext", "JSON"],
-        flask_client_configurable: FlaskClientConfigurable,
+        flask_client_configurable: FlaskClientConfigurable[TFlaskClient],
         basic_config: Config,
     ):
         basic_config.logging.format = format
@@ -156,7 +165,7 @@ class TestMiddleware(CreateApp):
     def test__bind_requesthandler__returns_decorated_flask_request_hook(
         self,
         config_type: str,
-        flask_client_configurable: FlaskClientConfigurable,
+        flask_client_configurable: FlaskClientConfigurable[TFlaskClient],
         basic_config: Config,
     ):
         flask_request_hook_mock = MagicMock()
@@ -167,9 +176,14 @@ class TestMiddleware(CreateApp):
             )
 
         flask_client = flask_client_configurable(basic_config)
-        wrapped_decorator = bind_requesthandler(
-            flask_client.client.application, flask_request_hook_mock
-        )
+        if isinstance(flask_client.client, FlaskClient):
+            wrapped_decorator = bind_requesthandler(
+                flask_client.client.application, flask_request_hook_mock
+            )
+        else:
+            wrapped_decorator = bind_requesthandler(
+                flask_client.client.app, flask_request_hook_mock
+            )
         _ = wrapped_decorator(lambda: None)
 
         assert flask_request_hook_mock.called
@@ -178,7 +192,7 @@ class TestMiddleware(CreateApp):
     def test__bind_requesthandler__calls_decorated_function_when_app_is_run(
         self,
         config_type: str,
-        flask_client_configurable: FlaskClientConfigurable,
+        flask_client_configurable: FlaskClientConfigurable[FlaskClient],
         basic_config: Config,
     ):
         if config_type == "openapi":
@@ -212,7 +226,7 @@ class TestMiddleware(CreateApp):
         self,
         code_or_exception: type[Exception] | int,
         config_type: str,
-        flask_client_configurable: FlaskClientConfigurable,
+        flask_client_configurable: FlaskClientConfigurable[TFlaskClient],
         basic_config: Config,
         mocker: MockerFixture,
     ):
@@ -230,39 +244,25 @@ class TestMiddleware(CreateApp):
         flask_errorhandler_mock.assert_called_with(code_or_exception)
 
     @pytest.mark.parametrize(
-        "code_or_exception_type,expected_exception_type,config_type,failure_lambda",
+        "code_or_exception_type,expected_exception_type,failure_lambda",
         [
             (
                 Exception,
                 ZeroDivisionError,
-                "basic",
                 lambda: 1 / 0,  # 1/0 to raise an exception (any exception)
             ),
-            (HTTPException, BadRequest, "basic", lambda: abort(400)),
-            (401, Unauthorized, "basic", lambda: abort(401)),
-            # (
-            #    Exception,
-            #    ZeroDivisionError,
-            #    "openapi",
-            #    lambda: 1 / 0,
-            # ),
-            # (HTTPException, BadRequest, "openapi", lambda: abort(400)),
-            # (401, Unauthorized, "openapi", lambda: abort(401)),
+            (HTTPException, BadRequest, lambda: abort(400)),
+            (401, Unauthorized, lambda: abort(401)),
         ],
     )
-    def test__bind_errorhandler__calls_decorated_function_with_correct_error_when_error_occurs_during_request(
+    def test__bind_errorhandler__from_Flask_calls_decorated_function_with_correct_error_when_error_occurs_during_request(
         self,
         code_or_exception_type: type[Exception] | int,
         expected_exception_type: type[Exception],
-        config_type: str,
         failure_lambda: Callable[[], Response],
         basic_config: Config,
-        flask_client_configurable: FlaskClientConfigurable,
+        flask_client_configurable: FlaskClientConfigurable[FlaskClient],
     ):
-        if config_type == "openapi":
-            cast(FlaskConfig, basic_config.flask).openapi = FlaskOpenApiConfig(
-                spec_path=".", use_swagger=False
-            )
         flask_client = flask_client_configurable(basic_config)
 
         application_errorhandler_mock = MagicMock()
@@ -271,6 +271,68 @@ class TestMiddleware(CreateApp):
         )
         # this probably doesn't need to be done w/ connexion
         _ = flask_client.client.application.route("/")(failure_lambda)
+
+        _ = flask_client.client.get("/")
+
+        assert application_errorhandler_mock.called
+        assert isinstance(
+            application_errorhandler_mock.call_args[0][0], expected_exception_type
+        )
+
+    @pytest.mark.parametrize(
+        "code_or_exception_type,expected_exception_type,failure_lambda",
+        [
+            (
+                Exception,
+                ZeroDivisionError,
+                lambda: 1 / 0,  # 1/0 to raise an exception (any exception)
+            ),
+            (HTTPException, BadRequest, lambda: abort(400)),
+            (401, Unauthorized, lambda: abort(401)),
+        ],
+    )
+    def test__bind_errorhandler__from_Connexion_calls_decorated_function_with_correct_error_when_error_occurs_during_request(
+        self,
+        code_or_exception_type: type[Exception] | int,
+        expected_exception_type: type[Exception],
+        failure_lambda: Callable[[], Response],
+        openapi_config: Config,
+        flask_client_configurable: FlaskClientConfigurable[TestClient],
+        mocker: MockerFixture,
+    ):
+        # fake_config_dict: AnyDict = {
+        #    "flask": {"app_name": "test_app", "session": {"cookie": {}}}
+        # }
+
+        # The resolver in Connexion uses importlib to find operations
+        # in the OpenAPI spec. Instead, just replace `import_module`
+        # with this method as the return value. Connexion also
+        # requires that the `root` attribute exists.
+        def fake_operation_method():
+            return "Hello"
+
+        fake_operation_method.root = "/"
+        _ = mocker.patch(
+            "connexion.utils.importlib",
+            spec=importlib,
+            import_module=MagicMock(return_value=fake_operation_method),
+        )
+        _ = mocker.patch("io.open")
+        _ = mocker.patch(
+            "toml.decoder.loads",
+            return_value=toml.dumps(openapi_config.model_dump()),
+        )
+
+        # FIXME need a fixture to create a Connexion test client?
+        flask_client = flask_client_configurable(openapi_config)
+
+        application_errorhandler_mock = MagicMock()
+        _ = bind_errorhandler(flask_client.client.app, code_or_exception_type)(
+            application_errorhandler_mock
+        )
+
+        # this probably doesn't need to be done w/ connexion
+        _ = flask_client.route("/")(failure_lambda)
 
         _ = flask_client.client.get("/")
 

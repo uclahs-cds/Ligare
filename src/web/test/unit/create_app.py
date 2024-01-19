@@ -3,24 +3,26 @@ import logging
 from collections import defaultdict
 from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivateUsage]
 from contextlib import ExitStack
+from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Generator, NamedTuple, Protocol, cast
+from typing import Any, Callable, Generator, Generic, Protocol, TypeVar, cast
 
 import json_logging
 import pytest
 import yaml
 from BL_Python.programming.str import get_random_str
-from BL_Python.web.application import FlaskAppInjector, create_app
+from BL_Python.web.application import FlaskAppInjector, T_flask_app, create_app
 from BL_Python.web.config import (
     Config,
     FlaskConfig,
+    FlaskOpenApiConfig,
     FlaskSessionConfig,
     FlaskSessionCookieConfig,
 )
 from BL_Python.web.encryption import encrypt_flask_cookie
-from connexion import (  # pyright: ignore[reportMissingTypeStubs] Connexion is missing py.typed file
-    FlaskApp,
-)
+from connexion import FlaskApp
+from connexion.apps.abstract import TestClient as _TestClient
+from flask import Flask, Request, Response
 from flask.ctx import RequestContext
 from flask.sessions import SecureCookieSession
 from flask.testing import FlaskClient
@@ -29,28 +31,38 @@ from mock import MagicMock
 from pytest_mock import MockerFixture
 
 
-class FlaskClientInjector(NamedTuple):
+# In BL_Python.web `app` is always a Flask application
+class TestClient(_TestClient):
+    app: Flask
+
+
+TFlaskClient = FlaskClient | TestClient
+T_flask_client = TypeVar("T_flask_client", bound=TFlaskClient)
+
+
+@dataclass
+class FlaskClientInjector(Generic[T_flask_client]):
     """
     Flask test client and IoC container for the application
     created by PyTest fixtures.
     """
 
-    client: FlaskClient
+    client: T_flask_client
     injector: FlaskInjector
-    connexion_app: FlaskApp | None = None
+    # connexion_app: FlaskApp | None = None
 
 
-class FlaskAppGetter(Protocol):
+class FlaskAppGetter(Protocol, Generic[T_flask_app]):
     """
     A callable that instantiates a Flask application
     and returns the application with its IoC container.
     """
 
-    def __call__(self) -> FlaskAppInjector:
+    def __call__(self) -> FlaskAppInjector[T_flask_app]:
         ...
 
 
-class FlaskClientConfigurable(Protocol):
+class FlaskClientConfigurable(Protocol, Generic[T_flask_client]):
     """
     Get a Flask test client using the specified application configuration.
 
@@ -63,7 +75,7 @@ class FlaskClientConfigurable(Protocol):
         `FlaskClientInjector`
     """
 
-    def __call__(self, config: Config) -> FlaskClientInjector:
+    def __call__(self, config: Config) -> FlaskClientInjector[T_flask_client]:
         ...
 
 
@@ -93,6 +105,39 @@ class FlaskRequestConfigurable(Protocol):
         ...
 
 
+class TestSessionMiddleware:
+    _app: Flask
+
+    def __init__(self, app: Flask) -> None:
+        self._app = app
+
+    # @inject
+    #    def __call__(
+    #        self,
+    #        request: Request,
+    #        next_middleware: Callable[[Request], Response],
+    #        # config: Config,
+    #        # log: Logger,
+    #    ) -> Any:
+    #        # before request processing
+    #        _log_all_api_requests(request, config, log)
+    #
+    #        # continue processing request
+    #        response = next_middleware(request)
+    #
+    #        # after request processing
+    #        return _ordered_api_response_handers(response, config, log)
+
+    def __call__(
+        self, environ: dict[Any, Any], start_response: Callable[[Request], Response]
+    ) -> Any:
+        from flask import request, session
+
+        session["_id"] = get_random_str()
+
+        return start_response(request)
+
+
 class CreateApp:
     _automatic_mocks: dict[str, MagicMock] = defaultdict()
 
@@ -107,33 +152,81 @@ class CreateApp:
             )
         )
 
+    def _openapi_config(self) -> Config:
+        config = self._basic_config()
+        cast(FlaskConfig, config.flask).openapi = FlaskOpenApiConfig(
+            spec_path="config.toml", use_swagger=False
+        )
+        return config
+
     @pytest.fixture()
     def basic_config(self):
         return self._basic_config()
 
+    @pytest.fixture()
+    def openapi_config(self):
+        return self._openapi_config()
+
     def __get_basic_flask_app(
         self, config: Config, mocker: MockerFixture
-    ) -> Generator[FlaskAppInjector, Any, None]:
+    ) -> Generator[FlaskAppInjector[Flask], Any, None]:
+        # prevents the creation of a Connexion application
+        if config.flask is not None:
+            config.flask.openapi = None
+
         with mocker.patch(
             "BL_Python.web.application.load_config",
             return_value=config,
         ):
-            app = create_app()
+            app = cast(FlaskAppInjector[Flask], create_app())
+            yield app
+
+    def __get_openapi_app(
+        self, config: Config, mocker: MockerFixture
+    ) -> Generator[FlaskAppInjector[FlaskApp], Any, None]:
+        # prevents the creation of a Connexion application
+        if config.flask is None or config.flask.openapi is None:
+            raise Exception(
+                "[openapi] not set in config. Cannot create OpenAPI test client."
+            )
+
+        with mocker.patch(
+            "BL_Python.web.application.load_config",
+            return_value=config,
+        ):
+            app = cast(FlaskAppInjector[FlaskApp], create_app())
             yield app
 
     @pytest.fixture()
     def _get_basic_flask_app(
         self, basic_config: Config, mocker: MockerFixture
-    ) -> FlaskAppInjector:
+    ) -> FlaskAppInjector[Flask]:
         return next(self.__get_basic_flask_app(basic_config, mocker))
 
+    @pytest.fixture()
+    def _get_openapi_app(
+        self, openapi_config: Config, mocker: MockerFixture
+    ) -> FlaskAppInjector[FlaskApp]:
+        return next(self.__get_openapi_app(openapi_config, mocker))
+
     def _flask_client(
-        self, flask_app_getter: FlaskAppGetter
-    ) -> Generator[FlaskClientInjector, Any, None]:
+        self, flask_app_getter: FlaskAppGetter[Flask]
+    ) -> Generator[FlaskClientInjector[FlaskClient], Any, None]:
         with ExitStack() as stack:
-            (app, injector, connexion_app) = flask_app_getter()
+            result = flask_app_getter()
+            app = result.app
             client = stack.enter_context(app.test_client())
+
+            if not isinstance(
+                client, FlaskClient
+            ):  # pyright: ignore[reportUnnecessaryIsInstance]
+                raise Exception(
+                    f"""This fixture created a `{type(client)}` test client, but is only meant for `{type(FlaskClient)}`.
+Ensure either that [openapi] is not set in the [flask] config, or use the `openapi_client` fixture."""
+                )
+
             app = client.application
+
             flask_session_ctx_manager = cast(
                 _GeneratorContextManager[SecureCookieSession],
                 client.session_transaction(),
@@ -150,18 +243,51 @@ class CreateApp:
                 max_age=app.config['PERMANENT_SESSION_LIFETIME'] if app.config['PERMANENT_SESSION'] else None,
                 # fmt: on
             )
-            yield FlaskClientInjector(client, injector, connexion_app)
+
+            yield FlaskClientInjector(client, result.injector)  # , connexion_app)
+
+    def _openapi_client(
+        self, flask_app_getter: FlaskAppGetter[FlaskApp]
+    ) -> Generator[FlaskClientInjector[TestClient], Any, None]:
+        with ExitStack() as stack:
+            result = flask_app_getter()
+            app = result.app
+            client = stack.enter_context(app.test_client())
+
+            if not isinstance(
+                client, TestClient
+            ):  # pyright: ignore[reportUnnecessaryIsInstance]
+                raise Exception(
+                    f"""This fixture created a `{type(client)}` test client, but is only meant for `{type(TestClient)}`.
+Ensure either that [openapi] is set in the [flask] config, or use the `flask_client` fixture."""
+                )
+                # client.cookies.set(
+                #    cast(str, app.config["SESSION_COOKIE_NAME"]),
+                #    encrypt_flask_cookie(
+                #        cast(str, app.config["SECRET_KEY"]), flask_session
+                #    ),
+                #    domain="localhost",
+                #    # fmt: off
+                #    max_age=app.config['PERMANENT_SESSION_LIFETIME'] if app.config['PERMANENT_SESSION'] else None,
+                #    # fmt: on
+                # )
+                #                cast(Flask, client.app.app).wsgi_app = TestSessionMiddleware(
+                #                    cast(Flask, client.app.app).wsgi_app
+                #                )
+                # pass
+            app = cast(Flask, client.app.app)
+            yield FlaskClientInjector(client, result.injector)  # , connexion_app)
 
     @pytest.fixture()
     def flask_client(
-        self, _get_basic_flask_app: FlaskAppInjector
-    ) -> FlaskClientInjector:
+        self, _get_basic_flask_app: FlaskAppInjector[Flask]
+    ) -> FlaskClientInjector[FlaskClient]:
         return next(self._flask_client(lambda: _get_basic_flask_app))
 
     @pytest.fixture()
     def flask_client_configurable(
         self, mocker: MockerFixture
-    ) -> FlaskClientConfigurable:
+    ) -> FlaskClientConfigurable[FlaskClient]:
         def _flask_client_getter(config: Config):
             return next(
                 self._flask_client(
@@ -191,14 +317,14 @@ class CreateApp:
     @pytest.fixture()
     def flask_request_configurable(
         self,
-        flask_client_configurable: FlaskClientConfigurable,
+        flask_client_configurable: FlaskClientConfigurable[FlaskClient],
     ) -> FlaskRequestConfigurable:
         def _flask_request_getter(
             config: Config, request_context_args: dict[Any, Any] | None = None
         ):
             flask_client = flask_client_configurable(config)
             request_context = next(
-                self._flask_request(flask_client[0], request_context_args)
+                self._flask_request(flask_client.client, request_context_args)
             )
             return request_context
 
