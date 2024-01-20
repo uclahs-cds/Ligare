@@ -25,7 +25,7 @@ from ..create_app import (
 )
 
 
-class TestMiddleware(CreateApp):
+class TestFlaskMiddleware(CreateApp):
     @pytest.mark.parametrize("format", ["plaintext", "JSON"])
     def test___register_api_response_handlers__sets_correlation_id_response_header_when_not_set_in_request_header(
         self,

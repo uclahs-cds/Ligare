@@ -35,6 +35,7 @@ from flask.testing import FlaskClient
 from flask_injector import FlaskInjector
 from mock import MagicMock
 from pytest_mock import MockerFixture
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 TFlaskClient = FlaskClient | TestClient
 T_flask_client = TypeVar("T_flask_client", bound=TFlaskClient)
@@ -256,7 +257,7 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
                 encrypt_flask_cookie(
                     cast(str, app.config["SECRET_KEY"]), flask_session
                 ),
-                domain="localhost",
+                domain="testserver",
                 # fmt: off
                 max_age=app.config['PERMANENT_SESSION_LIFETIME'] if app.config['PERMANENT_SESSION'] else None,
                 # fmt: on
@@ -270,6 +271,9 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
         with ExitStack() as stack:
             result = flask_app_getter()
             app = result.app
+            app.add_middleware(
+                TrustedHostMiddleware, allowed_hosts=["localhost", "localhost:5000"]
+            )
             client = stack.enter_context(app.test_client())
 
             if not isinstance(client, TestClient):
@@ -381,7 +385,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
         return yaml.safe_load(
             """openapi: 3.0.3
 servers:
-  - url: http://localhost:5000/
+  - url: http://testserver/
     description: Test Application
 info:
   title: "Test Application"
@@ -390,7 +394,7 @@ paths:
   /:
     get:
       description: "Check whether the application is running."
-      operationId: "root"
+      operationId: "root.get"
       parameters: []
       responses:
         "200":
