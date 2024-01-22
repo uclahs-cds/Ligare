@@ -257,7 +257,7 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
                 encrypt_flask_cookie(
                     cast(str, app.config["SECRET_KEY"]), flask_session
                 ),
-                domain="testserver",
+                domain="localhost",
                 # fmt: off
                 max_age=app.config['PERMANENT_SESSION_LIFETIME'] if app.config['PERMANENT_SESSION'] else None,
                 # fmt: on
