@@ -79,7 +79,6 @@ class DBFeatureFlagRouter(FeatureFlagRouter):
             ) from e
 
         feature_flag.enabled = is_enabled
-        # pyright: ignore[reportGeneralTypeIssues]
         self._session.commit()
         super().set_feature_is_enabled(name, is_enabled)
 

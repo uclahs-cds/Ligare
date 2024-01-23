@@ -52,6 +52,7 @@ class App(Generic[T_app]):
     Type Args:
         T_app: Either `Flask` or `FlaskApp`
     """
+
     @staticmethod
     def create(
         config_filename: str = "config.toml",
@@ -215,7 +216,7 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         "swagger_url": config.flask.openapi.swagger_url or "/",
     }
 
-    _ = connexion_app.add_api(  # pyright: ignore[reportUnknownMemberType]
+    _ = connexion_app.add_api(
         f"{config.flask.app_name}/{config.flask.openapi.spec_path}",
         # base_path="/",
         validate_responses=config.flask.openapi.validate_responses,
