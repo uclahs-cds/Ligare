@@ -1,5 +1,5 @@
 from logging import Logger
-from typing import ClassVar, Protocol, Type, cast
+from typing import Protocol, Type, cast
 
 from BL_Python.programming.patterns import Singleton
 from injector import inject
@@ -14,9 +14,9 @@ from .feature_flag_router import FeatureFlagRouter
 
 class FeatureFlag(Protocol):
     __tablename__: str
-    name: ClassVar[Column[Unicode] | str]
-    enabled: ClassVar[Column[Boolean] | bool]
-    description: ClassVar[Column[Unicode] | str]
+    name: Column[Unicode] | str
+    enabled: Column[Boolean] | bool
+    description: Column[Unicode] | str
 
 
 class FeatureFlagTable(Singleton):
@@ -78,7 +78,8 @@ class DBFeatureFlagRouter(FeatureFlagRouter):
                 f"The feature flag `{name}` does not exist. It must be created before being accessed."
             ) from e
 
-        feature_flag.enabled = is_enabled  # pyright: ignore[reportGeneralTypeIssues]
+        feature_flag.enabled = is_enabled
+        # pyright: ignore[reportGeneralTypeIssues]
         self._session.commit()
         super().set_feature_is_enabled(name, is_enabled)
 

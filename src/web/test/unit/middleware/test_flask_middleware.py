@@ -154,7 +154,7 @@ class TestFlaskMiddleware(CreateApp):
             (401, Unauthorized, lambda: abort(401)),
         ],
     )
-    def test__bind_errorhandler__from_Flask_calls_decorated_function_with_correct_error_when_error_occurs_during_request(
+    def test__bind_errorhandler__calls_decorated_function_with_correct_error_when_error_occurs_during_request(
         self,
         code_or_exception_type: type[Exception] | int,
         expected_exception_type: type[Exception],
