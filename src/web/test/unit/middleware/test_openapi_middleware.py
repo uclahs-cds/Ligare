@@ -1,34 +1,19 @@
 import importlib
 import sys
-import uuid
 from types import ModuleType
-from typing import Callable, Literal, cast
-from uuid import uuid4
+from typing import Callable
 
 import pytest
 import toml
-from BL_Python.web.application import FlaskAppInjector, OpenAPIAppInjector
-from BL_Python.web.config import Config, FlaskConfig, FlaskOpenApiConfig
-from BL_Python.web.middleware import (
-    _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
-)
-from BL_Python.web.middleware import (
-    CORRELATION_ID_HEADER,
-    bind_errorhandler,
-    bind_requesthandler,
-)
-from connexion import FlaskApp
-from flask import Flask, Response, abort
-from flask.testing import FlaskClient
+from BL_Python.web.application import OpenAPIAppInjector
+from BL_Python.web.config import Config
+from BL_Python.web.middleware import bind_errorhandler
+from flask import Response, abort
 from mock import MagicMock
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
-from ..create_app import (
-    CreateApp,
-    OpenAPIClientInjectorConfigurable,
-    RequestConfigurable,
-)
+from ..create_app import CreateApp, OpenAPIClientInjectorConfigurable
 
 
 ##
@@ -548,7 +533,7 @@ class TestOpenAPIMiddleware(CreateApp):
             (401, Unauthorized, lambda: abort(401)),
         ],
     )
-    def test__bind_errorhandler__from_Connexion_calls_decorated_function_with_correct_error_when_error_occurs_during_request(
+    def test__bind_errorhandler__calls_decorated_function_with_correct_error_when_error_occurs_during_request(
         self,
         code_or_exception_type: type[Exception] | int,
         expected_exception_type: type[Exception],
@@ -557,7 +542,8 @@ class TestOpenAPIMiddleware(CreateApp):
         openapi_client_configurable: OpenAPIClientInjectorConfigurable,
         mocker: MockerFixture,
     ):
-        # check line 53 of json_logging.framework.connexion/__init__.py
+        # TODO regarding json_logging - check line 53 of
+        # json_logging.framework.connexion/__init__.py
         # looks like `.path` is no longer set on _current_request,
         # but json_logging is expecting it.
         openapi_config.logging.format = "plaintext"
@@ -568,7 +554,7 @@ class TestOpenAPIMiddleware(CreateApp):
         async def get():
             return failure_lambda()
 
-        root_module.get = get
+        setattr(root_module, "get", get)
         sys.modules[module_name] = root_module
         import_module = MagicMock(return_value=root_module)
         _ = mocker.patch(
@@ -582,15 +568,16 @@ class TestOpenAPIMiddleware(CreateApp):
 
         application_errorhandler_mock = MagicMock()
 
-        # def app_init_hook(app: OpenAPIAppInjector):
-        #    _ = bind_errorhandler(app.app, code_or_exception_type)(
-        #        application_errorhandler_mock
-        #    )
+        def app_init_hook(app: OpenAPIAppInjector):
+            _ = bind_errorhandler(app.app, code_or_exception_type)(
+                application_errorhandler_mock
+            )
 
-        flask_client = openapi_client_configurable(openapi_config)  # , app_init_hook)
-
-        # this probably doesn't need to be done w/ connexion
+        flask_client = openapi_client_configurable(openapi_config, app_init_hook)
 
         _ = flask_client.client.get("/", headers={"Host": "localhost:5000"})
 
-        pass
+        assert application_errorhandler_mock.called
+        assert isinstance(
+            application_errorhandler_mock.call_args[0][0], expected_exception_type
+        )
