@@ -183,7 +183,8 @@ addopts = [
     "--cov=.",
     "--junitxml=pytest.xml",
     "-o=junit_family=xunit2",
-    "--cov-report=xml:cov.xml"
+    "--cov-report=xml:cov.xml",
+    "--cov-report=term-missing",
 ]
 
 python_files = "test_*.py"
@@ -216,6 +217,7 @@ omit = [
     "__pycache__/*",
     "*/__pycache__/*"
 ]
+branch = true
 
 [tool.black]
 exclude = "src/.+/(typings|build)"
