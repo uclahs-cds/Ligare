@@ -6,7 +6,7 @@ from flask import Response, abort
 from flask.testing import FlaskClient
 from werkzeug.exceptions import Unauthorized
 
-from ..create_app import ClientInjector, CreateApp
+from ..create_app import ClientInjector, CreateApp, FlaskClientInjector
 
 
 def _raise_custom_unauthorized_exception():
@@ -33,7 +33,7 @@ class TestErrorHandlers(CreateApp):
         expected_status_code: int,
         expected_status_msg: str,
         failure_lambda: Callable[[], Response],
-        flask_client: ClientInjector[FlaskClient],
+        flask_client: FlaskClientInjector,
     ):
         _ = flask_client.client.application.route("/")(failure_lambda)
 

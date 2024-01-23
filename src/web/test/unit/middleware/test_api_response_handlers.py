@@ -13,16 +13,15 @@ from BL_Python.web.middleware import (
     register_api_request_handlers,
 )
 from flask import Flask, Response
-from flask.testing import FlaskClient
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from ..create_app import ClientInjector, CreateApp, FlaskClientInjectorConfigurable
+from ..create_app import CreateApp, FlaskClientInjector, FlaskClientInjectorConfigurable
 
 
 class TestApiResponseHandlers(CreateApp):
     def test__register_api_response_handlers__binds_flask_before_request(
-        self, flask_client: ClientInjector[FlaskClient], mocker: MockerFixture
+        self, flask_client: FlaskClientInjector, mocker: MockerFixture
     ):
         flask_before_request_mock = mocker.patch(
             "flask.sansio.scaffold.Scaffold.before_request"
@@ -82,7 +81,7 @@ class TestApiResponseHandlers(CreateApp):
 
     def test__log_all_api_responses__logs_response_information(
         self,
-        flask_client: ClientInjector[FlaskClient],
+        flask_client: FlaskClientInjector,
         caplog: LogCaptureFixture,
     ):
         with caplog.at_level(logging.DEBUG):
@@ -99,7 +98,7 @@ class TestApiResponseHandlers(CreateApp):
     def test__log_all_api_responses__logs_extra_response_information(
         self,
         property_name: str,
-        flask_client: ClientInjector[FlaskClient],
+        flask_client: FlaskClientInjector,
         caplog: LogCaptureFixture,
     ):
         with caplog.at_level(logging.DEBUG):
@@ -121,7 +120,7 @@ class TestApiResponseHandlers(CreateApp):
 
     def test__log_all_api_responses__logs_response_headers_without_session_id(
         self,
-        flask_client: ClientInjector[FlaskClient],
+        flask_client: FlaskClientInjector,
         caplog: LogCaptureFixture,
     ):
         wrapped_handler_decorator = bind_requesthandler(

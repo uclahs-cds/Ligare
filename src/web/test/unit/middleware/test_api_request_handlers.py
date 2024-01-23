@@ -6,16 +6,15 @@ from BL_Python.web.middleware import (
     INCOMING_REQUEST_MESSAGE,
     register_api_request_handlers,
 )
-from flask.testing import FlaskClient
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from ..create_app import ClientInjector, CreateApp
+from ..create_app import CreateApp, FlaskClientInjector
 
 
 class TestApiRequestHandlers(CreateApp):
     def test__register_api_request_handlers__binds_flask_before_request(
-        self, flask_client: ClientInjector[FlaskClient], mocker: MockerFixture
+        self, flask_client: FlaskClientInjector, mocker: MockerFixture
     ):
         flask_before_request_mock = mocker.patch(
             "flask.sansio.scaffold.Scaffold.before_request"
@@ -27,7 +26,7 @@ class TestApiRequestHandlers(CreateApp):
 
     def test__log_all_api_requests__logs_request_information(
         self,
-        flask_client: ClientInjector[FlaskClient],
+        flask_client: FlaskClientInjector,
         caplog: LogCaptureFixture,
     ):
         with caplog.at_level(logging.DEBUG):
@@ -48,7 +47,7 @@ class TestApiRequestHandlers(CreateApp):
     def test__log_all_api_requests__logs_extra_request_information(
         self,
         property_name: str,
-        flask_client: ClientInjector[FlaskClient],
+        flask_client: FlaskClientInjector,
         caplog: LogCaptureFixture,
     ):
         with caplog.at_level(logging.DEBUG):
@@ -74,7 +73,7 @@ class TestApiRequestHandlers(CreateApp):
 
     def test__log_all_api_requests__logs_request_headers_without_session_id(
         self,
-        flask_client: ClientInjector[FlaskClient],
+        flask_client: FlaskClientInjector,
         caplog: LogCaptureFixture,
     ):
         with caplog.at_level(logging.DEBUG):
