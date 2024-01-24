@@ -170,6 +170,35 @@ class MockController(NamedTuple):
     end: Callable[[], None]
 
 
+class OpenAPIMockController(MockController):
+    """
+    A fixture used to mock some internals of Connexion to enable
+    GET requests in tests.
+
+    An OpenAPI application should be created, and any bindings managed,
+    before calling `openapi_mock.begin()`. Once `begin()` is called,
+    changes to the application may result in undefined behavior.
+
+    `openapi_mock.end()` is called after the test finishes, and may also
+    be explicitly called in the test.
+
+    Args
+    ------
+        `Callable[[], Response]` A method used as the request handler for GET requests set to `/`.
+        This parameter is set through parametrization:
+
+        ```python
+        @pytest.mark.parametrize("openapi_mock", lambda: {}, indirect=["openapi_mock"])
+        def test_my_test(openapi_mock: OpenAPIMockController):
+            ...
+        ```
+
+    Returns
+    ------
+        `RequestContext`
+    """
+
+
 class CreateApp:
     _automatic_mocks: dict[str, MagicMock] = defaultdict()
 
@@ -253,7 +282,7 @@ class CreateApp:
                 result.app, Flask
             ):
                 raise Exception(
-                    f"""This fixture created a `{type(result)}.{type(result.app) if getattr(result, "app") else "None"}` application, but is only meant for `{Flask}`.
+                    f"""This fixture created a `{type(result)}.{type(result.app) if getattr(result, "app", None) else "None"}` application, but is only meant for `{Flask}`.
 Ensure either that [openapi] is not set in the [flask] config, or use the `openapi_client` fixture."""
                 )
 
@@ -293,7 +322,7 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
                 result.app, FlaskApp
             ):
                 raise Exception(
-                    f"""This fixture created a `{type(result)}.{type(result.app) if getattr(result, "app") else "None"}` application, but is only meant for `{FlaskApp}`.
+                    f"""This fixture created a `{type(result)}.{type(result.app) if getattr(result, "app", None) else "None"}` application, but is only meant for `{FlaskApp}`.
 Ensure either that [openapi] is set in the [flask] config, or use the `flask_client` fixture."""
                 )
             app = result.app
@@ -428,14 +457,14 @@ paths:
         )
 
     @pytest.fixture()
-    def openapi_mock(self, request: FixtureRequest, mocker: MockerFixture):
-        fixture_name = CreateApp.openapi_mock.__name__
-        parameter_error_msg = f"The first parameter to the `{fixture_name}` fixture must be a `Callable[..., Response]`."
+    def openapi_mock_controller(self, request: FixtureRequest, mocker: MockerFixture):
+        fixture_name = CreateApp.openapi_mock_controller.__name__
+        parameter_error_msg = f"The first parameter to the `{fixture_name}` fixture must be a `Callable[[], Response]`. Review the documentation for `OpenAPIMockController`."
 
-        if not request.param:
+        if not getattr(request, "param", None):
             raise Exception(parameter_error_msg)
 
-        get_handler: Callable[..., Response] = request.param
+        get_handler: Callable[[], Response] = request.param
         if not callable(get_handler):
             raise Exception(parameter_error_msg)
 
