@@ -3,10 +3,9 @@ from typing import Callable
 
 import pytest
 from flask import Response, abort
-from flask.testing import FlaskClient
 from werkzeug.exceptions import Unauthorized
 
-from ..create_app import ClientInjector, CreateApp, FlaskClientInjector
+from ..create_app import CreateApp, FlaskClientInjector
 
 
 def _raise_custom_unauthorized_exception():

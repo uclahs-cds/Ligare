@@ -7,8 +7,6 @@ from uuid import uuid4
 
 import json_logging
 from connexion import FlaskApp
-from connexion.lifecycle import ConnexionRequest, ConnexionResponse
-from connexion.types import MaybeAwaitable
 from flask import Flask, Request, Response, request
 from flask.typing import (
     AfterRequestCallable,
@@ -52,9 +50,6 @@ ErrorHandlerCallable = (
     Callable[..., ResponseReturnValue] | Callable[..., Awaitable[ResponseReturnValue]]
 )
 T_error_handler = TypeVar("T_error_handler", bound=ErrorHandlerCallable)
-T_connexion_error_handler = Callable[
-    [ConnexionRequest, Exception], MaybeAwaitable[ConnexionResponse]
-]
 
 TFlaskApp = Flask | FlaskApp
 T_flask_app = TypeVar("T_flask_app", bound=TFlaskApp)
@@ -75,15 +70,11 @@ def bind_requesthandler(
 def bind_errorhandler(
     app: TFlaskApp,
     code_or_exception: type[Exception] | int,
-) -> (
-    Callable[[T_error_handler], T_error_handler | None]
-    | Callable[[T_connexion_error_handler], T_connexion_error_handler | None]
-):
+) -> Callable[[T_error_handler], T_error_handler | None]:
     if isinstance(app, Flask):
         return app.errorhandler(code_or_exception)
     else:
         return app.app.errorhandler(code_or_exception)
-        # return lambda f: app.add_error_handler(code_or_exception, f)
 
 
 def _get_correlation_id(log: Logger) -> str:
@@ -299,8 +290,8 @@ def register_api_request_handlers(app: TFlaskApp):
     if isinstance(app, Flask):
         _ = bind_requesthandler(app, Flask.before_request)(_log_all_api_requests)
     else:
-        app.app.wsgi_app = RequestMiddleware(
-            app.app.wsgi_app  # pyright: ignore[reportGeneralTypeIssues]
+        app.app.wsgi_app = RequestMiddleware(  # pyright: ignore[reportAttributeAccessIssue,reportGeneralTypeIssues] FIXME differences between VSCode Pylance and Pyright versions
+            app.app.wsgi_app  # pyright: ignore[reportGeneralTypeIssues,reportArgumentType]
         )
         # app.add_middleware(middleware_class=RequestMiddleware)
 
