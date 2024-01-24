@@ -11,8 +11,8 @@ on:
     inputs:
       rewrite_dependencies:
         description:
-          If "true" or empty CICD will rewrite BL_Python dependencies,\n
-          during the build only, to use the local filesystem checkout rather than PyPI.\n
+          If "true" or empty CICD will rewrite BL_Python dependencies,
+          during the build only, to use the local filesystem checkout rather than PyPI.
           If "false" CICD will not rewrite the BL_Python dependencies.
         type: choice
         options:
@@ -20,6 +20,18 @@ on:
           - false
         default: "true"
         required: true
+      use_build_cache:
+        description:
+          If "true", the workflow will use the build cache if the associated
+          cache key has a hit. If "false," any existing build cache will be ignored.
+          The workflow will save a new build cache with the same cache key regardless
+          of `use_build_cache` if there was not a cache hit.
+        type: choice
+        options:
+          - true
+          - false
+        default: "true"
+        required: false
 
 jobs:
   Checkout:
@@ -27,53 +39,67 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      repository-build-cache-key: ${{ steps.repository-build-cache-key.outputs.cache_key }}
+      build-cache-key: ${{ steps.build-cache-key.outputs.cache_key }}
+      build-cache-key-run: ${{ steps.build-cache-key.outputs.cache_key_run }}
 
-    strategy:
-      matrix:
-        python-version: ["3.10"]
+    env:
+      PYTHON_VERSION: "3.10"
 
     steps:
       - uses: actions/checkout@v4
 
-      - id: repository-build-cache-key
+      - id: build-cache-key
+        # Use the same cache between Workflow runs _except_ when the event is a workflow_dispatch.
+        # This should result in cache keys like "Linux-true-(true|false)-abc123" for all runs _except_ workflow_dispatch,
+        # and cache keys like "linux-false-(true|123)-abc123" for workflow_dispatch.
         run: |
-          cache_key='${{ runner.os }}-${{ github.event_name != 'workflow_dispatch' || github.run_attempt }}-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}'
+          cache_key='${{ runner.os }}-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}'
+          cache_key_run='${{ runner.os }}-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}-run-id_${{ github.run_id }}-number_${{ github.run_number }}-attempt_${{ github.run_attempt }}'
           echo "cache_key=$cache_key" >> $GITHUB_OUTPUT
+          echo "cache_key_run=$cache_key_run" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v3
-        name: Check repository build cache
-        id: repository-build-cache
+      - name: Restore build cache
+        if: ${{ success() && (github.event_name != 'workflow_dispatch' || inputs.use_build_cache == 'true') }}
+        uses: actions/cache/restore@v3
+        id: restore-build-cache
         with:
           path: ${{ github.workspace }}
-          # Use the same cache between Workflow runs _except_ when the event is a workflow_dispatch.
-          # This should result in cache keys like "Linux-true-abc123" for all runs _except_ workflow_dispatch,
-          # and cache keys like "linux-123-abc123" for workflow_dispatch.
-          key: ${{ steps.repository-build-cache-key.outputs.cache_key }}
+          key: ${{ steps.build-cache-key.outputs.cache_key_run }}
+          restore-keys: ${{ steps.build-cache-key.outputs.cache_key }}
 
-      - name: Set up Python ${{ matrix.python-version }}
-        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != 'true' }}
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        if: ${{ success() && (inputs.use_build_cache == 'false' || steps.restore-build-cache.outputs.cache-matched-key == '' )}}
         uses: actions/setup-python@v4
         id: install_python
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
 
-      - name: Create Venv
-        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != 'true' }}
-        run: |
-          ${{ steps.install_python.outputs.python-path }} -m venv .github-venv
-
       - name: Install dependencies
-        if: ${{ success() && steps.repository-build-cache.outputs.cache-hit != 'true' }}
+        if: ${{ success() && (inputs.use_build_cache == 'false' || steps.restore-build-cache.outputs.cache-matched-key == '' )}}
         run: |
           echo Setting up dependencies
           python -m pip install -U pip
           python -m pip install toml
           REWRITE_DEPENDENCIES=${{ inputs.rewrite_dependencies }} \
             ./.github/workflows/CICD-scripts/pyproject_dependency_rewrite.py
+          ${{ steps.install_python.outputs.python-path }} -m venv .github-venv
           source .github-venv/bin/activate
+
+          echo "prefix=$(pwd)/node_modules" >> ~/.npmrc
+          # Note that currently pyproject.toml does not specify a version.
+          # As such, this will install the latest Pyright, including
+          # potentionally breaking changes.
+          npm install -g pyright
           ./install_all.sh -e
+
+      - name: Save build cache
+        if: ${{ success() && (github.event_name == 'workflow_dispatch' || steps.restore-build-cache.outputs.cache-matched-key == '') }}
+        uses: actions/cache/save@v3
+        id: save-build-cache
+        with:
+          path: ${{ github.workspace }}
+          key: ${{ steps.build-cache-key.outputs.cache_key_run }}
 
   Pyright:
     name: Static type checking
@@ -81,16 +107,14 @@ jobs:
     needs:
       - Checkout
     if: ${{( always() && !cancelled() ) }}
-    strategy:
-      matrix:
-        python-version: ["3.10"]
 
     steps:
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
         with:
-          key: ${{ needs.Checkout.outputs.repository-build-cache-key }}
+          key: ${{ needs.Checkout.outputs.build-cache-key-run }}
+          restore-keys: ${{ needs.Checkout.outputs.build-cache-key }}
           path: ${{ github.workspace }}
           fail-on-cache-miss: true
 
@@ -98,7 +122,7 @@ jobs:
         run: |
           echo Running pyright
           source .github-venv/bin/activate
-          pyright
+          ./node_modules/bin/pyright
 
   Pytest:
     name: Automated testing
@@ -106,16 +130,14 @@ jobs:
     needs:
       - Checkout
     if: ${{( always() && !cancelled() ) }}
-    strategy:
-      matrix:
-        python-version: ["3.10"]
 
     steps:
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
         with:
-          key: ${{ needs.Checkout.outputs.repository-build-cache-key }}
+          key: ${{ needs.Checkout.outputs.build-cache-key-run }}
+          restore-keys: ${{ needs.Checkout.outputs.build-cache-key }}
           path: ${{ github.workspace }}
           fail-on-cache-miss: true
 
@@ -146,16 +168,14 @@ jobs:
     needs:
       - Checkout
     if: ${{( always() && !cancelled() ) }}
-    strategy:
-      matrix:
-        python-version: ["3.10"]
 
     steps:
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
         with:
-          key: ${{ needs.Checkout.outputs.repository-build-cache-key }}
+          key: ${{ needs.Checkout.outputs.build-cache-key-run }}
+          restore-keys: ${{ needs.Checkout.outputs.build-cache-key }}
           path: ${{ github.workspace }}
           fail-on-cache-miss: true
 
