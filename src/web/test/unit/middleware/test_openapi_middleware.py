@@ -1,19 +1,11 @@
-import importlib
-import sys
-from types import ModuleType
-from typing import Callable
-
 import pytest
-import toml
-from BL_Python.web.application import OpenAPIAppInjector
-from BL_Python.web.config import Config
 from BL_Python.web.middleware import bind_errorhandler
-from flask import Response, abort
+from connexion import FlaskApp
+from flask import abort
 from mock import MagicMock
-from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
-from ..create_app import CreateApp, OpenAPIClientInjectorConfigurable
+from ..create_app import CreateApp, MockController
 
 
 ##
@@ -520,9 +512,75 @@ from ..create_app import CreateApp, OpenAPIClientInjectorConfigurable
 #
 #        flask_errorhandler_mock.assert_called_with(code_or_exception)
 #
+# FIXME regarding json_logging - check line 53 of
+# json_logging.framework.connexion/__init__.py
+# looks like `.path` is no longer set on _current_request,
+# but json_logging is expecting it.
+# openapi_config.logging.format = "plaintext"
 class TestOpenAPIMiddleware(CreateApp):
+    # @pytest.mark.parametrize(
+    #    "code_or_exception_type,expected_exception_type,failure_lambda",
+    #    [
+    #        (
+    #            Exception,
+    #            ZeroDivisionError,
+    #            lambda: 1 / 0,  # 1/0 to raise an exception (any exception)
+    #        ),
+    #        (HTTPException, BadRequest, lambda: abort(400)),
+    #        (401, Unauthorized, lambda: abort(401)),
+    #    ],
+    # )
+    # def test__bind_errorhandler__calls_decorated_function_with_correct_error_when_error_occurs_during_request(
+    #    self,
+    #    code_or_exception_type: type[Exception] | int,
+    #    expected_exception_type: type[Exception],
+    #    failure_lambda: Callable[[], Response],
+    #    openapi_config: Config,
+    #    openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+    #    mocker: MockerFixture,
+    # ):
+    #    # TODO regarding json_logging - check line 53 of
+    #    # json_logging.framework.connexion/__init__.py
+    #    # looks like `.path` is no longer set on _current_request,
+    #    # but json_logging is expecting it.
+    #    openapi_config.logging.format = "plaintext"
+
+    #    module_name = "root"
+    #    root_module = ModuleType(module_name)
+
+    #    async def get():
+    #        return failure_lambda()
+
+    #    setattr(root_module, "get", get)
+    #    sys.modules[module_name] = root_module
+    #    import_module = MagicMock(return_value=root_module)
+    #    _ = mocker.patch(
+    #        "connexion.utils.importlib", spec=importlib, import_module=import_module
+    #    )
+    #    _ = mocker.patch("io.open")
+    #    _ = mocker.patch(
+    #        "toml.decoder.loads",
+    #        return_value=toml.dumps(openapi_config.model_dump()),
+    #    )
+
+    #    application_errorhandler_mock = MagicMock()
+
+    #    def app_init_hook(app: OpenAPIAppInjector):
+    #        _ = bind_errorhandler(app.app, code_or_exception_type)(
+    #            application_errorhandler_mock
+    #        )
+
+    #    flask_client = openapi_client_configurable(openapi_config, app_init_hook)
+
+    #    _ = flask_client.client.get("/", headers={"Host": "localhost:5000"})
+
+    #    assert application_errorhandler_mock.called
+    #    assert isinstance(
+    #        application_errorhandler_mock.call_args[0][0], expected_exception_type
+    #    )
+
     @pytest.mark.parametrize(
-        "code_or_exception_type,expected_exception_type,failure_lambda",
+        "code_or_exception_type,expected_exception_type,openapi_mock",
         [
             (
                 Exception,
@@ -532,50 +590,26 @@ class TestOpenAPIMiddleware(CreateApp):
             (HTTPException, BadRequest, lambda: abort(400)),
             (401, Unauthorized, lambda: abort(401)),
         ],
+        indirect=["openapi_mock"],
     )
     def test__bind_errorhandler__calls_decorated_function_with_correct_error_when_error_occurs_during_request(
         self,
         code_or_exception_type: type[Exception] | int,
         expected_exception_type: type[Exception],
-        failure_lambda: Callable[[], Response],
-        openapi_config: Config,
-        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
-        mocker: MockerFixture,
+        openapi_mock: MockController,
     ):
-        # TODO regarding json_logging - check line 53 of
-        # json_logging.framework.connexion/__init__.py
-        # looks like `.path` is no longer set on _current_request,
-        # but json_logging is expecting it.
-        openapi_config.logging.format = "plaintext"
-
-        module_name = "root"
-        root_module = ModuleType(module_name)
-
-        async def get():
-            return failure_lambda()
-
-        setattr(root_module, "get", get)
-        sys.modules[module_name] = root_module
-        import_module = MagicMock(return_value=root_module)
-        _ = mocker.patch(
-            "connexion.utils.importlib", spec=importlib, import_module=import_module
-        )
-        _ = mocker.patch("io.open")
-        _ = mocker.patch(
-            "toml.decoder.loads",
-            return_value=toml.dumps(openapi_config.model_dump()),
-        )
-
+        app = FlaskApp("foo")
         application_errorhandler_mock = MagicMock()
+        _ = bind_errorhandler(app, code_or_exception_type)(
+            application_errorhandler_mock
+        )
 
-        def app_init_hook(app: OpenAPIAppInjector):
-            _ = bind_errorhandler(app.app, code_or_exception_type)(
-                application_errorhandler_mock
-            )
+        openapi_mock.begin()
+        app.add_api("foo.yaml")
 
-        flask_client = openapi_client_configurable(openapi_config, app_init_hook)
+        flask_client = app.test_client()
 
-        _ = flask_client.client.get("/", headers={"Host": "localhost:5000"})
+        _ = flask_client.get("/", headers={"Host": "localhost:5000"})
 
         assert application_errorhandler_mock.called
         assert isinstance(

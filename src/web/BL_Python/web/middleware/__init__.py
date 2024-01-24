@@ -52,7 +52,7 @@ ErrorHandlerCallable = (
     Callable[..., ResponseReturnValue] | Callable[..., Awaitable[ResponseReturnValue]]
 )
 T_error_handler = TypeVar("T_error_handler", bound=ErrorHandlerCallable)
-T_Connexion_error_handler = Callable[
+T_connexion_error_handler = Callable[
     [ConnexionRequest, Exception], MaybeAwaitable[ConnexionResponse]
 ]
 
@@ -77,12 +77,13 @@ def bind_errorhandler(
     code_or_exception: type[Exception] | int,
 ) -> (
     Callable[[T_error_handler], T_error_handler | None]
-    | Callable[[T_Connexion_error_handler], T_Connexion_error_handler | None]
+    | Callable[[T_connexion_error_handler], T_connexion_error_handler | None]
 ):
     if isinstance(app, Flask):
         return app.errorhandler(code_or_exception)
     else:
-        return lambda f: app.add_error_handler(code_or_exception, f)
+        return app.app.errorhandler(code_or_exception)
+        # return lambda f: app.add_error_handler(code_or_exception, f)
 
 
 def _get_correlation_id(log: Logger) -> str:
@@ -253,7 +254,7 @@ def _log_all_api_responses(response: Response, config: Config, log: Logger):
 class RequestMiddleware:
     _app: Flask
 
-    def __init__(self, app: Flask) -> None:
+    def __init__(self, app: Flask) -> None:  # pyright: ignore[reportMissingSuperCall]
         self._app = app
 
     # @inject
@@ -274,25 +275,33 @@ class RequestMiddleware:
     #        return _ordered_api_response_handers(response, config, log)
 
     def __call__(
-        self, environ: dict[Any, Any], start_response: Callable[[Request], Response]
+        self,
+        environ: dict[Any, Any],
+        start_response: Callable[[Request], Response],
+        config: Config,
+        log: Logger,
     ) -> Any:
-        from flask import request
-
         # before request processing
-        _log_all_api_requests(request, None, None)  # , config, log)
+        # FIXME does DI work here?
+        _log_all_api_requests(request, config, log)
 
         # continue processing request
         response = start_response(request)
 
         # after request processing
-        return _ordered_api_response_handers(response, None, None)  # , config, log)
+        # FIXME does DI work here?
+        # FIXME consider creating a separate ResponseMiddleware
+        # instead of having the "Request" class handle
+        return _ordered_api_response_handers(response, config, log)
 
 
 def register_api_request_handlers(app: TFlaskApp):
     if isinstance(app, Flask):
-        bind_requesthandler(app, Flask.before_request)(_log_all_api_requests)
+        _ = bind_requesthandler(app, Flask.before_request)(_log_all_api_requests)
     else:
-        app.app.wsgi_app = RequestMiddleware(app.app.wsgi_app)
+        app.app.wsgi_app = RequestMiddleware(
+            app.app.wsgi_app  # pyright: ignore[reportGeneralTypeIssues]
+        )
         # app.add_middleware(middleware_class=RequestMiddleware)
 
 
@@ -300,12 +309,14 @@ def register_api_response_handlers(app: TFlaskApp):
     # TODO consider moving request/response logging to the WSGI app
     # apparently Flask may not call this if unhandled exceptions occur
     if isinstance(app, Flask):
-        bind_requesthandler(app, Flask.after_request)(_ordered_api_response_handers)
+        _ = bind_requesthandler(app, Flask.after_request)(_ordered_api_response_handers)
 
 
 def register_error_handlers(app: TFlaskApp):
     @bind_errorhandler(app, Exception)
+    # @inject
     def catch_all_catastrophic(error: Exception, log: Logger):
+        # error: connexion.lifecycle.ConnexionRequest, log: ZeroDivisionError
         log.exception(error)
 
         response = {
@@ -316,6 +327,7 @@ def register_error_handlers(app: TFlaskApp):
         return response, 500
 
     @bind_errorhandler(app, HTTPException)
+    # @inject
     def catch_all(error: HTTPException, log: Logger):
         log.exception(error)
 
@@ -331,6 +343,7 @@ def register_error_handlers(app: TFlaskApp):
         )
 
     @bind_errorhandler(app, 401)
+    # @inject
     def unauthorized(error: Unauthorized, log: Logger):
         log.info(error)
 

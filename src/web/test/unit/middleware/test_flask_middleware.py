@@ -159,16 +159,16 @@ class TestFlaskMiddleware(CreateApp):
         code_or_exception_type: type[Exception] | int,
         expected_exception_type: type[Exception],
         failure_lambda: Callable[[], Response],
-        flask_client: FlaskClientInjector,
     ):
         application_errorhandler_mock = MagicMock()
-        _ = bind_errorhandler(flask_client.client.application, code_or_exception_type)(
-            application_errorhandler_mock
-        )
-        # this probably doesn't need to be done w/ connexion
-        _ = flask_client.client.application.route("/")(failure_lambda)
+        with Flask("foo").test_client() as test_client:
+            _ = bind_errorhandler(test_client.application, code_or_exception_type)(
+                application_errorhandler_mock
+            )
+            # this probably doesn't need to be done w/ connexion
+            _ = test_client.application.route("/")(failure_lambda)
 
-        _ = flask_client.client.get("/")
+            _ = test_client.get("/")
 
         assert application_errorhandler_mock.called
         assert isinstance(

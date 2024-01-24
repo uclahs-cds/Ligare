@@ -66,12 +66,14 @@ def configure_dependencies(
     can be used to bootstrap and start the Flask application.
     """
     if isinstance(app, FlaskApp):
-        app = app.app
+        flask_app = app.app  # .app
+    else:
+        flask_app = app
 
     modules = [AppModule(app)] + (application_modules if application_modules else [])
 
     # bootstrap the flask application and its dependencies
-    flask_injector = FlaskInjector(app, modules)
+    flask_injector = FlaskInjector(flask_app, modules)
 
     flask_injector.injector.binder.bind(Injector, flask_injector.injector)
 

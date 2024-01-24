@@ -1,11 +1,22 @@
 import importlib
 import logging
+import sys
 from collections import defaultdict
 from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivateUsage]
 from contextlib import ExitStack
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Callable, Generator, Generic, Protocol, TypeVar, cast
+from types import ModuleType
+from typing import (
+    Any,
+    Callable,
+    Generator,
+    Generic,
+    NamedTuple,
+    Protocol,
+    TypeVar,
+    cast,
+)
 
 import json_logging
 import pytest
@@ -34,7 +45,9 @@ from flask.sessions import SecureCookieSession
 from flask.testing import FlaskClient
 from flask_injector import FlaskInjector
 from mock import MagicMock
+from pytest import FixtureRequest
 from pytest_mock import MockerFixture
+from pytest_mock.plugin import MockType
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 TFlaskClient = FlaskClient | TestClient
@@ -78,11 +91,6 @@ class ClientInjectorConfigurable(Protocol[T_app, T_flask_client]):
         `FlaskClientInjector[T_flask_client]`
     """
 
-    #    @overload
-    #    def __call__(self, config: Config) -> FlaskClientInjector[T_flask_client]:
-    #        ...
-
-    #    @overload
     def __call__(
         self,
         config: Config,
@@ -155,6 +163,11 @@ class TestSessionMiddleware:
         session["_id"] = get_random_str()
 
         return start_response(request)
+
+
+class MockController(NamedTuple):
+    begin: Callable[[], None]
+    end: Callable[[], None]
 
 
 class CreateApp:
@@ -230,19 +243,22 @@ class CreateApp:
 
     def _flask_client(
         self, flask_app_getter: AppGetter[Flask]
-    ) -> Generator[ClientInjector[FlaskClient], Any, None]:
+    ) -> Generator[FlaskClientInjector, Any, None]:
         with ExitStack() as stack:
             result = flask_app_getter()
-            app = result.app
-            client = stack.enter_context(app.test_client())
 
             if not isinstance(
-                client, FlaskClient
-            ):  # pyright: ignore[reportUnnecessaryIsInstance]
+                result, AppInjector
+            ) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
+                result.app, Flask
+            ):
                 raise Exception(
-                    f"""This fixture created a `{type(client)}` test client, but is only meant for `{FlaskClient}`.
+                    f"""This fixture created a `{type(result)}.{type(result.app) if getattr(result, "app") else "None"}` application, but is only meant for `{Flask}`.
 Ensure either that [openapi] is not set in the [flask] config, or use the `openapi_client` fixture."""
                 )
+
+            app = result.app
+            client = stack.enter_context(app.test_client())
 
             app = client.application
 
@@ -267,47 +283,51 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
 
     def _openapi_client(
         self, flask_app_getter: AppGetter[FlaskApp]
-    ) -> Generator[ClientInjector[TestClient], Any, None]:
+    ) -> Generator[OpenAPIClientInjector, Any, None]:
         with ExitStack() as stack:
             result = flask_app_getter()
+
+            if not isinstance(
+                result, AppInjector
+            ) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
+                result.app, FlaskApp
+            ):
+                raise Exception(
+                    f"""This fixture created a `{type(result)}.{type(result.app) if getattr(result, "app") else "None"}` application, but is only meant for `{FlaskApp}`.
+Ensure either that [openapi] is set in the [flask] config, or use the `flask_client` fixture."""
+                )
             app = result.app
             app.add_middleware(
                 TrustedHostMiddleware, allowed_hosts=["localhost", "localhost:5000"]
             )
             client = stack.enter_context(app.test_client())
-
-            if not isinstance(client, TestClient):
-                raise Exception(
-                    f"""This fixture created a `{type(client)}` test client, but is only meant for `{TestClient}`.
-Ensure either that [openapi] is set in the [flask] config, or use the `flask_client` fixture."""
-                )
-                # client.cookies.set(
-                #    cast(str, app.config["SESSION_COOKIE_NAME"]),
-                #    encrypt_flask_cookie(
-                #        cast(str, app.config["SECRET_KEY"]), flask_session
-                #    ),
-                #    domain="localhost",
-                #    # fmt: off
-                #    max_age=app.config['PERMANENT_SESSION_LIFETIME'] if app.config['PERMANENT_SESSION'] else None,
-                #    # fmt: on
-                # )
-                #                cast(Flask, client.app.app).wsgi_app = TestSessionMiddleware(
-                #                    cast(Flask, client.app.app).wsgi_app
-                #                )
-                # pass
+            # client.cookies.set(
+            #    cast(str, app.config["SESSION_COOKIE_NAME"]),
+            #    encrypt_flask_cookie(
+            #        cast(str, app.config["SECRET_KEY"]), flask_session
+            #    ),
+            #    domain="localhost",
+            #    # fmt: off
+            #    max_age=app.config['PERMANENT_SESSION_LIFETIME'] if app.config['PERMANENT_SESSION'] else None,
+            #    # fmt: on
+            # )
+            #                cast(Flask, client.app.app).wsgi_app = TestSessionMiddleware(
+            #                    cast(Flask, client.app.app).wsgi_app
+            #                )
+            # pass
             # app = cast(Flask, client.app.app)
             yield ClientInjector(client, result.injector)  # , connexion_app)
 
     @pytest.fixture()
     def flask_client(
         self, _get_basic_flask_app: FlaskAppInjector
-    ) -> ClientInjector[FlaskClient]:
+    ) -> FlaskClientInjector:
         return next(self._flask_client(lambda: _get_basic_flask_app))
 
     @pytest.fixture()
     def openapi_client(
         self, _get_openapi_app: AppInjector[FlaskApp]
-    ) -> ClientInjector[TestClient]:
+    ) -> OpenAPIClientInjector:
         return next(self._openapi_client(lambda: _get_openapi_app))
 
     def _client_configurable(
@@ -407,6 +427,63 @@ paths:
 """
         )
 
+    @pytest.fixture()
+    def openapi_mock(self, request: FixtureRequest, mocker: MockerFixture):
+        fixture_name = CreateApp.openapi_mock.__name__
+        parameter_error_msg = f"The first parameter to the `{fixture_name}` fixture must be a `Callable[..., Response]`."
+
+        if not request.param:
+            raise Exception(parameter_error_msg)
+
+        get_handler: Callable[..., Response] = request.param
+        if not callable(get_handler):
+            raise Exception(parameter_error_msg)
+
+        openapi_spec_module_name = "root"
+        openapi_spec_root_module = ModuleType(openapi_spec_module_name)
+
+        setattr(openapi_spec_root_module, "get", lambda: get_handler())
+        sys.modules[openapi_spec_module_name] = openapi_spec_root_module
+        openapi_spec_import_module = MagicMock(return_value=openapi_spec_root_module)
+
+        # don't create the app, just prep for
+        # the app to load all these mocks instead
+        importlib_mock: MockType | None = None
+        spec_loader_mock: MockType | None = None
+
+        def begin():
+            nonlocal importlib_mock, spec_loader_mock
+
+            if importlib_mock is None:
+                importlib_mock = mocker.patch(
+                    "connexion.utils.importlib",
+                    spec=importlib,
+                    import_module=openapi_spec_import_module,
+                )
+
+            if spec_loader_mock is None:
+                spec_loader_mock = mocker.patch(
+                    "connexion.spec.Specification._load_spec_from_file",
+                    return_value=self._get_openapi_spec(),
+                )
+
+        def end():
+            nonlocal importlib_mock, spec_loader_mock
+
+            if importlib_mock is not None:
+                mocker.stop(importlib_mock)
+
+            if spec_loader_mock is not None:
+                mocker.stop(spec_loader_mock)
+
+        mock_controller = MockController(begin=begin, end=end)
+
+        try:
+            yield mock_controller
+        finally:
+            mock_controller.end()
+            _ = sys.modules.pop(openapi_spec_module_name)
+
     # https://stackoverflow.com/a/55079736
     # creates a fixture on this class called `setup_method_fixture`
     # then tells pytest to use it for every test in the class
@@ -430,10 +507,6 @@ paths:
             ("BL_Python.web.application._import_blueprint_modules", []),
             ("BL_Python.web.application._get_program_dir", "."),
             ("BL_Python.web.application._get_exec_dir", "."),
-            (
-                "connexion.spec.Specification._load_spec_from_file",
-                self._get_openapi_spec(),
-            ),
         ]
 
         for mock_target in mock_targets:
