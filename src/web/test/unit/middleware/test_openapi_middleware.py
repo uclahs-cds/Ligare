@@ -1,9 +1,16 @@
+import uuid
+from typing import Literal
+
 import pytest
 from BL_Python.web.application import AppInjector, FlaskAppInjector, OpenAPIAppInjector
 from BL_Python.web.config import Config
-from BL_Python.web.middleware import bind_errorhandler
+from BL_Python.web.middleware import (
+    _get_correlation_id,
+    bind_errorhandler,
+    bind_requesthandler,
+)
 from connexion import FlaskApp
-from flask import abort
+from flask import Flask, abort
 from mock import MagicMock
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
@@ -13,6 +20,7 @@ from ..create_app import (
     OpenAPIClientInjector,
     OpenAPIClientInjectorConfigurable,
     OpenAPIMockController,
+    RequestConfigurable,
 )
 
 
@@ -466,46 +474,8 @@ from ..create_app import (
 #            correlation_id = _get_correlation_id(MagicMock())
 #            assert correlation_id == correlation_id
 #
-#    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
-#    def test___get_correlation_id__sets_correlation_id(
-#        self,
-#        format: Literal["plaintext", "JSON"],
-#        flask_request_configurable: RequestConfigurable,
-#        openapi_config: Config,
-#    ):
-#        openapi_config.logging.format = format
-#        with flask_request_configurable(openapi_config):
-#            correlation_id = _get_correlation_id(MagicMock())
 #
-#            assert correlation_id
-#            _ = uuid.UUID(correlation_id)
 #
-#    def test__bind_requesthandler__returns_decorated_flask_request_hook(
-#        self,
-#        flask_client: OpenAPIClientInjector,
-#    ):
-#        flask_request_hook_mock = MagicMock()
-#
-#        wrapped_decorator = bind_requesthandler(
-#            flask_client.client.application, flask_request_hook_mock
-#        )
-#        _ = wrapped_decorator(lambda: None)
-#
-#        assert flask_request_hook_mock.called
-#
-#    def test__bind_requesthandler__calls_decorated_function_when_app_is_run(
-#        self,
-#        flask_client: OpenAPIClientInjector,
-#    ):
-#        wrapped_handler_decorator = bind_requesthandler(
-#            flask_client.client.application, Flask.before_request
-#        )
-#        request_handler_mock = MagicMock()
-#        _ = wrapped_handler_decorator(request_handler_mock)
-#
-#        _ = flask_client.client.get("/")
-#
-#        assert request_handler_mock.called
 #
 # FIXME regarding json_logging - check line 53 of
 # json_logging.framework.connexion/__init__.py
@@ -513,6 +483,52 @@ from ..create_app import (
 # but json_logging is expecting it.
 # openapi_config.logging.format = "plaintext"
 class TestOpenAPIMiddleware(CreateApp):
+    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    def test___get_correlation_id__sets_correlation_id(
+        self,
+        format: Literal["plaintext", "JSON"],
+        openapi_request_configurable: RequestConfigurable,
+        openapi_config: Config,
+        openapi_mock_controller: OpenAPIMockController,
+    ):
+        # app = FlaskApp("foo")
+        openapi_config.logging.format = format
+
+        openapi_mock_controller.begin()
+        with openapi_request_configurable(openapi_config):
+            correlation_id = _get_correlation_id(MagicMock())
+
+            assert correlation_id
+            _ = uuid.UUID(correlation_id)
+
+    def test__bind_requesthandler__returns_decorated_flask_request_hook(self):
+        app = FlaskApp("foo")
+
+        flask_request_hook_mock = MagicMock()
+
+        wrapped_decorator = bind_requesthandler(app.app, flask_request_hook_mock)
+        _ = wrapped_decorator(lambda: None)
+
+        assert flask_request_hook_mock.called
+
+    def test__bind_requesthandler__calls_decorated_function_when_app_is_run(
+        self,
+        openapi_mock_controller: OpenAPIMockController,
+    ):
+        app = FlaskApp("foo")
+
+        openapi_mock_controller.begin()
+
+        flask_client = app.test_client()
+
+        wrapped_handler_decorator = bind_requesthandler(app.app, Flask.before_request)
+        request_handler_mock = MagicMock()
+        _ = wrapped_handler_decorator(request_handler_mock)
+
+        _ = flask_client.get("/")
+
+        assert request_handler_mock.called
+
     @pytest.mark.parametrize(
         "code_or_exception,openapi_mock_controller",
         [(Exception, lambda: 1), (HTTPException, lambda: 1), (401, lambda: 1)],

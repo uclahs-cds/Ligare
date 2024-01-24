@@ -406,11 +406,28 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
         ) as request_context:
             yield request_context
 
+    def _openapi_request(
+        self,
+        openapi_client: TestClient,
+        request_context_args: dict[Any, Any] | None = None,
+    ) -> Generator[RequestContext, Any, None]:
+        with cast(FlaskApp, openapi_client.app).app.test_request_context(
+            **(request_context_args or {})
+        ) as request_context:
+            yield request_context
+
     @pytest.fixture()
     def flask_request(
         self, flask_client: FlaskClient
     ) -> Generator[RequestContext, Any, None]:
         with next(self._flask_request(flask_client)) as request_context:
+            yield request_context
+
+    @pytest.fixture()
+    def openapi_request(
+        self, openapi_client: TestClient
+    ) -> Generator[RequestContext, Any, None]:
+        with next(self._openapi_request(openapi_client)) as request_context:
             yield request_context
 
     @pytest.fixture()
@@ -424,6 +441,24 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
             flask_client = flask_client_configurable(config)
             request_context = next(
                 self._flask_request(flask_client.client, request_context_args)
+            )
+            return request_context
+
+        return _flask_request_getter
+
+    @pytest.fixture()
+    def openapi_request_configurable(
+        self,
+        # TODO probably need to make an app_init_hook work for this
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        # TODO does RequestConfigurable need to be made generic to accomodate TestClient?
+    ) -> RequestConfigurable:
+        def _flask_request_getter(
+            config: Config, request_context_args: dict[Any, Any] | None = None
+        ):
+            flask_client = openapi_client_configurable(config)
+            request_context = next(
+                self._openapi_request(flask_client.client, request_context_args)
             )
             return request_context
 
@@ -461,10 +496,13 @@ paths:
         fixture_name = CreateApp.openapi_mock_controller.__name__
         parameter_error_msg = f"The first parameter to the `{fixture_name}` fixture must be a `Callable[[], Response]`. Review the documentation for `OpenAPIMockController`."
 
+        get_handler: Callable[[], Response]
+        # TODO probably log when this happens
         if not getattr(request, "param", None):
-            raise Exception(parameter_error_msg)
+            get_handler = lambda: Response()
+        else:
+            get_handler = request.param
 
-        get_handler: Callable[[], Response] = request.param
         if not callable(get_handler):
             raise Exception(parameter_error_msg)
 
