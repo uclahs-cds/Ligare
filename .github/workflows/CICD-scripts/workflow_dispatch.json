@@ -4,6 +4,6 @@
   "action": "workflow_dispatch",
   "inputs": {
     "rewrite_dependencies": "false",
-    "use_build_cache": "true"
+    "use_dependency_cache": "true"
   }
 }

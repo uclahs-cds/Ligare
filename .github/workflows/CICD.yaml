@@ -20,12 +20,12 @@ on:
           - false
         default: "true"
         required: true
-      use_build_cache:
+      use_dependency_cache:
         description:
-          If "true", the workflow will use the build cache if the associated
-          cache key has a hit. If "false," any existing build cache will be ignored.
-          The workflow will save a new build cache with the same cache key regardless
-          of `use_build_cache` if there was not a cache hit.
+          If "true", the workflow will use the dependency cache if the associated
+          cache key has a hit. If "false," any existing dependency cache will be ignored.
+          The workflow will save a new dependency cache with the same cache key regardless
+          of `use_dependency_cache` if there was not a cache hit.
         type: choice
         options:
           - true
@@ -39,8 +39,8 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      build-cache-key: ${{ steps.build-cache-key.outputs.cache_key }}
-      build-cache-key-run: ${{ steps.build-cache-key.outputs.cache_key_run }}
+      cache-key-dependencies: ${{ steps.generate-cache-keys.outputs.cache_key }}
+      cache-key-run: ${{ steps.generate-cache-keys.outputs.cache_key_run }}
 
     env:
       PYTHON_VERSION: "3.10"
@@ -49,40 +49,37 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Generate cache keys
-        id: build-cache-key
-        # Use the same cache between Workflow runs _except_ when the event is a workflow_dispatch.
-        # This should result in cache keys like "Linux-true-(true|false)-abc123" for all runs _except_ workflow_dispatch,
-        # and cache keys like "linux-false-(true|123)-abc123" for workflow_dispatch.
+        id: generate-cache-keys
+        # Use separate cache keys for dependencies and for run workspace.
+        # The dependencies can be restored between runs,
+        # while the workspace is restored between jobs in the same run.
         run: |
           rand=$(( (1000+$RANDOM)%$RANDOM*$RANDOM ))
           run_attempt=$([ -n "${{ github.run_attempt }}" ] && printf ${{ github.run_attempt }} || printf $rand)
-          cache_key='${{ runner.os }}-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}'
-          cache_key_run="$cache_key"'-run-id_${{ github.run_id }}-number_${{ github.run_number }}-attempt_'"$run_attempt"
-          echo "cache_key=$cache_key" >> $GITHUB_OUTPUT
+          cache_key_dependencies='${{ runner.os }}-dependencies-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}'
+          cache_key_run='${{ runner.os }}-run-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}-run-id_${{ github.run_id }}-number_${{ github.run_number }}-attempt_'"$run_attempt"
+          echo "cache_key_dependencies=$cache_key_dependencies" >> $GITHUB_OUTPUT
           echo "cache_key_run=$cache_key_run" >> $GITHUB_OUTPUT
 
-      - name: Restore build cache
-        if: ${{ success() && (github.event_name != 'workflow_dispatch' || inputs.use_build_cache == 'true') }}
+      - name: Restore dependency cache
+        if: ${{ success() && (github.event_name != 'workflow_dispatch' || inputs.use_dependency_cache == 'true') }}
         uses: actions/cache/restore@v4
-        id: restore-build-cache
+        id: restore-dependency-cache
         with:
           path: |
-            ${{ github.workspace }}/.github-venv
-            ${{ github.workspace }}/node_modules
-          key: ${{ steps.build-cache-key.outputs.cache_key_run }}
-          # we only want to restore the previous dependency cache, not the checkout cache.
-          # all other jobs should use cache_key_run so that the checkout is restored as well.
-          restore-keys: ${{ steps.build-cache-key.outputs.cache_key }}
+            .github-venv
+            node_modules
+          key: ${{ steps.generate-cache-keys.outputs.cache_key_dependencies }}
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        if: ${{ success() && (inputs.use_build_cache == 'false' || steps.restore-build-cache.outputs.cache-matched-key == '' )}}
+        if: ${{ success() && (inputs.use_dependency_cache == 'false' || !steps.restore-dependency-cache.outputs.cache-hit) }}
         uses: actions/setup-python@v5
         id: install_python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        if: ${{ success() && (inputs.use_build_cache == 'false' || steps.restore-build-cache.outputs.cache-matched-key == '' )}}
+        if: ${{ success() && (inputs.use_dependency_cache == 'false' || !steps.restore-dependency-cache.outputs.cache-hit) }}
         run: |
           echo Setting up dependencies
           python -m pip install -U pip
@@ -99,12 +96,22 @@ jobs:
           npm install -g pyright
           ./install_all.sh -e
 
-      - name: Save build cache
+      - name: Save dependency cache
+        if: ${{ success() && !steps.restore-dependency-cache.outputs.cache-hit }}
         uses: actions/cache/save@v4
-        id: save-build-cache
+        id: save-dependency-cache
+        with:
+          path: |
+            .github-venv
+            node_modules
+          key: ${{ steps.generate-cache-keys.outputs.cache_key_dependencies }}
+
+      - name: Save run cache
+        uses: actions/cache/save@v4
+        id: save-run-cache
         with:
           path: ${{ github.workspace }}
-          key: ${{ steps.build-cache-key.outputs.cache_key_run }}
+          key: ${{ steps.generate-cache-keys.outputs.cache_key_run }}
 
   Pyright:
     name: Static type checking
@@ -125,10 +132,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - uses: actions/cache/restore@v4
-        name: Restore repository build
-        id: restore-repository-build
+        name: Restore run cache
+        id: restore-run-cache
         with:
-          key: ${{ needs.Checkout.outputs.build-cache-key-run }}
+          key: ${{ needs.Checkout.outputs.cache-key-run }}
           path: ${{ github.workspace }}
           fail-on-cache-miss: true
 
@@ -157,10 +164,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - uses: actions/cache/restore@v4
-        name: Restore repository build
-        id: restore-repository-build
+        name: Restore run cache
+        id: restore-run-cache
         with:
-          key: ${{ needs.Checkout.outputs.build-cache-key-run }}
+          key: ${{ needs.Checkout.outputs.cache-key-run }}
           path: ${{ github.workspace }}
           fail-on-cache-miss: true
 
@@ -204,10 +211,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - uses: actions/cache/restore@v4
-        name: Restore repository build
-        id: restore-repository-build
+        name: Restore run cache
+        id: restore-run-cache
         with:
-          key: ${{ needs.Checkout.outputs.build-cache-key-run }}
+          key: ${{ needs.Checkout.outputs.cache-key-run }}
           path: ${{ github.workspace }}
           fail-on-cache-miss: true
 
@@ -241,7 +248,7 @@ jobs:
           contains(toJSON(needs), '"result": "failure"')
         env:
           RANDOM_EOF: |
-            EOF`echo $RANDOM | base64`
+            EOF`echo $RANDOM`
         run: |
           echo One or more required jobs did not complete successfully;
           jq -r 'keys[] as $job | "Job ID: \($job)'"\n"'    \(.[$job] | .result)"' <<${{ env.RANDOM_EOF }}
