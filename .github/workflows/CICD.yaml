@@ -48,7 +48,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: build-cache-key
+      - name: Generate cache keys
+        id: build-cache-key
         # Use the same cache between Workflow runs _except_ when the event is a workflow_dispatch.
         # This should result in cache keys like "Linux-true-(true|false)-abc123" for all runs _except_ workflow_dispatch,
         # and cache keys like "linux-false-(true|123)-abc123" for workflow_dispatch.
