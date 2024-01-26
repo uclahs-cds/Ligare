@@ -3,6 +3,7 @@
 import re
 from glob import glob
 from os import environ, linesep
+from pathlib import Path
 from sys import exit
 from typing import Any
 
@@ -37,7 +38,9 @@ WORKDIR = environ.get("GITHUB_WORKSPACE")
 if WORKDIR is None:
     raise ValueError("GITHUB_WORKSPACE is not set.")
 
-pyproject_files = ["pyproject.toml"] + glob("src/*/pyproject.toml")
+pyproject_files = [str(Path(WORKDIR, "pyproject.toml"))] + glob(
+    str(Path(WORKDIR, "src/*/pyproject.toml"))
+)
 
 for pyproject_file in pyproject_files:
     print(
