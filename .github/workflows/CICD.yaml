@@ -57,7 +57,7 @@ jobs:
           rand=$(( (1000+$RANDOM)%$RANDOM*$RANDOM ))
           run_attempt=$([ -n "${{ github.run_attempt }}" ] && printf ${{ github.run_attempt }} || printf $rand)
           cache_key='${{ runner.os }}-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}'
-          cache_key_run='${{ runner.os }}-${{ github.event_name }}-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}-run-id_${{ github.run_id }}-number_${{ github.run_number }}-attempt_'"$run_attempt"
+          cache_key_run="$cache_key"'-run-id_${{ github.run_id }}-number_${{ github.run_number }}-attempt_'"$run_attempt"
           echo "cache_key=$cache_key" >> $GITHUB_OUTPUT
           echo "cache_key_run=$cache_key_run" >> $GITHUB_OUTPUT
 
