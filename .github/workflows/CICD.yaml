@@ -62,7 +62,7 @@ jobs:
 
       - name: Restore build cache
         if: ${{ success() && (github.event_name != 'workflow_dispatch' || inputs.use_build_cache == 'true') }}
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         id: restore-build-cache
         with:
           path: |
@@ -73,7 +73,7 @@ jobs:
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         if: ${{ success() && (inputs.use_build_cache == 'false' || steps.restore-build-cache.outputs.cache-matched-key == '' )}}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         id: install_python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -97,7 +97,7 @@ jobs:
           ./install_all.sh -e
 
       - name: Save build cache
-        uses: actions/cache/save@v3
+        uses: actions/cache/save@v4
         id: save-build-cache
         with:
           path: ${{ github.workspace }}
@@ -121,7 +121,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/cache/restore@v3
+      - uses: actions/cache/restore@v4
         name: Restore repository build
         id: restore-repository-build
         with:
@@ -154,7 +154,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/cache/restore@v3
+      - uses: actions/cache/restore@v4
         name: Restore repository build
         id: restore-repository-build
         with:
@@ -202,7 +202,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/cache/restore@v3
+      - uses: actions/cache/restore@v4
         name: Restore repository build
         id: restore-repository-build
         with:
