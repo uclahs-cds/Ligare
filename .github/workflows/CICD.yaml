@@ -53,8 +53,10 @@ jobs:
         # This should result in cache keys like "Linux-true-(true|false)-abc123" for all runs _except_ workflow_dispatch,
         # and cache keys like "linux-false-(true|123)-abc123" for workflow_dispatch.
         run: |
+          rand=$(( (1000+$RANDOM)%$RANDOM*$RANDOM ))
+          run_attempt=$([ -n "${{ github.run_attempt }}" ] && printf ${{ github.run_attempt }} || printf $rand)
           cache_key='${{ runner.os }}-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}'
-          cache_key_run='${{ runner.os }}-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}-run-id_${{ github.run_id }}-number_${{ github.run_number }}-attempt_${{ github.run_attempt }}'
+          cache_key_run='${{ runner.os }}-${{ github.event_name }}-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}-run-id_${{ github.run_id }}-number_${{ github.run_number }}-attempt_'"$run_attempt"
           echo "cache_key=$cache_key" >> $GITHUB_OUTPUT
           echo "cache_key_run=$cache_key_run" >> $GITHUB_OUTPUT
 
@@ -63,7 +65,9 @@ jobs:
         uses: actions/cache/restore@v3
         id: restore-build-cache
         with:
-          path: ${{ github.workspace }}
+          path: |
+            ${{ github.workspace }}/.github-venv
+            ${{ github.workspace }}/node_modules
           key: ${{ steps.build-cache-key.outputs.cache_key_run }}
           restore-keys: ${{ steps.build-cache-key.outputs.cache_key }}
 
@@ -73,7 +77,6 @@ jobs:
         id: install_python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: "pip"
 
       - name: Install dependencies
         if: ${{ success() && (inputs.use_build_cache == 'false' || steps.restore-build-cache.outputs.cache-matched-key == '' )}}
@@ -86,7 +89,7 @@ jobs:
           ${{ steps.install_python.outputs.python-path }} -m venv .github-venv
           source .github-venv/bin/activate
 
-          echo "prefix=$(pwd)/node_modules" >> ~/.npmrc
+          echo 'prefix=${{ github.workspace }}/node_modules' >> ~/.npmrc
           # Note that currently pyproject.toml does not specify a version.
           # As such, this will install the latest Pyright, including
           # potentionally breaking changes.
@@ -94,7 +97,6 @@ jobs:
           ./install_all.sh -e
 
       - name: Save build cache
-        if: ${{ success() && (github.event_name == 'workflow_dispatch' || steps.restore-build-cache.outputs.cache-matched-key == '') }}
         uses: actions/cache/save@v3
         id: save-build-cache
         with:
@@ -106,9 +108,19 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - Checkout
-    if: ${{( always() && !cancelled() ) }}
+
+    env:
+      PYTHON_VERSION: "3.10"
+
+    if: ${{( success() && !cancelled() ) }}
 
     steps:
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        id: install_python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
@@ -121,7 +133,7 @@ jobs:
       - name: Test with pyright
         run: |
           echo Running pyright
-          source .github-venv/bin/activate
+          source ${{ github.workspace }}/.github-venv/bin/activate
           ./node_modules/bin/pyright
 
   Pytest:
@@ -129,9 +141,19 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - Checkout
-    if: ${{( always() && !cancelled() ) }}
+
+    env:
+      PYTHON_VERSION: "3.10"
+
+    if: ${{( success() && !cancelled() ) }}
 
     steps:
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        id: install_python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
@@ -144,7 +166,7 @@ jobs:
       - name: Test with pytest and generate reports
         run: |
           echo Running pytest
-          source .github-venv/bin/activate
+          source ${{ github.workspace }}/.github-venv/bin/activate
           pytest -k "not acceptance"
 
           coverage html
@@ -167,9 +189,19 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - Checkout
-    if: ${{( always() && !cancelled() ) }}
+
+    env:
+      PYTHON_VERSION: "3.10"
+
+    if: ${{( success() && !cancelled() ) }}
 
     steps:
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        id: install_python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
       - uses: actions/cache/restore@v3
         name: Restore repository build
         id: restore-repository-build
