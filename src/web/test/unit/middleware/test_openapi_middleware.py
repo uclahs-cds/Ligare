@@ -5,6 +5,7 @@ import pytest
 from BL_Python.web.application import AppInjector, FlaskAppInjector, OpenAPIAppInjector
 from BL_Python.web.config import Config
 from BL_Python.web.middleware import (
+    CORRELATION_ID_HEADER,
     _get_correlation_id,
     bind_errorhandler,
     bind_requesthandler,
@@ -426,53 +427,8 @@ from ..create_app import (
 #        assert response.headers[CORRELATION_ID_HEADER]
 #        _ = uuid.UUID(response.headers[CORRELATION_ID_HEADER])
 #
-#    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
-#    def test___register_api_response_handlers__sets_correlation_id_response_header_when_set_in_request_header(
-#        self,
-#        format: Literal["plaintext", "JSON"],
-#        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
-#        openapi_config: Config,
-#    ):
-#        openapi_config.logging.format = format
-#        flask_client = openapi_client_configurable(openapi_config)
-#        correlation_id = str(uuid4())
-#        response = flask_client.client.get(
-#            "/", headers={CORRELATION_ID_HEADER: correlation_id}
-#        )
 #
-#        assert response.headers[CORRELATION_ID_HEADER] == correlation_id
 #
-#    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
-#    def test___get_correlation_id__validates_correlation_id_when_set_in_request_headers(
-#        self,
-#        format: Literal["plaintext", "JSON"],
-#        flask_request_configurable: RequestConfigurable,
-#        openapi_config: Config,
-#    ):
-#        openapi_config.logging.format = format
-#        correlation_id = "abc123"
-#        with flask_request_configurable(
-#            openapi_config, {"headers": {CORRELATION_ID_HEADER: correlation_id}}
-#        ):
-#            with pytest.raises(
-#                ValueError, match="^badly formed hexadecimal UUID string$"
-#            ):
-#                _ = _get_correlation_id(MagicMock())
-#
-#    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
-#    def test___get_correlation_id__uses_existing_correlation_id_when_set_in_request_headers(
-#        self,
-#        format: Literal["plaintext", "JSON"],
-#        flask_request_configurable: RequestConfigurable,
-#        openapi_config: Config,
-#    ):
-#        openapi_config.logging.format = format
-#        correlation_id = str(uuid4())
-#        with flask_request_configurable(
-#            openapi_config, {"headers": {CORRELATION_ID_HEADER: correlation_id}}
-#        ):
-#            correlation_id = _get_correlation_id(MagicMock())
-#            assert correlation_id == correlation_id
 #
 #
 #
@@ -483,6 +439,60 @@ from ..create_app import (
 # but json_logging is expecting it.
 # openapi_config.logging.format = "plaintext"
 class TestOpenAPIMiddleware(CreateApp):
+    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    def test___register_api_response_handlers__sets_correlation_id_response_header_when_set_in_request_header(
+        self,
+        format: Literal["plaintext", "JSON"],
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_config: Config,
+        openapi_mock_controller: OpenAPIMockController,
+    ):
+        openapi_config.logging.format = format
+        openapi_mock_controller.begin()
+        flask_client = openapi_client_configurable(openapi_config)
+        correlation_id = str(uuid.uuid4())
+        response = flask_client.client.get(
+            "/", headers={CORRELATION_ID_HEADER: correlation_id}
+        )
+
+        assert response.headers[CORRELATION_ID_HEADER] == correlation_id
+
+    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    def test___get_correlation_id__validates_correlation_id_when_set_in_request_headers(
+        self,
+        format: Literal["plaintext", "JSON"],
+        openapi_request_configurable: RequestConfigurable,
+        openapi_config: Config,
+        openapi_mock_controller: OpenAPIMockController,
+    ):
+        openapi_config.logging.format = format
+        correlation_id = "abc123"
+        openapi_mock_controller.begin()
+        with openapi_request_configurable(
+            openapi_config, {"headers": {CORRELATION_ID_HEADER: correlation_id}}
+        ):
+            with pytest.raises(
+                ValueError, match="^badly formed hexadecimal UUID string$"
+            ):
+                _ = _get_correlation_id(MagicMock())
+
+    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    def test___get_correlation_id__uses_existing_correlation_id_when_set_in_request_headers(
+        self,
+        format: Literal["plaintext", "JSON"],
+        openapi_request_configurable: RequestConfigurable,
+        openapi_config: Config,
+        openapi_mock_controller: OpenAPIMockController,
+    ):
+        openapi_config.logging.format = format
+        correlation_id = str(uuid.uuid4())
+        openapi_mock_controller.begin()
+        with openapi_request_configurable(
+            openapi_config, {"headers": {CORRELATION_ID_HEADER: correlation_id}}
+        ):
+            correlation_id = _get_correlation_id(MagicMock())
+            assert correlation_id == correlation_id
+
     @pytest.mark.parametrize("format", ["plaintext", "JSON"])
     def test___get_correlation_id__sets_correlation_id(
         self,

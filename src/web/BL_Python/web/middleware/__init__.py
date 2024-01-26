@@ -6,7 +6,7 @@ from typing import Any, Awaitable, Callable, Dict, TypeVar
 from uuid import uuid4
 
 import json_logging
-from connexion import FlaskApp
+from connexion import FlaskApp, utils
 from flask import Flask, Request, Response, request
 from flask.typing import (
     AfterRequestCallable,
@@ -14,6 +14,7 @@ from flask.typing import (
     ResponseReturnValue,
 )
 from injector import inject
+from starlette.types import ASGIApp, Receive, Scope, Send
 from werkzeug.exceptions import HTTPException, Unauthorized
 
 from ..config import Config
@@ -274,16 +275,77 @@ class RequestMiddleware:
     ) -> Any:
         # before request processing
         # FIXME does DI work here?
+
         _log_all_api_requests(request, config, log)
 
         # continue processing request
         response = start_response(request)
+        return response
 
-        # after request processing
-        # FIXME does DI work here?
-        # FIXME consider creating a separate ResponseMiddleware
-        # instead of having the "Request" class handle
-        return _ordered_api_response_handers(response, config, log)
+
+class ResponseMiddleware:
+    _app: ASGIApp
+
+    def __init__(self, app: ASGIApp):  # pyright: ignore[reportMissingSuperCall]
+        self._app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        async def wrapped_send(message: Any) -> None:
+            nonlocal scope
+            nonlocal send
+
+            if message["type"] != "http.response.start":
+                return await send(message)
+
+            request = scope
+            response = message
+
+            response_headers: list[tuple[bytes, bytes]] = response["headers"]
+            content_type = utils.extract_content_type(response_headers)
+            _, encoding = utils.split_content_type(content_type)
+            if encoding is None:
+                encoding = "utf-8"
+
+            request_headers: list[tuple[bytes, bytes]] = request["headers"]
+            try:
+                request_correlation_id: bytes | None = next(
+                    (
+                        correlation_id
+                        for (header, correlation_id) in request_headers
+                        if header == CORRELATION_ID_HEADER.lower().encode(encoding)
+                    ),
+                    None,
+                )
+
+                if request_correlation_id:
+                    # validate format
+                    _ = uuid.UUID(request_correlation_id.decode(encoding))
+                else:
+                    request_correlation_id = str(uuid4()).encode(encoding)
+                    # log.info(
+                    #    f'Generated new UUID "{request_correlation_id}" for {CORRELATION_ID_HEADER} request header.'
+                    # )
+
+                response_headers.append(
+                    (CORRELATION_ID_HEADER.encode(encoding), request_correlation_id)
+                )
+
+                return await send(message)
+            except ValueError as e:
+                # log.warning(
+                #    f"Badly formatted {CORRELATION_ID_HEADER} received in request."
+                # )
+                raise e
+
+        await self._app(scope, receive, wrapped_send)
+        ## continue processing request
+        # response = start_response(request)
+
+        ## after request processing
+        ## FIXME does DI work here?
+        ## FIXME consider creating a separate ResponseMiddleware
+        ## instead of having the "Request" class handle
+        # return _ordered_api_response_handers(response, config, log)
 
 
 def register_api_request_handlers(app: TFlaskApp):
@@ -301,6 +363,8 @@ def register_api_response_handlers(app: TFlaskApp):
     # apparently Flask may not call this if unhandled exceptions occur
     if isinstance(app, Flask):
         _ = bind_requesthandler(app, Flask.after_request)(_ordered_api_response_handers)
+    else:
+        app.add_middleware(ResponseMiddleware)
 
 
 def register_error_handlers(app: TFlaskApp):
