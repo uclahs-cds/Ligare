@@ -70,6 +70,8 @@ jobs:
             ${{ github.workspace }}/.github-venv
             ${{ github.workspace }}/node_modules
           key: ${{ steps.build-cache-key.outputs.cache_key_run }}
+          # we only want to restore the previous dependency cache, not the checkout cache.
+          # all other jobs should use cache_key_run so that the checkout is restored as well.
           restore-keys: ${{ steps.build-cache-key.outputs.cache_key }}
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
@@ -127,7 +129,6 @@ jobs:
         id: restore-repository-build
         with:
           key: ${{ needs.Checkout.outputs.build-cache-key-run }}
-          restore-keys: ${{ needs.Checkout.outputs.build-cache-key }}
           path: ${{ github.workspace }}
           fail-on-cache-miss: true
 
@@ -160,7 +161,6 @@ jobs:
         id: restore-repository-build
         with:
           key: ${{ needs.Checkout.outputs.build-cache-key-run }}
-          restore-keys: ${{ needs.Checkout.outputs.build-cache-key }}
           path: ${{ github.workspace }}
           fail-on-cache-miss: true
 
@@ -208,7 +208,6 @@ jobs:
         id: restore-repository-build
         with:
           key: ${{ needs.Checkout.outputs.build-cache-key-run }}
-          restore-keys: ${{ needs.Checkout.outputs.build-cache-key }}
           path: ${{ github.workspace }}
           fail-on-cache-miss: true
 
