@@ -75,6 +75,7 @@ class ConnexionMiddleware:
     provided application."""
 
     default_middlewares = ...
+    middlewares: list[type] | None = ...
     def __init__(
         self,
         app: ASGIApp,

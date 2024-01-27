@@ -283,13 +283,16 @@ class RequestMiddleware:
         return response
 
 
-class ResponseMiddleware:
+class CorrelationIDMiddleware:
     _app: ASGIApp
 
     def __init__(self, app: ASGIApp):  # pyright: ignore[reportMissingSuperCall]
         self._app = app
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+    @inject
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send, log: Logger
+    ) -> None:
         async def wrapped_send(message: Any) -> None:
             nonlocal scope
             nonlocal send
@@ -308,11 +311,15 @@ class ResponseMiddleware:
 
             request_headers: list[tuple[bytes, bytes]] = request["headers"]
             try:
+                correlation_id_header_encoded = CORRELATION_ID_HEADER.lower().encode(
+                    encoding
+                )
+
                 request_correlation_id: bytes | None = next(
                     (
                         correlation_id
                         for (header, correlation_id) in request_headers
-                        if header == CORRELATION_ID_HEADER.lower().encode(encoding)
+                        if header == correlation_id_header_encoded
                     ),
                     None,
                 )
@@ -322,30 +329,25 @@ class ResponseMiddleware:
                     _ = uuid.UUID(request_correlation_id.decode(encoding))
                 else:
                     request_correlation_id = str(uuid4()).encode(encoding)
-                    # log.info(
-                    #    f'Generated new UUID "{request_correlation_id}" for {CORRELATION_ID_HEADER} request header.'
-                    # )
+                    request_headers.append(
+                        (correlation_id_header_encoded, request_correlation_id)
+                    )
+                    log.info(
+                        f'Generated new UUID "{request_correlation_id}" for {CORRELATION_ID_HEADER} request header.'
+                    )
 
                 response_headers.append(
-                    (CORRELATION_ID_HEADER.encode(encoding), request_correlation_id)
+                    (correlation_id_header_encoded, request_correlation_id)
                 )
 
                 return await send(message)
             except ValueError as e:
-                # log.warning(
-                #    f"Badly formatted {CORRELATION_ID_HEADER} received in request."
-                # )
+                log.warning(
+                    f"Badly formatted {CORRELATION_ID_HEADER} received in request."
+                )
                 raise e
 
         await self._app(scope, receive, wrapped_send)
-        ## continue processing request
-        # response = start_response(request)
-
-        ## after request processing
-        ## FIXME does DI work here?
-        ## FIXME consider creating a separate ResponseMiddleware
-        ## instead of having the "Request" class handle
-        # return _ordered_api_response_handers(response, config, log)
 
 
 def register_api_request_handlers(app: TFlaskApp):
@@ -364,7 +366,7 @@ def register_api_response_handlers(app: TFlaskApp):
     if isinstance(app, Flask):
         _ = bind_requesthandler(app, Flask.after_request)(_ordered_api_response_handers)
     else:
-        app.add_middleware(ResponseMiddleware)
+        app.add_middleware(CorrelationIDMiddleware)
 
 
 def register_error_handlers(app: TFlaskApp):
