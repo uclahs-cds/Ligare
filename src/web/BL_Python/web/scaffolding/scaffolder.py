@@ -12,7 +12,7 @@ from jinja2 import BaseLoader, Environment, PackageLoader, Template
 
 # fmt: off
 from pkg_resources import (
-    ResourceManager,  # pyright: ignore[reportUnknownVariableType,reportGeneralTypeIssues,reportAttributeAccessIssue]
+    ResourceManager,  # pyright: ignore[reportUnknownVariableType,reportAttributeAccessIssue]
 )
 from pkg_resources import get_provider
 
@@ -51,7 +51,7 @@ class Scaffolder:
         self._checked_directories: set[Path] = set()
         # BaseLoader is used for rendering strings only. It does not need additional functionality.
         self._base_env = Environment(
-            loader=BaseLoader  # pyright: ignore[reportGeneralTypeIssues,reportArgumentType]
+            loader=BaseLoader  # pyright: ignore[reportArgumentType]
         )
 
     def _create_directory(self, directory: Path, overwrite_existing_files: bool = True):

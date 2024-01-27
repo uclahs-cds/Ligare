@@ -11,8 +11,7 @@ def test__AppModule__binds_extra_dependencies():
     flask_mock.configure_mock()
     extra_dependency_mock = MagicMock()
 
-    class TestDependencyType:
-        ...
+    class TestDependencyType: ...
 
     app_module = AppModule(flask_mock, (TestDependencyType, extra_dependency_mock))
 

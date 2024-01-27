@@ -1,11 +1,12 @@
 from functools import partial
-from typing import Any, Callable, Protocol, Tuple, cast
+from typing import Any, Protocol, Tuple, cast
 
 from BL_Python.programming.patterns.dependency_injection import LoggerModule
 from connexion import FlaskApp
 from flask import Config as Config
 from flask import Flask
-from flask_injector import FlaskInjector, wrap_function
+from flask_injector import wrap_function  # pyright: ignore[reportUnknownVariableType]
+from flask_injector import FlaskInjector
 from injector import Binder, Injector, Module
 from starlette.types import Receive, Scope, Send
 from typing_extensions import override
@@ -59,8 +60,9 @@ class AppModule(Module):
 
 
 class MiddlewareRoutine(Protocol):
-    def __call__(self, scope: Scope, receive: Receive, send: Send, *args: Any) -> None:
-        ...
+    def __call__(
+        self, scope: Scope, receive: Receive, send: Send, *args: Any
+    ) -> None: ...
 
 
 def configure_dependencies(

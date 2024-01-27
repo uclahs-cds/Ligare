@@ -209,9 +209,9 @@ def _wrap_all_api_responses(response: Response, config: Config, log: Logger):
         if request.path.startswith("/ui/") or (
             request.url_rule and request.url_rule.endpoint == "/v1./v1_swagger_ui_index"
         ):
-            response.headers[
-                CONTENT_SECURITY_POLICY_HEADER
-            ] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'self' 'unsafe-inline'"
+            response.headers[CONTENT_SECURITY_POLICY_HEADER] = (
+                "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'self' 'unsafe-inline'"
+            )
 
 
 def _log_all_api_responses(response: Response, config: Config, log: Logger):
@@ -354,8 +354,10 @@ def register_api_request_handlers(app: TFlaskApp):
     if isinstance(app, Flask):
         _ = bind_requesthandler(app, Flask.before_request)(_log_all_api_requests)
     else:
-        app.app.wsgi_app = RequestMiddleware(  # pyright: ignore[reportAttributeAccessIssue,reportGeneralTypeIssues] FIXME differences between VSCode Pylance and Pyright versions
-            app.app.wsgi_app  # pyright: ignore[reportGeneralTypeIssues,reportArgumentType]
+        app.app.wsgi_app = (
+            RequestMiddleware(  # pyright: ignore[reportAttributeAccessIssue]
+                app.app.wsgi_app  # pyright: ignore[reportArgumentType]
+            )
         )
         # app.add_middleware(middleware_class=RequestMiddleware)
 

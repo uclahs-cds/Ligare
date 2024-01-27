@@ -18,16 +18,14 @@ if TYPE_CHECKING:
             full_table_name: str,
             base_table: str,
             meta_base: MetaBaseType,
-        ) -> None:
-            ...
+        ) -> None: ...
 
     class Connection(Protocol):
         dialect: Dialect
 
     class Op(Protocol):
         @staticmethod
-        def get_bind() -> Connection:
-            ...
+        def get_bind() -> Connection: ...
 
 
 @final

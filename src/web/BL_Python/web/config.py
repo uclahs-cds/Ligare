@@ -90,9 +90,9 @@ class FlaskSessionConfig(BaseModel):
         environ.update(
             {
                 "PERMANENT_SESSION": str(1 if self.permanent else 0),
-                "PERMANENT_SESSION_LIFETIME": str(self.lifetime)
-                if self.lifetime
-                else "",
+                "PERMANENT_SESSION_LIFETIME": (
+                    str(self.lifetime) if self.lifetime else ""
+                ),
                 "SESSION_REFRESH_EACH_REQUEST": str(
                     1 if self.refresh_each_request else 0
                 ),
