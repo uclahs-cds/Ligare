@@ -1,25 +1,25 @@
 import json
-import re
-import uuid
 from logging import Logger
-from typing import Any, Awaitable, Callable, Dict, TypeVar
-from uuid import uuid4
+from typing import Awaitable, Callable, TypeVar
 
-import json_logging
-from connexion import FlaskApp, utils
-from flask import Flask, Request, Response, request
+from BL_Python.web.middleware.flask import (
+    register_flask_api_request_handlers,
+    register_flask_api_response_handlers,
+)
+from BL_Python.web.middleware.openapi import (
+    register_openapi_api_request_handlers,
+    register_openapi_api_response_handlers,
+)
+from connexion import FlaskApp
+from flask import Flask, Response
 from flask.typing import (
     AfterRequestCallable,
     BeforeRequestCallable,
     ResponseReturnValue,
 )
-from injector import inject
-from starlette.types import ASGIApp, Receive, Scope, Send
 from werkzeug.exceptions import HTTPException, Unauthorized
 
-from ..config import Config
-
-CORRELATION_ID_HEADER = "X-Correlation-ID"
+CORRELATION_ID_HEADER = "X-Correlation-Id"
 REQUEST_COOKIE_HEADER = "Cookie"
 RESPONSE_COOKIE_HEADER = "Set-Cookie"
 CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER = "Access-Control-Allow-Origin"
@@ -56,18 +56,6 @@ TFlaskApp = Flask | FlaskApp
 T_flask_app = TypeVar("T_flask_app", bound=TFlaskApp)
 
 
-def bind_requesthandler(
-    app: T_flask_app,
-    flask_app_handler: Callable[
-        [T_flask_app, Callable[..., Response | None]], T_request_callable
-    ],
-):
-    def wrapper(request_callable: Callable[..., Response | None]) -> T_request_callable:
-        return flask_app_handler(app, request_callable)
-
-    return wrapper
-
-
 def bind_errorhandler(
     app: TFlaskApp,
     code_or_exception: type[Exception] | int,
@@ -76,52 +64,6 @@ def bind_errorhandler(
         return app.errorhandler(code_or_exception)
     else:
         return app.app.errorhandler(code_or_exception)
-
-
-def _get_correlation_id(log: Logger) -> str:
-    correlation_id = _get_correlation_id_from_json_logging(log)
-
-    if not correlation_id:
-        correlation_id = _get_correlation_id_from_headers(log)
-
-    return correlation_id
-
-
-def _get_correlation_id_from_headers(log: Logger) -> str:
-    try:
-        correlation_id = request.headers.get(CORRELATION_ID_HEADER)
-
-        if correlation_id:
-            # validate format
-            _ = uuid.UUID(correlation_id)
-        else:
-            correlation_id = str(uuid4())
-            log.info(
-                f'Generated new UUID "{correlation_id}" for {CORRELATION_ID_HEADER} request header.'
-            )
-
-        return correlation_id
-
-    except ValueError as e:
-        log.warning(f"Badly formatted {CORRELATION_ID_HEADER} received in request.")
-        raise e
-
-
-def _get_correlation_id_from_json_logging(log: Logger) -> str | None:
-    correlation_id: None | str
-    try:
-        correlation_id = json_logging.get_correlation_id(request)
-        # validate format
-        _ = uuid.UUID(correlation_id)
-        return correlation_id
-    except ValueError as e:
-        log.warning(f"Badly formatted {CORRELATION_ID_HEADER} received in request.")
-        raise e
-    except Exception as e:
-        log.debug(
-            f"Error received when getting {CORRELATION_ID_HEADER} header from `json_logging`. Possibly `json_logging` is not configured, and this is not an error.",
-            exc_info=e,
-        )
 
 
 INCOMING_REQUEST_MESSAGE = "Incoming request:\n\
@@ -135,240 +77,20 @@ OUTGOING_RESPONSE_MESSAGE = f"Outgoing response:\n\
    Status: %s"
 
 
-@inject
-def _log_all_api_requests(request: Request, config: Config, log: Logger):
-    correlation_id = _get_correlation_id(log)
-
-    request_headers_safe: Dict[str, str] = dict(request.headers)
-
-    if (
-        request_headers_safe.get(REQUEST_COOKIE_HEADER)
-        and config.flask
-        and config.flask.session
-    ):
-        request_headers_safe[REQUEST_COOKIE_HEADER] = re.sub(
-            rf"({config.flask.session.cookie.name}=)[^;]+(;|$)",
-            r"\1<redacted>\2",
-            request_headers_safe[REQUEST_COOKIE_HEADER],
-        )
-
-    log.info(
-        INCOMING_REQUEST_MESSAGE,
-        request.method,
-        request.url,
-        request.host,
-        request.remote_addr,
-        request.remote_user,
-        extra={
-            "props": {
-                "correlation_id": correlation_id,
-                "headers": request_headers_safe,
-            }
-        },
-    )
-
-
-@inject
-def _ordered_api_response_handers(response: Response, config: Config, log: Logger):
-    _wrap_all_api_responses(response, config, log)
-    _log_all_api_responses(response, config, log)
-    return response
-
-
-def _wrap_all_api_responses(response: Response, config: Config, log: Logger):
-    correlation_id = _get_correlation_id(log)
-
-    cors_domain: str | None = None
-    if config.web.security.cors.origin:
-        cors_domain = config.web.security.cors.origin
-    else:
-        if not response.headers.get(CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER):
-            cors_domain = request.headers.get(ORIGIN_HEADER)
-            if not cors_domain:
-                cors_domain = request.headers.get(HOST_HEADER)
-
-    if cors_domain:
-        response.headers[CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER] = cors_domain
-
-    response.headers[CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER] = str(
-        config.web.security.cors.allow_credentials
-    )
-
-    response.headers[CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER] = ",".join(
-        config.web.security.cors.allow_methods
-    )
-
-    response.headers[CORRELATION_ID_HEADER] = correlation_id
-
-    if config.web.security.csp:
-        response.headers[CONTENT_SECURITY_POLICY_HEADER] = config.web.security.csp
-
-    if config.flask and config.flask.openapi and config.flask.openapi.use_swagger:
-        # Use a permissive CSP for the Swagger UI
-        # https://github.com/swagger-api/swagger-ui/issues/7540
-        if request.path.startswith("/ui/") or (
-            request.url_rule and request.url_rule.endpoint == "/v1./v1_swagger_ui_index"
-        ):
-            response.headers[CONTENT_SECURITY_POLICY_HEADER] = (
-                "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'self' 'unsafe-inline'"
-            )
-
-
-def _log_all_api_responses(response: Response, config: Config, log: Logger):
-    correlation_id = _get_correlation_id(log)
-
-    response_headers_safe: Dict[str, str] = dict(response.headers)
-
-    if (
-        response_headers_safe.get(RESPONSE_COOKIE_HEADER)
-        and config.flask
-        and config.flask.session
-    ):
-        response_headers_safe[RESPONSE_COOKIE_HEADER] = re.sub(
-            rf"({config.flask.session.cookie.name}=)[^;]+(;|$)",
-            r"\1<redacted>\2",
-            response_headers_safe[RESPONSE_COOKIE_HEADER],
-        )
-
-    log.info(
-        OUTGOING_RESPONSE_MESSAGE,
-        response.status_code,
-        response.status,
-        extra={
-            "props": {
-                "correlation_id": correlation_id,
-                "headers": response_headers_safe,
-            }
-        },
-    )
-
-
-class RequestMiddleware:
-    _app: Flask
-
-    def __init__(self, app: Flask) -> None:  # pyright: ignore[reportMissingSuperCall]
-        self._app = app
-
-    # @inject
-    #    def __call__(
-    #        self,
-    #        request: Request,
-    #        next_middleware: Callable[[Request], Response],
-    #        # config: Config,
-    #        # log: Logger,
-    #    ) -> Any:
-    #        # before request processing
-    #        _log_all_api_requests(request, config, log)
-    #
-    #        # continue processing request
-    #        response = next_middleware(request)
-    #
-    #        # after request processing
-    #        return _ordered_api_response_handers(response, config, log)
-
-    def __call__(
-        self,
-        environ: dict[Any, Any],
-        start_response: Callable[[Request], Response],
-        config: Config,
-        log: Logger,
-    ) -> Any:
-        # before request processing
-        # FIXME does DI work here?
-
-        _log_all_api_requests(request, config, log)
-
-        # continue processing request
-        response = start_response(request)
-        return response
-
-
-class CorrelationIDMiddleware:
-    _app: ASGIApp
-
-    def __init__(self, app: ASGIApp):  # pyright: ignore[reportMissingSuperCall]
-        self._app = app
-
-    @inject
-    async def __call__(
-        self, scope: Scope, receive: Receive, send: Send, log: Logger
-    ) -> None:
-        async def wrapped_send(message: Any) -> None:
-            nonlocal scope
-            nonlocal send
-
-            if message["type"] != "http.response.start":
-                return await send(message)
-
-            request = scope
-            response = message
-
-            response_headers: list[tuple[bytes, bytes]] = response["headers"]
-            content_type = utils.extract_content_type(response_headers)
-            _, encoding = utils.split_content_type(content_type)
-            if encoding is None:
-                encoding = "utf-8"
-
-            request_headers: list[tuple[bytes, bytes]] = request["headers"]
-            try:
-                correlation_id_header_encoded = CORRELATION_ID_HEADER.lower().encode(
-                    encoding
-                )
-
-                request_correlation_id: bytes | None = next(
-                    (
-                        correlation_id
-                        for (header, correlation_id) in request_headers
-                        if header == correlation_id_header_encoded
-                    ),
-                    None,
-                )
-
-                if request_correlation_id:
-                    # validate format
-                    _ = uuid.UUID(request_correlation_id.decode(encoding))
-                else:
-                    request_correlation_id = str(uuid4()).encode(encoding)
-                    request_headers.append(
-                        (correlation_id_header_encoded, request_correlation_id)
-                    )
-                    log.info(
-                        f'Generated new UUID "{request_correlation_id}" for {CORRELATION_ID_HEADER} request header.'
-                    )
-
-                response_headers.append(
-                    (correlation_id_header_encoded, request_correlation_id)
-                )
-
-                return await send(message)
-            except ValueError as e:
-                log.warning(
-                    f"Badly formatted {CORRELATION_ID_HEADER} received in request."
-                )
-                raise e
-
-        await self._app(scope, receive, wrapped_send)
-
-
 def register_api_request_handlers(app: TFlaskApp):
     if isinstance(app, Flask):
-        _ = bind_requesthandler(app, Flask.before_request)(_log_all_api_requests)
+        return register_flask_api_request_handlers(app)
     else:
-        app.app.wsgi_app = (
-            RequestMiddleware(  # pyright: ignore[reportAttributeAccessIssue]
-                app.app.wsgi_app  # pyright: ignore[reportArgumentType]
-            )
-        )
-        # app.add_middleware(middleware_class=RequestMiddleware)
+        return register_openapi_api_request_handlers(app)
 
 
 def register_api_response_handlers(app: TFlaskApp):
-    # TODO consider moving request/response logging to the WSGI app
-    # apparently Flask may not call this if unhandled exceptions occur
     if isinstance(app, Flask):
-        _ = bind_requesthandler(app, Flask.after_request)(_ordered_api_response_handers)
+        # TODO consider moving request/response logging to the WSGI app
+        # apparently Flask may not call this if unhandled exceptions occur
+        return register_flask_api_response_handlers(app)
     else:
-        app.add_middleware(CorrelationIDMiddleware)
+        return register_openapi_api_response_handlers(app)
 
 
 def register_error_handlers(app: TFlaskApp):

@@ -9,9 +9,9 @@ from BL_Python.web.middleware import (
     CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER,
     OUTGOING_RESPONSE_MESSAGE,
-    bind_requesthandler,
     register_api_request_handlers,
 )
+from BL_Python.web.middleware.flask import bind_requesthandler
 from flask import Flask, Response
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture

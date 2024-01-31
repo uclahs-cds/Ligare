@@ -4,14 +4,11 @@ from uuid import uuid4
 
 import pytest
 from BL_Python.web.config import Config
-from BL_Python.web.middleware import (
+from BL_Python.web.middleware import CORRELATION_ID_HEADER, bind_errorhandler
+from BL_Python.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
-from BL_Python.web.middleware import (
-    CORRELATION_ID_HEADER,
-    bind_errorhandler,
-    bind_requesthandler,
-)
+from BL_Python.web.middleware.flask import bind_requesthandler
 from flask import Flask, Response, abort
 from mock import MagicMock
 from pytest_mock import MockerFixture

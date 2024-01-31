@@ -3,6 +3,8 @@ from typing import Any, Protocol, Tuple, cast
 
 from BL_Python.programming.patterns.dependency_injection import LoggerModule
 from connexion import FlaskApp
+
+# from connexion.middleware.main import MiddlewarePosition
 from flask import Config as Config
 from flask import Flask
 from flask_injector import wrap_function  # pyright: ignore[reportUnknownVariableType]
@@ -59,10 +61,26 @@ class AppModule(Module):
 #            binder.bind(dependency[0], to=dependency[1])
 
 
-class MiddlewareRoutine(Protocol):
-    def __call__(
-        self, scope: Scope, receive: Receive, send: Send, *args: Any
-    ) -> None: ...
+from starlette.types import ASGIApp, Receive, Scope, Send
+
+
+class DependencyInjectionMiddleware:
+    _app: ASGIApp
+
+    def __init__(self, app: ASGIApp):  # pyright: ignore[reportMissingSuperCall]
+        self._app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        async def wrapped_send(message: Any) -> None:
+            nonlocal scope
+            nonlocal receive
+            nonlocal send
+
+            x = await send(message)
+
+            return x
+
+        await self._app(scope, receive, wrapped_send)
 
 
 def configure_dependencies(
@@ -75,6 +93,7 @@ def configure_dependencies(
     can be used to bootstrap and start the Flask application.
     """
     if isinstance(app, FlaskApp):
+        app.add_middleware(DependencyInjectionMiddleware)  # should position change?
         flask_app = app.app  # .app
     else:
         flask_app = app
@@ -87,6 +106,11 @@ def configure_dependencies(
     flask_injector.injector.binder.bind(Injector, flask_injector.injector)
 
     return _configure_connexion_dependencies(app, flask_injector)
+
+
+class MiddlewareRoutine(Protocol):
+    def __call__(self, scope: Scope, receive: Receive, send: Send, *args: Any) -> None:
+        ...
 
 
 def _configure_connexion_dependencies(
