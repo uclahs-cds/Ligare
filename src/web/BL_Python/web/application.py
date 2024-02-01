@@ -136,8 +136,8 @@ def create_app(
         app = configure_blueprint_routes(full_config)
 
     register_error_handlers(app)
-    register_api_request_handlers(app)
-    register_api_response_handlers(app)
+    _ = register_api_request_handlers(app)
+    _ = register_api_response_handlers(app)
     # register_app_teardown_handlers(app)
 
     # Register every subconfig as a ConfigModule.

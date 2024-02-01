@@ -15,6 +15,19 @@ from flask.typing import (
 from injector import inject
 
 from ...config import Config
+from ..consts import (
+    CONTENT_SECURITY_POLICY_HEADER,
+    CORRELATION_ID_HEADER,
+    CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
+    CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
+    CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER,
+    HOST_HEADER,
+    INCOMING_REQUEST_MESSAGE,
+    ORIGIN_HEADER,
+    OUTGOING_RESPONSE_MESSAGE,
+    REQUEST_COOKIE_HEADER,
+    RESPONSE_COOKIE_HEADER,
+)
 
 # pyright: reportUnusedFunction=false
 
@@ -65,8 +78,6 @@ def _get_correlation_id(log: Logger) -> str:
 
 
 def _get_correlation_id_from_headers(log: Logger) -> str:
-    from .. import CORRELATION_ID_HEADER
-
     try:
         correlation_id = request.headers.get(CORRELATION_ID_HEADER)
 
@@ -87,8 +98,6 @@ def _get_correlation_id_from_headers(log: Logger) -> str:
 
 
 def _get_correlation_id_from_json_logging(log: Logger) -> str | None:
-    from .. import CORRELATION_ID_HEADER
-
     correlation_id: None | str
     try:
         correlation_id = json_logging.get_correlation_id(request)
@@ -111,8 +120,6 @@ def _log_all_api_requests(
     config: Config,
     log: Logger,
 ):
-    from .. import INCOMING_REQUEST_MESSAGE, REQUEST_COOKIE_HEADER
-
     request_headers_safe: dict[str, str] = dict(request.headers)
 
     correlation_id = _get_correlation_id(log)
@@ -152,16 +159,6 @@ def _ordered_api_response_handers(response: Response, config: Config, log: Logge
 
 
 def _wrap_all_api_responses(response: Response, config: Config, log: Logger):
-    from .. import (
-        CONTENT_SECURITY_POLICY_HEADER,
-        CORRELATION_ID_HEADER,
-        CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
-        CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
-        CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER,
-        HOST_HEADER,
-        ORIGIN_HEADER,
-    )
-
     correlation_id = _get_correlation_id(log)
 
     cors_domain: str | None = None
@@ -202,8 +199,6 @@ def _wrap_all_api_responses(response: Response, config: Config, log: Logger):
 
 
 def _log_all_api_responses(response: Response, config: Config, log: Logger):
-    from .. import OUTGOING_RESPONSE_MESSAGE, RESPONSE_COOKIE_HEADER
-
     correlation_id = _get_correlation_id(log)
 
     response_headers_safe: Dict[str, str] = dict(response.headers)

@@ -109,8 +109,9 @@ def configure_dependencies(
 
 
 class MiddlewareRoutine(Protocol):
-    def __call__(self, scope: Scope, receive: Receive, send: Send, *args: Any) -> None:
-        ...
+    def __call__(
+        self, scope: Scope, receive: Receive, send: Send, *args: Any
+    ) -> None: ...
 
 
 def _configure_connexion_dependencies(

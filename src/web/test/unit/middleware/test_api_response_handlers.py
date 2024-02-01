@@ -3,13 +3,13 @@ from typing import Any, cast
 
 import pytest
 from BL_Python.web.config import Config
-from BL_Python.web.middleware import (
+from BL_Python.web.middleware import register_api_request_handlers
+from BL_Python.web.middleware.consts import (
     CONTENT_SECURITY_POLICY_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER,
     OUTGOING_RESPONSE_MESSAGE,
-    register_api_request_handlers,
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
 from flask import Flask, Response
@@ -27,7 +27,7 @@ class TestApiResponseHandlers(CreateApp):
             "flask.sansio.scaffold.Scaffold.before_request"
         )
 
-        register_api_request_handlers(flask_client.client.application)
+        _ = register_api_request_handlers(flask_client.client.application)
 
         assert flask_before_request_mock.called
 

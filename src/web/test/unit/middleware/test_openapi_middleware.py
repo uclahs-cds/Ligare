@@ -1,11 +1,11 @@
-import logging
 import uuid
 from typing import Literal
 
 import pytest
 from BL_Python.web.application import OpenAPIAppInjector
 from BL_Python.web.config import Config
-from BL_Python.web.middleware import CORRELATION_ID_HEADER, bind_errorhandler
+from BL_Python.web.middleware import bind_errorhandler
+from BL_Python.web.middleware.consts import CORRELATION_ID_HEADER
 from BL_Python.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
@@ -13,7 +13,6 @@ from BL_Python.web.middleware.flask import bind_requesthandler
 from connexion import FlaskApp
 from flask import Flask, abort
 from mock import MagicMock
-from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 

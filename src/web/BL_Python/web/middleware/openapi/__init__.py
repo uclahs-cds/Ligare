@@ -18,6 +18,19 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import TypedDict
 
 from ...config import Config
+from ..consts import (
+    CONTENT_SECURITY_POLICY_HEADER,
+    CORRELATION_ID_HEADER,
+    CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
+    CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
+    CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER,
+    HOST_HEADER,
+    INCOMING_REQUEST_MESSAGE,
+    ORIGIN_HEADER,
+    OUTGOING_RESPONSE_MESSAGE,
+    REQUEST_COOKIE_HEADER,
+    RESPONSE_COOKIE_HEADER,
+)
 
 # pyright: reportUnusedFunction=false
 
@@ -106,8 +119,6 @@ def _get_correlation_id(
 def _get_correlation_id_from_headers(
     request: MiddlewareRequestDict, response: MiddlewareResponseDict, log: Logger
 ) -> str:
-    from .. import CORRELATION_ID_HEADER
-
     try:
         headers = _headers_as_dict(request)
         correlation_id = headers.get(CORRELATION_ID_HEADER.lower())
@@ -135,8 +146,6 @@ def _get_correlation_id_from_headers(
 def _get_correlation_id_from_json_logging(
     request_response: MiddlewareRequestDict | MiddlewareResponseDict, log: Logger
 ) -> str | None:
-    from .. import CORRELATION_ID_HEADER
-
     correlation_id: None | str
     try:
         correlation_id = json_logging.get_correlation_id(request_response)
@@ -177,8 +186,6 @@ def _log_all_api_requests(
     config: Config,
     log: Logger,
 ):
-    from .. import INCOMING_REQUEST_MESSAGE, REQUEST_COOKIE_HEADER
-
     request_headers_safe: dict[str, str] = _headers_as_dict(request)
 
     correlation_id = _get_correlation_id(request, response, log)
@@ -217,16 +224,6 @@ def _wrap_all_api_responses(
     config: Config,
     log: Logger,
 ):
-    from .. import (
-        CONTENT_SECURITY_POLICY_HEADER,
-        CORRELATION_ID_HEADER,
-        CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
-        CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
-        CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER,
-        HOST_HEADER,
-        ORIGIN_HEADER,
-    )
-
     correlation_id = _get_correlation_id(request, response, log)
     response_headers = _headers_as_dict(response)
 
@@ -274,8 +271,6 @@ def _log_all_api_responses(
     config: Config,
     log: Logger,
 ):
-    from .. import OUTGOING_RESPONSE_MESSAGE, RESPONSE_COOKIE_HEADER
-
     response_headers_safe: dict[str, str] = _headers_as_dict(response)
 
     correlation_id = _get_correlation_id(request, response, log)
@@ -393,8 +388,6 @@ class CorrelationIDMiddleware:
     async def __call__(
         self, scope: Scope, receive: Receive, send: Send, log: Logger
     ) -> None:
-        from .. import CORRELATION_ID_HEADER
-
         async def wrapped_send(message: Any) -> None:
             nonlocal scope
             nonlocal send

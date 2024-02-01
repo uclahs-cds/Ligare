@@ -4,7 +4,8 @@ from uuid import uuid4
 
 import pytest
 from BL_Python.web.config import Config
-from BL_Python.web.middleware import CORRELATION_ID_HEADER, bind_errorhandler
+from BL_Python.web.middleware import bind_errorhandler
+from BL_Python.web.middleware.consts import CORRELATION_ID_HEADER
 from BL_Python.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
