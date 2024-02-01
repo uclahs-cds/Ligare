@@ -92,8 +92,8 @@ class TestOpenAPIMiddleware(CreateApp):
         with openapi_request_configurable(
             openapi_config, {"headers": {CORRELATION_ID_HEADER: correlation_id}}
         ):
-            correlation_id = _get_correlation_id(MagicMock())
-            assert correlation_id == correlation_id
+            returned_correlation_id = _get_correlation_id(MagicMock())
+            assert correlation_id == returned_correlation_id
 
     @pytest.mark.parametrize("format", ["plaintext", "JSON"])
     def test___get_correlation_id__sets_correlation_id(
