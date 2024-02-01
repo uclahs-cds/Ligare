@@ -71,7 +71,8 @@ class AppGetter(Protocol[T_app]):
     and returns the application with its IoC container.
     """
 
-    def __call__(self) -> AppInjector[T_app]: ...
+    def __call__(self) -> AppInjector[T_app]:
+        ...
 
 
 TAppInitHook = Callable[[AppInjector[T_app]], None] | None
@@ -94,7 +95,8 @@ class ClientInjectorConfigurable(Protocol[T_app, T_flask_client]):
         self,
         config: Config,
         app_init_hook: TAppInitHook[T_app] | None = None,
-    ) -> ClientInjector[T_flask_client]: ...
+    ) -> ClientInjector[T_flask_client]:
+        ...
 
 
 FlaskClientInjectorConfigurable = ClientInjectorConfigurable[Flask, FlaskClient]
@@ -126,7 +128,8 @@ class RequestConfigurable(Protocol):
 
     def __call__(
         self, config: Config, request_context_args: dict[Any, Any] | None = None
-    ) -> RequestContext: ...
+    ) -> RequestContext:
+        ...
 
 
 class TestSessionMiddleware:

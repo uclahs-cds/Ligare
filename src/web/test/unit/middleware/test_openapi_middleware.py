@@ -1,3 +1,4 @@
+import logging
 import uuid
 from typing import Literal
 
@@ -12,6 +13,7 @@ from BL_Python.web.middleware.flask import bind_requesthandler
 from connexion import FlaskApp
 from flask import Flask, abort
 from mock import MagicMock
+from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
@@ -58,6 +60,25 @@ class TestOpenAPIMiddleware(CreateApp):
         )
 
         assert response.headers[CORRELATION_ID_HEADER] == correlation_id
+
+    @pytest.mark.parametrize("format", ["plaintext", "JSON"])
+    def test___register_api_response_handler__validates_correlation_id_when_set_in_request_headers(
+        self,
+        format: Literal["plaintext", "JSON"],
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_config: Config,
+        openapi_mock_controller: OpenAPIMockController,
+    ):
+        openapi_config.logging.format = format
+        correlation_id = "abc123"
+        openapi_mock_controller.begin()
+        flask_client = openapi_client_configurable(openapi_config)
+
+        response = flask_client.client.get(
+            "/", headers={CORRELATION_ID_HEADER: correlation_id}
+        )
+
+        assert response.status_code == 500
 
     @pytest.mark.parametrize("format", ["plaintext", "JSON"])
     def test___get_correlation_id__validates_correlation_id_when_set_in_request_headers(

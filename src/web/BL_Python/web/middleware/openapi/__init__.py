@@ -93,26 +93,28 @@ MiddlewareResponseDict = TypedDict(
 
 
 def _get_correlation_id(
-    request_response: MiddlewareRequestDict | MiddlewareResponseDict, log: Logger
+    request: MiddlewareRequestDict, response: MiddlewareResponseDict, log: Logger
 ) -> str:
-    correlation_id = _get_correlation_id_from_json_logging(request_response, log)
+    correlation_id = _get_correlation_id_from_json_logging(response, log)
 
     if not correlation_id:
-        correlation_id = _get_correlation_id_from_headers(request_response, log)
+        correlation_id = _get_correlation_id_from_headers(request, response, log)
 
     return correlation_id
 
 
 def _get_correlation_id_from_headers(
-    request_response: MiddlewareRequestDict | MiddlewareResponseDict, log: Logger
+    request: MiddlewareRequestDict, response: MiddlewareResponseDict, log: Logger
 ) -> str:
     from .. import CORRELATION_ID_HEADER
 
     try:
-        headers = _headers_as_dict(request_response)
+        headers = _headers_as_dict(request)
+        correlation_id = headers.get(CORRELATION_ID_HEADER.lower())
 
-        # FIXME why aren't the headers set here?
-        correlation_id = headers.get(CORRELATION_ID_HEADER)
+        if not correlation_id:
+            headers = _headers_as_dict(response)
+            correlation_id = headers.get(CORRELATION_ID_HEADER.lower())
 
         if correlation_id:
             # validate format
@@ -171,6 +173,7 @@ def _headers_as_dict(
 @inject
 def _log_all_api_requests(
     request: MiddlewareRequestDict,
+    response: MiddlewareResponseDict,
     config: Config,
     log: Logger,
 ):
@@ -178,7 +181,7 @@ def _log_all_api_requests(
 
     request_headers_safe: dict[str, str] = _headers_as_dict(request)
 
-    correlation_id = _get_correlation_id(request, log)
+    correlation_id = _get_correlation_id(request, response, log)
 
     if (
         request_headers_safe.get(REQUEST_COOKIE_HEADER)
@@ -224,7 +227,7 @@ def _wrap_all_api_responses(
         ORIGIN_HEADER,
     )
 
-    correlation_id = _get_correlation_id(response, log)
+    correlation_id = _get_correlation_id(request, response, log)
     response_headers = _headers_as_dict(response)
 
     cors_domain: str | None = None
@@ -266,6 +269,7 @@ def _wrap_all_api_responses(
 
 
 def _log_all_api_responses(
+    request: MiddlewareRequestDict,
     response: MiddlewareResponseDict,
     config: Config,
     log: Logger,
@@ -274,7 +278,7 @@ def _log_all_api_responses(
 
     response_headers_safe: dict[str, str] = _headers_as_dict(response)
 
-    correlation_id = _get_correlation_id(response, log)
+    correlation_id = _get_correlation_id(request, response, log)
 
     if (
         response_headers_safe.get(RESPONSE_COOKIE_HEADER)
@@ -340,9 +344,10 @@ class RequestLoggerMiddleware:
             if message["type"] != "http.response.start":
                 return await send(message)
 
+            response = cast(MiddlewareResponseDict, scope)
             request = cast(MiddlewareRequestDict, scope)
 
-            _log_all_api_requests(request, config, log)
+            _log_all_api_requests(request, response, config, log)
 
             return await send(message)
 
@@ -370,7 +375,7 @@ class ResponseLoggerMiddleware:
             request = cast(MiddlewareRequestDict, scope)
             response = cast(MiddlewareResponseDict, message)
 
-            _log_all_api_responses(response, config, log)
+            _log_all_api_responses(request, response, config, log)
             _wrap_all_api_responses(request, response, config, log)
 
             return await send(message)
