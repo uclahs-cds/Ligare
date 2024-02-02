@@ -36,11 +36,17 @@ T_app = TypeVar("T_app", bound=TApp, covariant=True)
 @dataclass
 class AppInjector(Generic[T_app]):
     app: T_app
-    injector: FlaskInjector
+    flask_injector: FlaskInjector
 
 
 FlaskAppInjector = AppInjector[Flask]
 OpenAPIAppInjector = AppInjector[FlaskApp]
+
+
+@dataclass
+class CreateAppResult(Generic[T_app]):
+    flask_app: Flask
+    app_injector: AppInjector[T_app]
 
 
 # In Python 3.12 we can use generics in functions,
@@ -60,7 +66,7 @@ class App(Generic[T_app]):
         # FIXME should be a list of PydanticDataclass
         application_configs: list[type[AbstractConfig]] | None = None,
         application_modules: list[Module] | None = None,
-    ):
+    ) -> CreateAppResult[T_app]:
         """
         Bootstrap the Flask applcation.
 
@@ -70,7 +76,7 @@ class App(Generic[T_app]):
             application_modules: Modules the application will use for the application lifetime.
         """
         return cast(
-            AppInjector[T_app],
+            CreateAppResult[T_app],
             create_app(config_filename, application_configs, application_modules),
         )
 
@@ -85,7 +91,7 @@ def create_app(
     # just grow and grow.
     # startup_builder: IStartupBuilder,
     # config: Config,
-) -> AppInjector[TApp]:
+) -> CreateAppResult[TApp]:
     """
     Do not use this method directly. Instead, use `App[T_app].create()`
     """
@@ -156,7 +162,8 @@ def create_app(
     modules = application_modules + [ConfigModule(full_config, type(full_config))]
     flask_injector = configure_dependencies(app, application_modules=modules)
 
-    return AppInjector(app, flask_injector)
+    flask_app = app.app if isinstance(app, FlaskApp) else app
+    return CreateAppResult(flask_app, AppInjector(app, flask_injector))
 
 
 def configure_openapi(config: Config, name: Optional[str] = None):

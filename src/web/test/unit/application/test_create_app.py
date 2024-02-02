@@ -1,7 +1,7 @@
 import pathlib
 from os import environ
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 import pytest
 from BL_Python.programming.config import AbstractConfig
@@ -9,7 +9,6 @@ from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import App, configure_blueprint_routes, configure_openapi
 from BL_Python.web.config import Config, FlaskConfig, FlaskOpenApiConfig
 from flask import Blueprint, Flask
-from flask_injector import FlaskInjector
 from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
@@ -308,9 +307,11 @@ class TestCreateApp(CreateApp):
         app = App[Flask].create(
             config_filename=toml_filename, application_configs=[CustomConfig]
         )
+
         assert (
-            cast(FlaskInjector, cast(Any, app).injector).injector.get(CustomConfig).foo
-        ) == toml_load_result["custom"]["foo"]
+            app.app_injector.flask_injector.injector.get(CustomConfig).foo
+            == toml_load_result["custom"]["foo"]
+        )
 
     @pytest.mark.parametrize(
         "envvar_name,config_var_name,var_value",

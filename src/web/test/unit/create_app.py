@@ -237,7 +237,7 @@ class CreateApp:
             return_value=config,
         ):
             app = App[Flask].create()
-            yield app
+            yield app.app_injector
 
     def __get_openapi_app(
         self, config: Config, mocker: MockerFixture
@@ -253,7 +253,7 @@ class CreateApp:
             return_value=config,
         ):
             app = App[FlaskApp].create()
-            yield app
+            yield app.app_injector
 
     @pytest.fixture()
     def _get_basic_flask_app(
@@ -305,7 +305,7 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
                 # fmt: on
             )
 
-            yield ClientInjector(client, result.injector)  # , connexion_app)
+            yield ClientInjector(client, result.flask_injector)
 
     def _openapi_client(
         self, flask_app_getter: AppGetter[FlaskApp]
@@ -342,7 +342,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
             #                )
             # pass
             # app = cast(Flask, client.app.app)
-            yield ClientInjector(client, result.injector)  # , connexion_app)
+            yield ClientInjector(client, result.flask_injector)
 
     @pytest.fixture()
     def flask_client(
