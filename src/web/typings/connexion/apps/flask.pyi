@@ -44,6 +44,7 @@ class FlaskOperation:
     @property
     def fn(self) -> t.Callable[..., t.Any]: ...
     def __call__(self, *args: list[t.Any], **kwargs: t.Any) -> FlaskResponse: ...
+    _fn: t.Callable[..., t.Any]
 
 class FlaskApi(AbstractRoutingAPI[t.Any]):
     def __init__(
@@ -79,6 +80,8 @@ class FlaskASGIApp(SpecMiddleware):
     ) -> None: ...
     @override
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None: ...
+
+    app: Flask
 
 class FlaskApp(AbstractApp):
     """Connexion Application based on ConnexionMiddleware wrapping a Flask application."""
