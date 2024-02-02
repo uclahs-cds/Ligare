@@ -30,7 +30,8 @@ secret_key = '123abc'
 
 [logging]
 log_level = 'INFO'
-format = 'JSON'
+{# JSON logging does not work with Connexion 3x. #}
+format = 'plaintext'
 
 [web.security.cors]
 origin = 'http://localhost:5000'

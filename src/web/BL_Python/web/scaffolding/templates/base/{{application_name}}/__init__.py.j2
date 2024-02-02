@@ -44,7 +44,7 @@ def create_app():
         sending in the dependencies to remove_db.
         For now, just resolve it directly.
     #}
-    @app.app.teardown_request
+    @app.app.app.teardown_request
     def remove_db(exception: Any):
         session = app.injector.injector.get(Session)
         session.rollback()
