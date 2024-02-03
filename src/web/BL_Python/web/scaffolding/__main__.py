@@ -1,4 +1,5 @@
 import logging
+import sys
 from argparse import ArgumentParser, Namespace
 from functools import partial
 from os import environ
@@ -32,7 +33,7 @@ else:
 log = logging.getLogger()
 
 
-def _parse_args():
+def _parse_args(args: list[str]):
     parser = ArgumentParser(description="BL_Python Web Project Scaffolding Tool")
 
     subparsers = parser.add_subparsers(help="Select mode", required=True)
@@ -111,21 +112,21 @@ def _parse_args():
     )
     modify_parser.set_defaults(mode_executor=partial(_run_modify_mode), mode="modify")
 
-    args = parser.parse_args()
+    _args = parser.parse_args(args)
 
-    if args.output_directory is None:
-        args.output_directory = args.name
+    if _args.output_directory is None:
+        _args.output_directory = _args.name
 
-    if args.endpoints is None:
-        args.endpoints = [args.name]
+    if _args.endpoints is None:
+        _args.endpoints = [_args.name]
     else:
-        if "application" in args.endpoints:
+        if "application" in _args.endpoints:
             log.warn(
                 'The endpoint name "application" is reserved and will not be scaffolded.'
             )
-            args.endpoints.remove("application")
+            _args.endpoints.remove("application")
 
-    return args
+    return _args
 
 
 def _run_create_mode(args: Namespace):
@@ -174,7 +175,7 @@ def _run_modify_mode(args: Namespace):
 
 
 def scaffold():
-    args = _parse_args()
+    args = _parse_args(sys.argv[1:])
 
     print(
         f'Scaffolding application named "{args.name}" under directory `{Path(args.output_directory).absolute()}`.'
