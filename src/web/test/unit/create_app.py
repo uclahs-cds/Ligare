@@ -135,23 +135,6 @@ class TestSessionMiddleware:
     def __init__(self, app: Flask) -> None:  # pyright: ignore[reportMissingSuperCall]
         self._app = app
 
-    # @inject
-    #    def __call__(
-    #        self,
-    #        request: Request,
-    #        next_middleware: Callable[[Request], Response],
-    #        # config: Config,
-    #        # log: Logger,
-    #    ) -> Any:
-    #        # before request processing
-    #        _log_all_api_requests(request, config, log)
-    #
-    #        # continue processing request
-    #        response = next_middleware(request)
-    #
-    #        # after request processing
-    #        return _ordered_api_response_handers(response, config, log)
-
     def __call__(
         self, environ: dict[Any, Any], start_response: Callable[[Request], Response]
     ) -> Any:
@@ -327,6 +310,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
                 TrustedHostMiddleware, allowed_hosts=["localhost", "localhost:5000"]
             )
             client = stack.enter_context(app.test_client())
+            # TODO OpenAPI requires more work before sessions are working. Flask can use this code, but BL_Python.web doesn't support sessions yet anyway.
             # client.cookies.set(
             #    cast(str, app.config["SESSION_COOKIE_NAME"]),
             #    encrypt_flask_cookie(
@@ -446,9 +430,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
     @pytest.fixture()
     def openapi_request_configurable(
         self,
-        # TODO probably need to make an app_init_hook work for this
         openapi_client_configurable: OpenAPIClientInjectorConfigurable,
-        # TODO does RequestConfigurable need to be made generic to accomodate TestClient?
     ) -> RequestConfigurable:
         def _flask_request_getter(
             config: Config, request_context_args: dict[Any, Any] | None = None
