@@ -133,11 +133,10 @@ def create_app(
         )
 
     app: Flask | FlaskApp
-    # openapi: FlaskApp | None = None
 
     if full_config.flask.openapi is not None:
         openapi = configure_openapi(full_config)
-        app = openapi  # .app
+        app = openapi
     else:
         app = configure_blueprint_routes(full_config)
 
