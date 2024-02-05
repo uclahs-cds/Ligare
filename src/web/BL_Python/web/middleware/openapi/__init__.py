@@ -324,7 +324,8 @@ def encode_headers(
 class RequestLoggerMiddleware:
     _app: ASGIApp
 
-    def __init__(self, app: ASGIApp):  # pyright: ignore[reportMissingSuperCall]
+    def __init__(self, app: ASGIApp):
+        super().__init__()
         self._app = app
 
     @inject
@@ -352,7 +353,8 @@ class RequestLoggerMiddleware:
 class ResponseLoggerMiddleware:
     _app: ASGIApp
 
-    def __init__(self, app: ASGIApp):  # pyright: ignore[reportMissingSuperCall]
+    def __init__(self, app: ASGIApp):
+        super().__init__()
         self._app = app
 
     @inject
@@ -381,7 +383,8 @@ class ResponseLoggerMiddleware:
 class CorrelationIDMiddleware:
     _app: ASGIApp
 
-    def __init__(self, app: ASGIApp):  # pyright: ignore[reportMissingSuperCall]
+    def __init__(self, app: ASGIApp):
+        super().__init__()
         self._app = app
 
     @inject

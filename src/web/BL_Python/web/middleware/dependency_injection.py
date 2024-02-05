@@ -89,11 +89,12 @@ class OpenAPIEndpointDependencyInjectionMiddleware:
             when setting up the middleware without violating the contract that Starlette expects.
             """
 
-            def __init__(  # pyright: ignore[reportMissingSuperCall]
+            def __init__(
                 self,
                 app: ASGIApp,
                 flask_injector: FlaskInjector | None = flask_injector,
             ) -> None:
+                super().__init__()
                 self._app = app
                 self._flask_injector = flask_injector
 
