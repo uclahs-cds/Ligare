@@ -237,8 +237,8 @@ jobs:
       - Pytest
       - Style
     # this job should run regardless of success, failure, or skips,
-    # but not if the workflow is canceled. `always()` ignores canceled,
-    # and so we check for the canceled state.
+    # but not if the workflow is cancelled. `always()` ignores cancelled,
+    # and so we check for the cancelled state.
     if: ${{( always() && !cancelled() ) }}
     steps:
       - name: Failure
