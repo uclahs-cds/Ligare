@@ -2,11 +2,13 @@ import re
 import uuid
 from logging import Logger
 from typing import Any, Awaitable, Callable, Literal, TypeVar, cast
+from urllib.parse import urlunsplit
 from uuid import uuid4
 
 import json_logging
 from BL_Python.programming.collections.dict import AnyDict
 from connexion import ConnexionMiddleware, FlaskApp, utils
+from connexion.middleware.swagger_ui import SwaggerUIMiddleware
 from flask import Flask, Response
 from flask.typing import (
     AfterRequestCallable,
@@ -103,6 +105,22 @@ MiddlewareResponseDict = TypedDict(
         "headers": list[tuple[bytes, bytes]],
     },
 )
+
+from typing import NamedTuple
+
+
+class Url(NamedTuple):
+    scheme: str
+    netloc: str
+    path: str
+    query: str
+    fragment: str
+
+    @staticmethod
+    def create(
+        scheme: str, host: str, port: str | int, path: str, query: str, fragment: str
+    ):
+        return Url(scheme, f"{host}:{port}", path, query, fragment)
 
 
 def _get_correlation_id(
@@ -374,6 +392,88 @@ class ResponseLoggerMiddleware:
 
             _log_all_api_responses(request, response, config, log)
             _wrap_all_api_responses(request, response, config, log)
+
+            return await send(message)
+
+        await self._app(scope, receive, wrapped_send)
+
+
+class SwaggerBootstrapMiddleware:
+    """
+    This is a means of applying partial application over a class, rather than a function.
+    It is done this way to jive with Connexion/Starlette's middleware system.
+    The inclusion of a flask_injector parameters lets us use that instance
+    when setting up the middleware without violating the contract that Starlette expects.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        super().__init__()
+        self._app = app
+
+    @inject
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send, config: Config, log: Logger
+    ) -> None:
+        async def wrapped_send(message: Any) -> None:
+            nonlocal scope
+            nonlocal receive
+            nonlocal send
+
+            # Only run during startup of the application
+            if (
+                scope["type"] != "lifespan"
+                and message["type"] != "lifespan.startup.complete"
+            ) or not scope["app"]:
+                return await send(message)
+
+            # Find every registered route
+            connexion_app = cast(ConnexionMiddleware, scope["app"])
+
+            if not connexion_app.middleware_stack:
+                return await send(message)
+
+            swagger_ui_middleware = next(
+                (
+                    middleware
+                    for middleware in scope["app"].middleware_stack
+                    if isinstance(middleware, SwaggerUIMiddleware)
+                ),
+                None,
+            )
+
+            if not swagger_ui_middleware:
+                return await send(message)
+
+            from starlette.routing import Mount, Route
+
+            # This gets the URL to the Swagger UI. The URL is
+            # part of the Swagger middleware's routes.
+            # Basically, do this:
+            # connexion_app.middleware_stack[2].router.routes[0].routes[2].path
+            url_path = next(
+                (
+                    route.path
+                    for mount in cast(list[Mount], swagger_ui_middleware.router.routes)
+                    if not mount.path and not mount.name
+                    for route in cast(list[Route], mount.routes)
+                    if route.name == "_get_swagger_ui_home"
+                ),
+                "",
+            )
+
+            http_url = urlunsplit(
+                Url.create(
+                    "http",
+                    # localhost:5000 is an assumption from Flask's default values
+                    config.flask.host if config.flask else "localhost",
+                    config.flask.port if config.flask else 5000,
+                    url_path,
+                    "",
+                    "",
+                )
+            )
+
+            log.info(f"Swagger UI can be accessed at {http_url}")
 
             return await send(message)
 

@@ -12,6 +12,7 @@ from typing import Generic, Optional, TypeVar, cast
 import json_logging
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
 from BL_Python.programming.dependency_injection import ConfigModule
+from BL_Python.web.middleware.openapi import SwaggerBootstrapMiddleware
 from connexion import FlaskApp
 from flask import Blueprint, Flask
 from flask_injector import FlaskInjector
@@ -230,15 +231,8 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         options=options,
     )
 
-    # FIXME what's the new way to get this URL?
-    # if config.flask.openapi.use_swagger:
-    #    # App context needed for url_for.
-    #    # This can only run after connexion is instantiated
-    #    # because it registers the swagger UI url.
-    #    with app.app_context():
-    #        app.logger.info(
-    #            f"Swagger UI can be accessed at {url_for('/./_swagger_ui_index', _external=True)}"
-    #        )
+    if config.flask.openapi.use_swagger:
+        connexion_app.add_middleware(SwaggerBootstrapMiddleware)
 
     return connexion_app
 
