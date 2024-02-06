@@ -1,5 +1,6 @@
 import uuid
 from typing import Literal
+from urllib.parse import urlunsplit
 
 import pytest
 from BL_Python.web.application import OpenAPIAppInjector
@@ -10,6 +11,7 @@ from BL_Python.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
+from BL_Python.web.middleware.openapi import Url
 from connexion import FlaskApp
 from flask import Flask, abort
 from mock import MagicMock
@@ -221,3 +223,13 @@ class TestOpenAPIMiddleware(CreateApp):
         assert isinstance(
             application_errorhandler_mock.call_args[0][0], expected_exception_type
         )
+
+
+def test__url_create__returns_correct_url():
+    url = Url.create("http", "localhost", 5000, "/ui", "a=b", "foo")
+    assert "http" == url.scheme
+    assert "localhost:5000" == url.netloc
+    assert "/ui" == url.path
+    assert "a=b" == url.query
+    assert "foo" == url.fragment
+    assert "http://localhost:5000/ui?a=b#foo" == urlunsplit(url)
