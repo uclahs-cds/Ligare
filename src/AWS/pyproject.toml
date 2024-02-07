@@ -28,7 +28,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "boto3 ~= 1.27"
+    "boto3"
 ]
 
 dynamic = ["version", "readme"]
@@ -45,5 +45,8 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 [tool.setuptools.package-dir]
 "BL_Python.AWS" = "BL_Python/AWS"
 
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+exclude = ["build*"]
+
+[tool.setuptools.package-data]
+"BL_Python.AWS" = ["py.typed"]

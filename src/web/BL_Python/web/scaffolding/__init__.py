@@ -1,3 +1,13 @@
-from .scaffolder import ScaffoldConfig, ScaffoldEndpoint, Scaffolder, ScaffoldModule
+from .scaffolder import (  # pragma: nocover
+    ScaffoldConfig,
+    ScaffoldEndpoint,
+    Scaffolder,
+    ScaffoldModule,
+)
 
-__all__ = ("ScaffoldConfig", "ScaffoldEndpoint", "Scaffolder", "ScaffoldModule")
+__all__ = (
+    "ScaffoldConfig",
+    "ScaffoldEndpoint",
+    "Scaffolder",
+    "ScaffoldModule",
+)  # pragma: nocover

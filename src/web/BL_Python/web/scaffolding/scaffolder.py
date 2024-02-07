@@ -5,14 +5,14 @@ from dataclasses import asdict, dataclass, field
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
-from typing import Any, cast, final
+from typing import Any, final
 
 from BL_Python.programming.collections.dict import merge
 from jinja2 import BaseLoader, Environment, PackageLoader, Template
 
 # fmt: off
 from pkg_resources import (
-    ResourceManager,  # pyright: ignore[reportUnknownVariableType,reportGeneralTypeIssues]
+    ResourceManager,  # pyright: ignore[reportUnknownVariableType,reportAttributeAccessIssue]
 )
 from pkg_resources import get_provider
 
@@ -51,7 +51,7 @@ class Scaffolder:
         self._checked_directories: set[Path] = set()
         # BaseLoader is used for rendering strings only. It does not need additional functionality.
         self._base_env = Environment(
-            loader=BaseLoader  # pyright: ignore[reportGeneralTypeIssues]
+            loader=BaseLoader  # pyright: ignore[reportArgumentType]
         )
 
     def _create_directory(self, directory: Path, overwrite_existing_files: bool = True):
@@ -79,9 +79,7 @@ class Scaffolder:
             f"Rendering template string `{template_string}` with config `{template_config}`."
         )
 
-        rendered_string = self._base_env.from_string(
-            template_string
-        ).render(  # pyright: ignore[reportUnknownMemberType]
+        rendered_string = self._base_env.from_string(template_string).render(
             **template_config
         )
 
@@ -168,12 +166,7 @@ class Scaffolder:
         Only files ending with `.j2` are rendered.
         """
         # render the base templates
-        for template_name in cast(
-            list[str],
-            env.list_templates(  # pyright: ignore[reportUnknownMemberType]
-                extensions=["j2"]
-            ),
-        ):
+        for template_name in env.list_templates(extensions=["j2"]):
             self._render_template(
                 template_name,
                 env,

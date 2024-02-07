@@ -27,7 +27,7 @@ class FastAPIAppRequestInstrumentationConfigurator(AppRequestInstrumentationConf
 
 class FastAPIRequestAdapter(RequestAdapter):
     @staticmethod
-    def get_request_class_type():
+    def get_request_class_type(): # -> type[Request]:
         ...
     
     @staticmethod
@@ -38,46 +38,46 @@ class FastAPIRequestAdapter(RequestAdapter):
     def get_current_request():
         ...
     
-    def get_remote_user(self, request: starlette.requests.Request): # -> Literal['-']:
+    def get_remote_user(self, request: starlette.requests.Request): # -> Any | Literal['-']:
         ...
     
-    def get_http_header(self, request: starlette.requests.Request, header_name, default=...): # -> None:
+    def get_http_header(self, request: starlette.requests.Request, header_name, default=...): # -> str | None:
         ...
     
     def set_correlation_id(self, request_, value): # -> None:
         ...
     
-    def get_correlation_id_in_request_context(self, request: starlette.requests.Request): # -> None:
+    def get_correlation_id_in_request_context(self, request: starlette.requests.Request): # -> Any | None:
         ...
     
     def get_protocol(self, request: starlette.requests.Request): # -> str:
         ...
     
-    def get_path(self, request: starlette.requests.Request):
+    def get_path(self, request: starlette.requests.Request): # -> str:
         ...
     
-    def get_content_length(self, request: starlette.requests.Request):
+    def get_content_length(self, request: starlette.requests.Request): # -> str:
         ...
     
-    def get_method(self, request: starlette.requests.Request):
+    def get_method(self, request: starlette.requests.Request): # -> str:
         ...
     
-    def get_remote_ip(self, request: starlette.requests.Request):
+    def get_remote_ip(self, request: starlette.requests.Request): # -> str:
         ...
     
-    def get_remote_port(self, request: starlette.requests.Request):
+    def get_remote_port(self, request: starlette.requests.Request): # -> int:
         ...
     
 
 
 class FastAPIResponseAdapter(ResponseAdapter):
-    def get_status_code(self, response: starlette.responses.Response):
+    def get_status_code(self, response: starlette.responses.Response): # -> int:
         ...
     
-    def get_response_size(self, response: starlette.responses.Response):
+    def get_response_size(self, response: starlette.responses.Response): # -> str:
         ...
     
-    def get_content_type(self, response: starlette.responses.Response):
+    def get_content_type(self, response: starlette.responses.Response): # -> str:
         ...
     
 

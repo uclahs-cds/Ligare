@@ -9,7 +9,7 @@ from flask import Blueprint, Config, Flask, url_for
 from injector import inject
 from werkzeug.routing import BuildError
 
-application_blueprint = Blueprint("", __name__)
+application_blueprint = Blueprint("application", __name__)
 
 
 @inject

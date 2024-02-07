@@ -73,24 +73,28 @@ packages = [
     "BL_Python.web"
 ]
 
+[tool.setuptools.package-data]
+"BL_Python" = ["py.typed"]
+
 #
 [project.optional-dependencies]
 dev-dependencies = [
     # testing automation. use specific versions so behavior does not change.
-    "pytest == 7.4.0",
-    "pytest-mock == 3.11.1",
-    "mock == 5.1.0",
+    "pytest",
+    "pytest-mock",
+    "mock",
+    "pytest-cov",
 
     # code quality. allow minor version updates.
     # this can possibly change behavior of quality checks,
     # which allows us to catch new types of problems.
-    "pyright ~= 1.1",
-    "isort ~= 5.12",
+    "pyright",
+    "isort",
     # specific version is nnecessary due to Flask dependency
     # version conflict with `click`
     # flask 1.1.4 depends on click<8.0 and >=5.1
     # black 22.1.0 depends on click>=8.0.0
-    "black == 21.12b0"
+    "black"
 ]
 
 [tool.pyright]
@@ -105,6 +109,7 @@ include = [
 exclude = [
     "**/build",
     "**/.venv",
+    "**/.github-venv",
     "**/.pytest_cache",
     ".github",
     ".git",
@@ -143,6 +148,18 @@ reportUnusedCallResult = "information"
 reportMissingTypeStubs = "information"
 
 [tool.pytest.ini_options]
+pythonpath = [
+    ".",
+    "src/AWS",
+    "src/database",
+    "src/development",
+    "src/GitHub",
+    "src/platform",
+    "src/programming",
+    "src/testing",
+    "src/web",
+]
+
 testpaths = [
     "test",
     "src/AWS/test",
@@ -156,12 +173,51 @@ testpaths = [
 ]
 
 addopts = [
-    "--import-mode=importlib"
+    "--import-mode=importlib",
+    # to debug tests without altering these options see
+    # https://pytest-cov.readthedocs.io/en/latest/debuggers.html
+    # For more information regarding doing this with VSCode see
+    # https://github.com/microsoft/vscode-python/issues/21255
+    # and
+    # https://github.com/microsoft/vscode-python/issues/21845
+    "--cov=.",
+    "--junitxml=pytest.xml",
+    "-o=junit_family=xunit2",
+    "--cov-report=xml:cov.xml",
+    "--cov-report=term-missing",
 ]
 
 python_files = "test_*.py"
 
-norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv"
+norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv .github-venv"
+
+[tool.coverage.report]
+include_namespace_packages = true
+
+[tool.coverage.html]
+show_contexts = true
+
+[tool.coverage.run]
+dynamic_context = "test_function"
+relative_files = true
+omit = [
+    ".venv/*",
+    "*/.venv/*",
+    ".github-venv/*",
+    "*/test/*",
+    "*/src/*/test/*",
+    "build/*",
+    "*/build/*",
+    ".pytest_cache/*",
+    ".github/*",
+    ".git/*",
+    "typings/*",
+    "*/typings/*",
+    "node_modules/*",
+    "__pycache__/*",
+    "*/__pycache__/*"
+]
+branch = true
 
 [tool.black]
 exclude = "src/.+/(typings|build)"

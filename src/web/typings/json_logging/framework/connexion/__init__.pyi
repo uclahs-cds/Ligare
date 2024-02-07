@@ -37,7 +37,7 @@ class ConnexionRequestAdapter(RequestAdapter):
         ...
     
     @staticmethod
-    def get_current_request():
+    def get_current_request(): # -> LocalProxy[ConnexionRequest]:
         ...
     
     def get_remote_user(self, request): # -> Literal['-']:

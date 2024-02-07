@@ -16,12 +16,18 @@ class _Singleton(Type[Any]):
 _SingletonType = NewType("_SingletonType", _Singleton)
 
 
-# FIXME is this broken? take another look with a fresh brain
 class Singleton(type):
-    """Singleton metaclass"""
+    """
+    Singleton metaclass.
+    Create a new Singleton type by setting that class's metaclass:
+
+    `class Foo(metaclass=Singleton): ...`
+
+    In addition to making a class a Singleton, these classes cannot have their attributes changed.
+    """
 
     def __new__(
-        cls: Type[Any],
+        cls: type,
         cls_name: str,
         bases: tuple[Type[Any]],
         members: dict[str, Any],
@@ -29,16 +35,10 @@ class Singleton(type):
         _new_type: Type[Any] = type(cls_name, bases, members)
         _instance: _SingletonType | None = None
 
-        def __new__(cls: Type[Any], *args: Any, **kwargs: Any):
+        def __new__(cls: Any, *args: Any, **kwargs: Any):
             nonlocal _instance
             if _instance is None:
-                _instance = cast(
-                    Any,
-                    super(
-                        _new_type,
-                        cast(Any, cls),  # pyright: ignore[reportUnknownMemberType]
-                    ).__new__(cls),
-                )
+                _instance = cast(Any, super(_new_type, cls)).__new__(cls)
                 child_init = _instance.__init__
 
                 def __init__(cls: _SingletonType, *args: Any, **kwargs: Any):

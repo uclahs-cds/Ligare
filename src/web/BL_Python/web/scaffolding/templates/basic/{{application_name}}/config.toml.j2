@@ -1,0 +1,35 @@
+{% if 'database' in module %}
+[database]
+connection_string = '{{module.database.connection_string}}'
+sqlalchemy_echo = false
+
+{% endif %}
+[flask]
+app_name = '{{application_name}}'
+env = 'development'
+host = "127.0.0.1"
+# FIXME this should be an int
+port = "5000"
+
+[flask.session]
+permanent = true
+lifetime = 86400
+refresh_each_request = true
+
+[flask.session.cookie]
+httponly = true
+secure = true
+samesite = 'none'
+secret_key = 'abc123'
+
+[logging]
+log_level = 'INFO'
+format = 'JSON'
+
+[web.security.cors]
+origin = 'http://localhost:5000'
+allow_credentials = true
+allow_methods = ['GET', 'POST', 'PATCH', 'OPTIONS']
+
+[web.security]
+csp = "default-src 'self'"

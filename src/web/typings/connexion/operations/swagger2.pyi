@@ -8,6 +8,7 @@ from connexion.operations.abstract import AbstractOperation
 This module defines a Swagger2Operation class, a Connexion operation specific for Swagger 2 specs.
 """
 logger = ...
+COLLECTION_FORMAT_MAPPING = ...
 class Swagger2Operation(AbstractOperation):
     """
     Exposes a Swagger 2.0 operation under the AbstractOperation interface.
@@ -18,10 +19,8 @@ class Swagger2Operation(AbstractOperation):
     decorators that provide security, validation, serialization,
     and deserialization.
     """
-    def __init__(self, api, method, path, operation, resolver, app_produces, app_consumes, path_parameters=..., app_security=..., security_definitions=..., definitions=..., parameter_definitions=..., response_definitions=..., validate_responses=..., strict_validation=..., randomize_endpoint=..., validator_map=..., pythonic_params=..., uri_parser_class=..., pass_context_arg_name=...) -> None:
+    def __init__(self, method, path, operation, resolver, app_produces, app_consumes, path_parameters=..., app_security=..., security_schemes=..., definitions=..., randomize_endpoint=..., uri_parser_class=...) -> None:
         """
-        :param api: api that this operation is attached to
-        :type api: apis.AbstractAPI
         :param method: HTTP method
         :type method: str
         :param path: relative path to this operation
@@ -38,37 +37,25 @@ class Swagger2Operation(AbstractOperation):
         :type path_parameters: list
         :param app_security: list of security rules the application uses by default
         :type app_security: list
-        :param security_definitions: `Security Definitions Object
+        :param security_schemes: `Security Definitions Object
             <https://github.com/swagger-api/swagger-spec/blob/master/versions/2.0.md#security-definitions-object>`_
-        :type security_definitions: dict
+        :type security_schemes: dict
         :param definitions: `Definitions Object
             <https://github.com/swagger-api/swagger-spec/blob/master/versions/2.0.md#definitionsObject>`_
         :type definitions: dict
-        :param parameter_definitions: Global parameter definitions
-        :type parameter_definitions: dict
-        :param response_definitions: Global response definitions
-        :type response_definitions: dict
-        :param validate_responses: True enables validation. Validation errors generate HTTP 500 responses.
-        :type validate_responses: bool
-        :param strict_validation: True enables validation on invalid request parameters
-        :type strict_validation: bool
         :param randomize_endpoint: number of random characters to append to operation name
         :type randomize_endpoint: integer
-        :param validator_map: Custom validators for the types "parameter", "body" and "response".
-        :type validator_map: dict
-        :param pythonic_params: When True CamelCase parameters are converted to snake_case and an underscore is appended
-            to any shadowed built-ins
-        :type pythonic_params: bool
         :param uri_parser_class: class to use for uri parsing
         :type uri_parser_class: AbstractURIParser
-        :param pass_context_arg_name: If not None will try to inject the request context to the function using this
-            name.
-        :type pass_context_arg_name: str|None
         """
         ...
     
     @classmethod
-    def from_spec(cls, spec, api, path, method, resolver, *args, **kwargs): # -> Self@Swagger2Operation:
+    def from_spec(cls, spec, *args, path, method, resolver, **kwargs): # -> Self:
+        ...
+    
+    @property
+    def request_body(self) -> dict:
         ...
     
     @property
@@ -83,7 +70,7 @@ class Swagger2Operation(AbstractOperation):
     def produces(self):
         ...
     
-    def get_path_parameter_types(self): # -> dict[Unknown, Unknown]:
+    def get_path_parameter_types(self): # -> dict[Any, Any]:
         ...
     
     def with_definitions(self, schema):
@@ -92,27 +79,26 @@ class Swagger2Operation(AbstractOperation):
     def response_schema(self, status_code=..., content_type=...):
         ...
     
-    def example_response(self, status_code=..., *args, **kwargs): # -> tuple[Unknown, int] | tuple[Unknown | dict[Unknown, Unknown] | list[Unknown], int] | tuple[None, int]:
+    def example_response(self, status_code=..., *args, **kwargs): # -> tuple[Any, int] | tuple[Any | dict[Any, Any] | list[Any], int] | tuple[None, int]:
         """
         Returns example response from spec
         """
         ...
     
-    @property
-    def body_schema(self):
+    def body_name(self, content_type: str = ...) -> str:
+        ...
+    
+    def body_schema(self, content_type: str = ...) -> dict:
         """
         The body schema definition for this operation.
         """
         ...
     
-    @property
-    def body_definition(self): # -> dict[Unknown, Unknown]:
+    def body_definition(self, content_type: str = ...) -> dict:
         """
         The body complete definition for this operation.
 
         **There can be one "body" parameter at most.**
-
-        :rtype: dict
         """
         ...
     

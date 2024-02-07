@@ -20,7 +20,7 @@ class MockResolver(Resolver):
         """
         ...
     
-    def mock_operation(self, operation, *args, **kwargs): # -> tuple[Unknown, Unknown] | tuple[Literal['No example response was defined.'], Unknown]:
+    def mock_operation(self, operation, *args, **kwargs): # -> tuple[Any, Any] | tuple[Literal['No example response was defined.'], Any]:
         ...
     
 

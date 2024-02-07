@@ -1,10 +1,10 @@
 # isort: off
 from {{application_name}}._version import __version__
+from {{application_name}}._app_type import AppType
 # isort: on
 
 {% if module.database %}
 from typing import Any, cast
-from injector import Injector
 from sqlalchemy import MetaData
 
 from sqlalchemy.orm import Session
@@ -22,9 +22,10 @@ def create_app():
     application_modules.append(ScopedSessionModule())
     {% endif %}
 
-    from BL_Python.web.application import create_app as _create_app
     # fmt: off
-    app = _create_app(
+    from BL_Python.web.application import App
+    result = App[AppType].create(
+        config_filename="{{application_name}}/config.toml",
         application_configs=application_configs,
         application_modules=application_modules
     )
@@ -34,8 +35,8 @@ def create_app():
     # TODO For now, create the database and tables
     # when the application starts. This behavior
     # will be removed when Alembic is integrated.
-    session = cast(Injector, app.injector.injector).get(Session)
-    cast(MetaData, Base.metadata).create_all(session.bind) # pyright: ignore[reportGeneralTypeIssues]
+    session = result.app_injector.flask_injector.injector.get(Session)
+    cast(MetaData, Base.metadata).create_all(session.bind)
 
     {#
         # TODO ideally this would use @inject w/ session: Session,
@@ -43,10 +44,10 @@ def create_app():
         sending in the dependencies to remove_db.
         For now, just resolve it directly.
     #}
-    @app.teardown_request
+    @result.flask_app.teardown_request
     def remove_db(exception: Any):
-        session = app.injector.injector.get(Session)
+        session = result.app_injector.flask_injector.injector.get(Session)
         session.rollback()
     {% endif %}
 
-    return app
+    return result

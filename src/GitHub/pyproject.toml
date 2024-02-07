@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "PyGithub~=2.1"
+    "PyGithub"
 ]
 
 dynamic = ["version", "readme"]
@@ -32,12 +32,15 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 [tool.setuptools.package-dir]
 "BL_Python.GitHub" = "BL_Python/GitHub"
 
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+exclude = ["build*"]
+
+[tool.setuptools.package-data]
+"BL_Python.GitHub" = ["py.typed"]
 
 [project.optional-dependencies]
 dev-dependencies = [
-    "pytest == 7.4.0",
-    "pytest-mock == 3.11.1",
-    "mock == 5.1.0"
+    "pytest",
+    "pytest-mock",
+    "mock"
 ]

@@ -11,6 +11,10 @@
 *.rd[as]
 
 # Python
+.coverage
+coverage
+cov.xml
+pytest.xml
 build/
 __pycache__/
 .pytest_cache/

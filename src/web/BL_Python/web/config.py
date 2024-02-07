@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 class LoggingConfig(BaseModel):
     log_level: str = "INFO"
+    format: Literal["plaintext", "JSON"] = "JSON"
 
 
 class WebSecurityCorsConfig(BaseModel):
@@ -49,6 +50,7 @@ class FlaskSessionCookieConfig(BaseModel):
     # FIXME This is not done at the moment solely because we are not making
     # FIXME active use of sessions, but this should not be forgotten!
     secret_key: str | None = None
+    name: str = "session"
     httponly: bool = True
     secure: bool = True
     samesite: str = "none"
@@ -60,6 +62,7 @@ class FlaskSessionCookieConfig(BaseModel):
         environ.update(
             {
                 "SECRET_KEY": self.secret_key,
+                "SESSION_COOKIE_NAME": self.name,
                 "SESSION_COOKIE_HTTPONLY": str(1 if self.httponly else 0),
                 "SESSION_COOKIE_SECURE": str(1 if self.secure else 0),
                 "SESSION_COOKIE_SAMESITE": self.samesite,
@@ -69,6 +72,7 @@ class FlaskSessionCookieConfig(BaseModel):
     def _update_flask_config(self, flask_app_config: FlaskAppConfig):
         class ConfigObject:
             SECRET_KEY = self.secret_key
+            SESSION_COOKIE_NAME = self.name
             SESSION_COOKIE_HTTPONLY = self.httponly
             SESSION_COOKIE_SECURE = self.secure
             SESSION_COOKIE_SAMESITE = self.samesite
@@ -86,9 +90,9 @@ class FlaskSessionConfig(BaseModel):
         environ.update(
             {
                 "PERMANENT_SESSION": str(1 if self.permanent else 0),
-                "PERMANENT_SESSION_LIFETIME": str(self.lifetime)
-                if self.lifetime
-                else "",
+                "PERMANENT_SESSION_LIFETIME": (
+                    str(self.lifetime) if self.lifetime else ""
+                ),
                 "SESSION_REFRESH_EACH_REQUEST": str(
                     1 if self.refresh_each_request else 0
                 ),
@@ -112,13 +116,18 @@ class FlaskSessionConfig(BaseModel):
 class FlaskConfig(BaseModel):
     app_name: str = "app"
     env: str = "Development"
-    host: str | None = None
-    port: str | None = None
+    host: str = "localhost"
+    port: str = "5000"
     openapi: FlaskOpenApiConfig | None = None
     session: FlaskSessionConfig | None = None
 
     def _prepare_env_for_flask(self):
-        environ.update({"ENV": self.env})
+        environ.update(
+            FLASK_APP=self.app_name,
+            ENV=self.env,
+            FLASK_RUN_PORT=self.port,
+            FLASK_RUN_HOST=self.host,
+        )
         if self.session:
             self.session._prepare_env_for_flask()  # pyright: ignore[reportPrivateUsage]
 
@@ -129,8 +138,12 @@ class FlaskConfig(BaseModel):
             )
 
         class ConfigObject:
+            FLASK_APP = self.app_name
             ENV = self.env
             SERVER_NAME = f"{self.host}:{self.port}"
+            FLASK_RUN_PORT = self.port
+            FLASK_RUN_HOST = self.host
+            TESTING = self.env == "Testing"
 
         flask_app_config.from_object(ConfigObject)
 

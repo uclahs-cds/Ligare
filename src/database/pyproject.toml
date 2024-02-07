@@ -32,8 +32,8 @@ dependencies = [
     "sqlalchemy ~= 1.4",
     "alembic ~= 1.8",
     "sqlalchemy2-stubs ~= 0.0.2a34",
-    "injector ~= 0.20",
-    "pydantic ~= 2.1.1"
+    "injector",
+    "pydantic"
 ]
 
 dynamic = ["version", "readme"]
@@ -50,8 +50,11 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 [tool.setuptools.package-dir]
 "BL_Python.database" = "BL_Python/database"
 
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+exclude = ["build*"]
+
+[tool.setuptools.package-data]
+"BL_Python.database" = ["py.typed"]
 
 [project.optional-dependencies]
 postgres = [

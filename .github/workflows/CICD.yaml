@@ -8,53 +8,264 @@ on:
     branches:
       - "**"
   workflow_dispatch:
+    inputs:
+      rewrite_dependencies:
+        description:
+          If "true" or empty CICD will rewrite BL_Python dependencies,
+          during the build only, to use the local filesystem checkout rather than PyPI.
+          If "false" CICD will not rewrite the BL_Python dependencies.
+        type: choice
+        options:
+          - true
+          - false
+        default: "true"
+        required: true
+      use_dependency_cache:
+        description:
+          If "true", the workflow will use the dependency cache if the associated
+          cache key has a hit. If "false," any existing dependency cache will be ignored.
+          The workflow will save a new dependency cache with the same cache key regardless
+          of `use_dependency_cache` if there was not a cache hit.
+        type: choice
+        options:
+          - true
+          - false
+        default: "true"
+        required: false
 
 jobs:
-  All:
-    name: Build and test BL_Python
+  Checkout:
+    name: Checkout and Setup
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10"]
+
+    outputs:
+      cache-key-dependencies: ${{ steps.generate-cache-keys.outputs.cache_key }}
+      cache-key-run: ${{ steps.generate-cache-keys.outputs.cache_key_run }}
+
+    env:
+      PYTHON_VERSION: "3.10"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - name: Generate cache keys
+        id: generate-cache-keys
+        # Use separate cache keys for dependencies and for run workspace.
+        # The dependencies can be restored between runs,
+        # while the workspace is restored between jobs in the same run.
+        run: |
+          rand=$(( (1000+$RANDOM)%$RANDOM*$RANDOM ))
+          run_attempt=$([ -n "${{ github.run_attempt }}" ] && printf ${{ github.run_attempt }} || printf $rand)
+          cache_key_dependencies='${{ runner.os }}-dependencies-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}'
+          cache_key_run='${{ runner.os }}-run-${{ hashFiles('pyproject.toml', 'src/*/pyproject.toml') }}-run-id_${{ github.run_id }}-number_${{ github.run_number }}-attempt_'"$run_attempt"
+          echo "cache_key_dependencies=$cache_key_dependencies" >> $GITHUB_OUTPUT
+          echo "cache_key_run=$cache_key_run" >> $GITHUB_OUTPUT
+
+      #- name: Restore dependency cache
+      #  if: ${{ success() && (github.event_name != 'workflow_dispatch' || inputs.use_dependency_cache == 'true') }}
+      # TODO figure out a way to get 3rd party dependencies cached without caching BL_Python ... maybe.
+      #  uses: actions/cache/restore@v4
+      #  id: restore-dependency-cache
+      #  with:
+      #    path: |
+      #      .github-venv
+      #      node_modules
+      #    key: ${{ steps.generate-cache-keys.outputs.cache_key_dependencies }}
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        #if: ${{ success() && (inputs.use_dependency_cache == 'false' || !steps.restore-dependency-cache.outputs.cache-hit) }}
+        uses: actions/setup-python@v5
+        id: install_python
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: "pip"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
+        #if: ${{ success() && (inputs.use_dependency_cache == 'false' || !steps.restore-dependency-cache.outputs.cache-hit) }}
         run: |
+          echo Setting up dependencies
           python -m pip install -U pip
-          ./install_all.sh
+          python -m pip install toml
+          REWRITE_DEPENDENCIES=${{ inputs.rewrite_dependencies }} \
+            ./.github/workflows/CICD-scripts/pyproject_dependency_rewrite.py
+          ${{ steps.install_python.outputs.python-path }} -m venv .github-venv
+          source .github-venv/bin/activate
+
+          echo 'prefix=${{ github.workspace }}/node_modules' >> ~/.npmrc
+          # Note that currently pyproject.toml does not specify a version.
+          # As such, this will install the latest Pyright, including
+          # potentionally breaking changes.
+          npm install -g pyright
+          ./install_all.sh -e
+
+      # TODO see note above about 3rd party dependencies.
+      #- name: Save dependency cache
+      #  if: ${{ success() && !steps.restore-dependency-cache.outputs.cache-hit }}
+      #  uses: actions/cache/save@v4
+      #  id: save-dependency-cache
+      #  with:
+      #    path: |
+      #      .github-venv
+      #      node_modules
+      #    key: ${{ steps.generate-cache-keys.outputs.cache_key_dependencies }}
+
+      - name: Save run cache
+        uses: actions/cache/save@v4
+        id: save-run-cache
+        with:
+          path: ${{ github.workspace }}
+          key: ${{ steps.generate-cache-keys.outputs.cache_key_run }}
+
+  Pyright:
+    name: Static type checking
+    runs-on: ubuntu-latest
+    needs:
+      - Checkout
+
+    env:
+      PYTHON_VERSION: "3.10"
+
+    if: ${{( success() && !cancelled() ) }}
+
+    steps:
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        id: install_python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: actions/cache/restore@v4
+        name: Restore run cache
+        id: restore-run-cache
+        with:
+          key: ${{ needs.Checkout.outputs.cache-key-run }}
+          path: ${{ github.workspace }}
+          fail-on-cache-miss: true
 
       - name: Test with pyright
         run: |
-          pyright
+          echo Running pyright
+          source ${{ github.workspace }}/.github-venv/bin/activate
+          ./node_modules/bin/pyright
 
-      - name: Test with pytest
+  Pytest:
+    name: Automated testing
+    runs-on: ubuntu-latest
+    needs:
+      - Checkout
+
+    env:
+      PYTHON_VERSION: "3.10"
+
+    if: ${{( success() && !cancelled() ) }}
+
+    steps:
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        id: install_python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: actions/cache/restore@v4
+        name: Restore run cache
+        id: restore-run-cache
+        with:
+          key: ${{ needs.Checkout.outputs.cache-key-run }}
+          path: ${{ github.workspace }}
+          fail-on-cache-miss: true
+
+      - name: Test with pytest and generate reports
         run: |
           echo Running pytest
-          # infra is not set up to support integration tests, so ignore postgresql
-          # etl has been updated, while the tests have not been
-          pytest --junitxml pytest.xml \
-                 -k "not acceptance"
+          source ${{ github.workspace }}/.github-venv/bin/activate
+          pytest -k "not acceptance"
+
+          coverage html
 
       - name: Output pytest report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
+        if: ${{ always() }}
         with:
-          name: pytest-report
-          path: pytest.xml
+          name: pytest-and-coverage-report
+          path: |
+            pytest.xml
+            cov.xml
+            .coverage
+            htmlcov/
           retention-days: 1
           if-no-files-found: error
 
+  Style:
+    name: Style and formatting
+    runs-on: ubuntu-latest
+    needs:
+      - Checkout
+
+    env:
+      PYTHON_VERSION: "3.10"
+
+    if: ${{( success() && !cancelled() ) }}
+
+    steps:
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        id: install_python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: actions/cache/restore@v4
+        name: Restore run cache
+        id: restore-run-cache
+        with:
+          key: ${{ needs.Checkout.outputs.cache-key-run }}
+          path: ${{ github.workspace }}
+          fail-on-cache-miss: true
+
       - name: Check code style
         run: |
+          source .github-venv/bin/activate
           black --check src
 
       - name: Check import order
         run: |
+          source .github-venv/bin/activate
           isort --check-only src
+
+  Final-status-check:
+    name: Check workflow success
+    runs-on: ubuntu-latest
+    needs:
+      - Checkout
+      - Pyright
+      - Pytest
+      - Style
+    # this job should run regardless of success, failure, or skips,
+    # but not if the workflow is cancelled. `always()` ignores cancelled,
+    # and so we check for the cancelled state.
+    if: ${{( always() && !cancelled() ) }}
+    steps:
+      - name: Failure
+        # once the "needs" jobs have completed, if any of them
+        # failed, then the entire workflow is considered failed.
+        if: |
+          contains(toJSON(needs), '"result": "failure"')
+        env:
+          RANDOM_EOF: |
+            EOF`echo $RANDOM`
+        run: |
+          echo One or more required jobs did not complete successfully;
+          jq -r 'keys[] as $job | "Job ID: \($job)'"\n"'    \(.[$job] | .result)"' <<${{ env.RANDOM_EOF }}
+            ${{ toJSON(needs) }}
+          ${{ env.RANDOM_EOF }}
+          exit 1;
+
+      # TODO consider uploading the repository so errors can be more easily resolved.
+      #- name: Upload repository build
+      #  uses: actions/upload-artifact@v3
+      #  with:
+      #    name: repository-build
+      #    path: ${{ github.workspace }}
+      #    retention-days: 1
+      #    if-no-files-found: error
+
+      - name: Success
+        run: echo Workflow succeeded; exit 0;

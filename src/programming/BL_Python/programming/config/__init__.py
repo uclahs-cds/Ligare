@@ -32,7 +32,7 @@ class ConfigBuilder(Generic[TConfig]):
 
         _new_type_base = self._root_config if self._root_config else object
 
-        attrs = {}
+        attrs: dict[Any, Any] = {}
         annotations: dict[str, Any] = {}
 
         for config in self._configs:

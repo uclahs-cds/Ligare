@@ -28,8 +28,8 @@ classifiers = [
 ]
 
 dependencies = [
-    "injector == 0.21.0",
-    "pydantic ~= 2.1.1"
+    "injector",
+    "pydantic"
 ]
 
 dynamic = ["version", "readme"]
@@ -46,5 +46,8 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 [tool.setuptools.package-dir]
 "BL_Python.programming" = "BL_Python/programming"
 
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+exclude = ["build*"]
+
+[tool.setuptools.package-data]
+"BL_Python.programming" = ["py.typed"]

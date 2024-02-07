@@ -1,4 +1,4 @@
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 from github import Auth
 from github import Github as pygithub
@@ -69,11 +69,11 @@ class GitHub:
         ## can't use repo.organization because of this
         ## https://github.com/PyGithub/PyGithub/issues/1598
         repository = self._client.get_repo(f"{organization_name}/{repository_name}")
-        organization = self._client.get_organization(organization_name)
+        organization: Organization = self._client.get_organization(organization_name)
         # fixes the PyGithub API URLs for working with the organiztion owning the repository
-        repository._organization._value = (  # pyright: ignore[reportPrivateUsage,reportGeneralTypeIssues]
-            organization
-        )
+        cast(
+            Any, repository._organization  # pyright: ignore[reportPrivateUsage]
+        )._value = organization
         return repository
 
     def create_repository(
