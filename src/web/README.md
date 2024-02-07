@@ -67,7 +67,7 @@ The scaffolder will have created several files and directories, including a READ
 
 ## Flask
 
-`BL_Python.web` is based on [Flask 1.1.4](https://flask.palletsprojects.com/en/1.1.x/). Updating to Flask 2.x is not currently planned, but may happen in the future.
+`BL_Python.web` is based on [Flask 3.0.x](https://flask.palletsprojects.com/en/3.0.x/) and [Connexion 3.0.x](https://connexion.readthedocs.io/en/3.0.5/).
 
 ## Development
 
