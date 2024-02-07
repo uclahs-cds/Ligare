@@ -5,9 +5,10 @@ from dataclasses import asdict, dataclass, field
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
-from typing import Any, final
+from typing import Any, Literal, final
 
 from BL_Python.programming.collections.dict import merge
+from BL_Python.web.scaffolding.exceptions import OutputDirectoryException
 from jinja2 import BaseLoader, Environment, PackageLoader, Template
 
 # fmt: off
@@ -33,13 +34,13 @@ class ScaffoldModule:
 
 @dataclass
 class ScaffoldConfig:
-    output_directory: str
     application_name: str
-    template_type: str | None = None
+    output_directory: str
+    mode: Literal["create", "modify"] = "create"
+    template_type: Literal["basic", "openapi"] = "basic"
+    endpoints: list[ScaffoldEndpoint] | None = None
     modules: list[ScaffoldModule] | None = None
     module: dict[str, Any] = field(default_factory=dict)
-    endpoints: list[ScaffoldEndpoint] | None = None
-    mode: str = "create"
 
 
 @final
@@ -377,18 +378,16 @@ class Scaffolder:
         # "create" can run from any directory that is not an existing
         # application's root directory.
         if self._config.mode == "create" and in_application_directory:
-            self._log.critical(
-                "Attmpted to scaffold a new application in the same directory as an existing application. This is not supported. Change your working directory to the application's parent directory, or run this from a directory that does not contain an existing application."
-            )
-            return
+            msg = "Attempted to scaffold a new application in the same directory as an existing application. This is not supported. Change your working directory to the application's parent directory, or run this from a directory that does not contain an existing application."
+            self._log.critical(msg)
+            raise OutputDirectoryException(msg, self._config.output_directory)
 
         # modify can only run from an existing application's
         # parent directory.
         if self._config.mode == "modify" and not in_parent_directory:
-            self._log.critical(
-                f"Attempted to modify an existing application from a directory that is not the existing application's parent directory. This is not supported. Change your working directory to the application's parent directory."
-            )
-            return
+            msg = "Attempted to modify an existing application from a directory that is not the existing application's parent directory. This is not supported. Change your working directory to the application's parent directory."
+            self._log.critical(msg)
+            raise OutputDirectoryException(msg, self._config.output_directory)
 
         if (
             # Only in create mode do we make absolutely certain that

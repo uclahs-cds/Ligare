@@ -416,7 +416,6 @@ class SwaggerBootstrapMiddleware:
     ) -> None:
         async def wrapped_send(message: Any) -> None:
             nonlocal scope
-            nonlocal receive
             nonlocal send
 
             # Only run during startup of the application

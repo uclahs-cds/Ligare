@@ -1,8 +1,15 @@
 import logging
+from pathlib import Path
 from typing import Any
 
 import pytest
 from BL_Python.web.scaffolding.__main__ import ScaffolderCli, scaffold
+from BL_Python.web.scaffolding.exceptions import OutputDirectoryException
+from BL_Python.web.scaffolding.scaffolder import (
+    ScaffoldConfig,
+    ScaffoldEndpoint,
+    Scaffolder,
+)
 from pytest import CaptureFixture, LogCaptureFixture
 from pytest_mock import MockerFixture
 
@@ -302,3 +309,41 @@ def test__scaffold__create_mode_uses_argv_for_module_configuration(
     ]
 
     assert "database" in module_names
+
+
+def test__Scaffolder__create_halts_when_cwd_is_existing_application_directory(
+    caplog: LogCaptureFixture,
+    mocker: MockerFixture,
+):
+    path_mock = mocker.patch("BL_Python.web.scaffolding.scaffolder.Path")
+    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.SourceFileLoader")
+    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.module_from_spec")
+    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.spec_from_file_location")
+    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.input")
+
+    scaffold_config = ScaffoldConfig(
+        application_name="foo",
+        output_directory="foo",
+        template_type="basic",
+        modules=None,
+        endpoints=[ScaffoldEndpoint("foo")],
+        mode="create",
+    )
+
+    def _check_scaffolded_application_exists(test_path: Path):
+        # test_path is "." when Scaffolder checks whether
+        # the CWD is a previously scaffolded application.
+        return path_mock.call_args.args[0] == "."
+
+    _ = mocker.patch(
+        "BL_Python.web.scaffolding.scaffolder.Scaffolder._check_scaffolded_application_exists",
+        side_effect=_check_scaffolded_application_exists,
+    )
+
+    log = logging.getLogger("scaffolder")
+    scaffolder = Scaffolder(scaffold_config, log)
+    with pytest.raises(
+        OutputDirectoryException,
+        match=r"Attempted to scaffold a new application in the same directory as an existing application\..+",
+    ):
+        scaffolder.scaffold()

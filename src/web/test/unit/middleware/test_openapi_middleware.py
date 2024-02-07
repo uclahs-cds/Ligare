@@ -37,9 +37,9 @@ class TestOpenAPIMiddleware(CreateApp):
     ):
         openapi_config.logging.format = format
         openapi_mock_controller.begin()
-        flask_client = openapi_client_configurable(openapi_config)
+        client_injector = openapi_client_configurable(openapi_config)
 
-        response = flask_client.client.get("/")
+        response = client_injector.client.get("/")
 
         assert response.headers[CORRELATION_ID_HEADER]
         _ = uuid.UUID(response.headers[CORRELATION_ID_HEADER])
@@ -54,9 +54,9 @@ class TestOpenAPIMiddleware(CreateApp):
     ):
         openapi_config.logging.format = format
         openapi_mock_controller.begin()
-        flask_client = openapi_client_configurable(openapi_config)
+        client_injector = openapi_client_configurable(openapi_config)
         correlation_id = str(uuid.uuid4())
-        response = flask_client.client.get(
+        response = client_injector.client.get(
             "/", headers={CORRELATION_ID_HEADER: correlation_id}
         )
 
@@ -73,9 +73,9 @@ class TestOpenAPIMiddleware(CreateApp):
         openapi_config.logging.format = format
         correlation_id = "abc123"
         openapi_mock_controller.begin()
-        flask_client = openapi_client_configurable(openapi_config)
+        client_injector = openapi_client_configurable(openapi_config)
 
-        response = flask_client.client.get(
+        response = client_injector.client.get(
             "/", headers={CORRELATION_ID_HEADER: correlation_id}
         )
 
@@ -153,13 +153,13 @@ class TestOpenAPIMiddleware(CreateApp):
 
         openapi_mock_controller.begin()
 
-        flask_client = app.test_client()
+        test_client = app.test_client()
 
         wrapped_handler_decorator = bind_requesthandler(app.app, Flask.before_request)
         request_handler_mock = MagicMock()
         _ = wrapped_handler_decorator(request_handler_mock)
 
-        _ = flask_client.get("/")
+        _ = test_client.get("/")
 
         assert request_handler_mock.called
 
@@ -215,9 +215,9 @@ class TestOpenAPIMiddleware(CreateApp):
         openapi_mock_controller.begin()
         app.add_api("foo.yaml")
 
-        flask_client = app.test_client()
+        test_client = app.test_client()
 
-        _ = flask_client.get("/", headers={"Host": "localhost:5000"})
+        _ = test_client.get("/", headers={"Host": "localhost:5000"})
 
         assert application_errorhandler_mock.called
         assert isinstance(
@@ -225,7 +225,7 @@ class TestOpenAPIMiddleware(CreateApp):
         )
 
 
-def test__url_create__returns_correct_url():
+def test__Url__create__returns_correct_url():
     url = Url.create("http", "localhost", 5000, "/ui", "a=b", "foo")
     assert "http" == url.scheme
     assert "localhost:5000" == url.netloc

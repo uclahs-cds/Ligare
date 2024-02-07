@@ -1,3 +1,4 @@
+import logging
 import pathlib
 from os import environ
 from pathlib import Path
@@ -13,7 +14,12 @@ from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
 
-from ..create_app import CreateApp, FlaskClientInjectorConfigurable
+from ..create_app import (
+    CreateApp,
+    FlaskClientInjectorConfigurable,
+    OpenAPIClientInjectorConfigurable,
+    OpenAPIMockController,
+)
 
 
 class TestCreateApp(CreateApp):
@@ -267,6 +273,41 @@ class TestCreateApp(CreateApp):
             )
 
         connexion_mock.assert_called_with(app_name, specification_dir=spec_path)
+
+    def test__configure_openapi__logs_ui_url(
+        self,
+        caplog: pytest.LogCaptureFixture,
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_config: Config,
+        openapi_mock_controller: OpenAPIMockController,
+    ):
+        cast(
+            FlaskOpenApiConfig, cast(FlaskConfig, openapi_config.flask).openapi
+        ).use_swagger = True
+
+        app_logger = logging.getLogger("test_app")
+        try:
+            app_logger.addHandler(caplog.handler)
+            with caplog.at_level(logging.INFO):
+                openapi_mock_controller.begin()
+                _ = openapi_client_configurable(openapi_config)
+        finally:
+            app_logger.removeHandler(caplog.handler)
+
+        assert (
+            # Get the first matching log only.
+            # Sometimes Connexion logs more than once.
+            next(
+                (
+                    record.msg
+                    for record in caplog.records
+                    if record.msg
+                    == "Swagger UI can be accessed at http://localhost:5000/ui/"
+                ),
+                None,
+            )
+            is not None
+        )
 
     def test__create_app__requires_flask_config(
         self, flask_client_configurable: FlaskClientInjectorConfigurable
