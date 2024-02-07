@@ -79,7 +79,6 @@ packages = [
 #
 [project.optional-dependencies]
 dev-dependencies = [
-    # testing automation. use specific versions so behavior does not change.
     "pytest",
     "pytest-mock",
     "mock",
@@ -90,10 +89,6 @@ dev-dependencies = [
     # which allows us to catch new types of problems.
     "pyright",
     "isort",
-    # specific version is nnecessary due to Flask dependency
-    # version conflict with `click`
-    # flask 1.1.4 depends on click<8.0 and >=5.1
-    # black 22.1.0 depends on click>=8.0.0
     "black"
 ]
 
