@@ -39,7 +39,8 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: python-package-distributions
-          path: "${{ steps.package_details.outputs.package_directory }}dist/"
+          path: "${{ steps.package_details.outputs.package_directory }}/dist/"
+          if-no-files-found: error
 
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
