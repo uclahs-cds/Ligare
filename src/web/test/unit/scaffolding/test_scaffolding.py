@@ -28,10 +28,10 @@ def test__parse_args__modes_requires_name(mode: str, capsys: CaptureFixture[str]
     assert "error: the following arguments are required: -n" in captured.err
 
 
-@pytest.mark.parametrize("mode_name", ["create", "modify"])
-def test__parse_args__supports_specific_run_modes(mode_name: str):
-    args = ScaffolderCli()._parse_args([mode_name, "-n", "test"])
-    assert mode_name == args.mode
+@pytest.mark.parametrize("mode", ["create", "modify"])
+def test__parse_args__supports_specific_run_modes(mode: str):
+    args = ScaffolderCli()._parse_args([mode, "-n", "test"])
+    assert mode == args.mode
 
 
 @pytest.mark.parametrize("mode", ["create", "modify"])
