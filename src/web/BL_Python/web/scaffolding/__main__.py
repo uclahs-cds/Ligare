@@ -4,14 +4,41 @@ from argparse import ArgumentParser, Namespace
 from functools import partial
 from os import environ
 from pathlib import Path
+from typing import Callable, Literal, NamedTuple
 
+from BL_Python.programming.cli.argparse import disallow
 from BL_Python.web.scaffolding import (
+    EndpointOperation,
     ScaffoldConfig,
     ScaffoldEndpoint,
     Scaffolder,
     ScaffoldModule,
 )
 from typing_extensions import final
+
+APPLICATION_ENDPOINT_PATH_NAME = "application"
+
+
+class ScaffoldInputArgs(Namespace):
+    mode: Literal[  # pyright: ignore[reportUninitializedInstanceVariable]
+        "create", "modify"
+    ]
+    mode_executor: "Callable[[ScaffoldParsedArgs], None]"  # pyright: ignore[reportUninitializedInstanceVariable]
+    name: str  # pyright: ignore[reportUninitializedInstanceVariable]
+    endpoints: list[EndpointOperation] | None = None
+    template_type: Literal["basic", "openapi"] = "basic"
+    modules: list[Literal["database"]] | None = None
+    output_directory: str | None = None
+
+
+class ScaffoldParsedArgs(NamedTuple):
+    mode: Literal["create", "modify"]
+    mode_executor: "Callable[[ScaffoldParsedArgs], None]"
+    name: str
+    endpoints: list[EndpointOperation]
+    template_type: Literal["basic", "openapi"]
+    modules: list[Literal["database"]] | None
+    output_directory: str
 
 
 @final
@@ -37,7 +64,7 @@ class ScaffolderCli:
 
         self._log = logging.getLogger()
 
-    def _parse_args(self, args: list[str]):
+    def _parse_args(self, args: list[str]) -> ScaffoldParsedArgs:
         parser = ArgumentParser(description="BL_Python Web Project Scaffolding Tool")
 
         subparsers = parser.add_subparsers(help="Select mode", required=True)
@@ -50,7 +77,7 @@ class ScaffolderCli:
             metavar="name",
             dest="name",
             required=True,
-            type=str,
+            type=disallow([APPLICATION_ENDPOINT_PATH_NAME], "name"),
             help="The name of the application.",
         )
         _ = create_parser.add_argument(
@@ -58,7 +85,9 @@ class ScaffolderCli:
             action="append",
             metavar="endpoint",
             dest="endpoints",
-            type=str.lower,
+            type=disallow(
+                [APPLICATION_ENDPOINT_PATH_NAME], "endpoint", EndpointOperation
+            ),
             help="The name of an endpoint to scaffold. Can be specified more than once. If not specified, an endpoint sharing the name of the application will be scaffolded.",
         )
         template_types = ["basic", "openapi"]
@@ -98,7 +127,7 @@ class ScaffolderCli:
             metavar="name",
             dest="name",
             required=True,
-            type=str,
+            type=disallow([APPLICATION_ENDPOINT_PATH_NAME], "name"),
             help="The name of the application.",
         )
         _ = modify_parser.add_argument(
@@ -106,7 +135,9 @@ class ScaffolderCli:
             action="append",
             metavar="endpoint",
             dest="endpoints",
-            type=str.lower,
+            type=disallow(
+                [APPLICATION_ENDPOINT_PATH_NAME], "endpoint", EndpointOperation
+            ),
             help="The name of an endpoint to scaffold. Can be specified more than once. If not specified, an endpoint sharing the name of the application will be scaffolded.",
         )
         _ = modify_parser.add_argument(
@@ -120,23 +151,34 @@ class ScaffolderCli:
             mode_executor=partial(self._run_modify_mode), mode="modify"
         )
 
-        _args = parser.parse_args(args)
+        _args = parser.parse_args(args, namespace=ScaffoldInputArgs)
 
         if _args.output_directory is None:
             _args.output_directory = _args.name
 
         if _args.endpoints is None:
-            _args.endpoints = [_args.name]
+            _args.endpoints = [EndpointOperation(_args.name)]
         else:
-            if "application" in _args.endpoints:
+            endpoints = {
+                endpoint.url_path_name: endpoint for endpoint in _args.endpoints
+            }
+            if APPLICATION_ENDPOINT_PATH_NAME in endpoints:
                 self._log.warn(
-                    'The endpoint name "application" is reserved and will not be scaffolded.'
+                    f'The endpoint name "{APPLICATION_ENDPOINT_PATH_NAME}" is reserved and will not be scaffolded.'
                 )
-                _args.endpoints.remove("application")
+                _args.endpoints.remove(endpoints[APPLICATION_ENDPOINT_PATH_NAME])
 
-        return _args
+        return ScaffoldParsedArgs(
+            _args.mode,
+            _args.mode_executor,
+            _args.name,
+            _args.endpoints,
+            _args.template_type,
+            _args.modules,
+            _args.output_directory,
+        )
 
-    def _run_create_mode(self, args: Namespace):
+    def _run_create_mode(self, args: ScaffoldParsedArgs):
         self._log.info("Running create mode.")
 
         self._log.info(
@@ -157,14 +199,14 @@ class ScaffolderCli:
                 else [ScaffoldModule(module_name=module) for module in args.modules]
             ),
             endpoints=[
-                ScaffoldEndpoint(endpoint_name=endpoint) for endpoint in args.endpoints
+                ScaffoldEndpoint(operation=endpoint) for endpoint in args.endpoints
             ],
         )
 
         scaffolder = Scaffolder(config, self._log)
         scaffolder.scaffold()
 
-    def _run_modify_mode(self, args: Namespace):
+    def _run_modify_mode(self, args: ScaffoldParsedArgs):
         self._log.info("Running modify mode.")
 
         config = ScaffoldConfig(
@@ -172,7 +214,7 @@ class ScaffolderCli:
             output_directory=args.output_directory,
             application_name=args.name,
             endpoints=[
-                ScaffoldEndpoint(endpoint_name=endpoint) for endpoint in args.endpoints
+                ScaffoldEndpoint(operation=endpoint) for endpoint in args.endpoints
             ],
         )
 

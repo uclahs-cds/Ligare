@@ -1,9 +1,10 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from BL_Python.web.scaffolding.__main__ import ScaffolderCli, scaffold
-from pytest import CaptureFixture, LogCaptureFixture
+from BL_Python.web.scaffolding.scaffolder import ScaffoldEndpoint, ScaffoldModule
+from pytest import CaptureFixture
 from pytest_mock import MockerFixture
 
 # pyright: reportPrivateUsage=false
@@ -35,18 +36,36 @@ def test__parse_args__supports_specific_run_modes(mode: str):
 
 
 @pytest.mark.parametrize("mode", ["create", "modify"])
-def test__parse_args__disallows_endpoints_named_application(
-    mode: str,
-    caplog: LogCaptureFixture,
+def test__parse_args__disallows_application_to_be_named_application(
+    mode: str, capsys: CaptureFixture[str]
 ):
-    with caplog.at_level(logging.DEBUG):
-        args = ScaffolderCli()._parse_args([mode, "-n", "test", "-e", "application"])
+    with pytest.raises(SystemExit) as e:
+        _ = ScaffolderCli()._parse_args([mode, "-n", "application"])
 
+    captured = capsys.readouterr()
+    assert e.value.code == 2
     assert (
-        'The endpoint name "application" is reserved and will not be scaffolded.'
-        in caplog.messages
+        "`application` is not an allowed value of the `name` argument." in captured.err
     )
-    assert "application" not in args.endpoints
+
+
+# write a test for when the application name is "application"
+# and whether that will break the "application" endpoint
+
+
+@pytest.mark.parametrize("mode", ["create", "modify"])
+def test__parse_args__disallows_endpoints_named_application(
+    mode: str, capsys: CaptureFixture[str]
+):
+    with pytest.raises(SystemExit) as e:
+        _ = ScaffolderCli()._parse_args([mode, "-n", "test", "-e", "application"])
+
+    captured = capsys.readouterr()
+    assert e.value.code == 2
+    assert (
+        "`application` is not an allowed value of the `endpoint` argument."
+        in captured.err
+    )
 
 
 @pytest.mark.parametrize(
@@ -59,15 +78,23 @@ def test__parse_args__lowercases_endpoint_names(
 ):
     args = ScaffolderCli()._parse_args([mode, "-n", "test", "-e", endpoint_name])
 
-    assert endpoint_name.lower() in args.endpoints
+    assert args.endpoints is not None
+    endpoint_name_lower = endpoint_name.lower()
+    assert (endpoint_name_lower, endpoint_name_lower) in {
+        (endpoint.url_path_name, endpoint.method_name) for endpoint in args.endpoints
+    }
 
 
 @pytest.mark.parametrize("mode", ["create", "modify"])
 def test__parse_args__allows_multiple_endpoints(mode: str):
     args = ScaffolderCli()._parse_args([mode, "-n", "test", "-e", "foo", "-e", "bar"])
 
-    assert "foo" in args.endpoints
-    assert "bar" in args.endpoints
+    assert args.endpoints is not None
+    endpoints = {
+        (endpoint.url_path_name, endpoint.method_name) for endpoint in args.endpoints
+    }
+    assert ("foo", "foo") in endpoints
+    assert ("bar", "bar") in endpoints
 
 
 @pytest.mark.parametrize("mode", ["create", "modify"])
@@ -76,14 +103,49 @@ def test__parse_args__uses_application_name_for_endpoint_if_no_endpoints_given(
 ):
     args = ScaffolderCli()._parse_args([mode, "-n", "test"])
 
-    assert "test" in args.endpoints
+    assert args.endpoints is not None
+    assert ("test", "test") in {
+        (endpoint.url_path_name, endpoint.method_name) for endpoint in args.endpoints
+    }
 
 
 @pytest.mark.parametrize("mode", ["create", "modify"])
-def test__parse_args__does_not_use_application_name_if_endpoints_given(mode: str):
+def test__parse_args__does_not_use_application_name_for_endpoint_if_endpoints_given(
+    mode: str,
+):
     args = ScaffolderCli()._parse_args([mode, "-n", "test", "-e", "foo"])
 
-    assert "test" not in args.endpoints
+    assert args.endpoints is not None
+    endpoints = {
+        (endpoint.url_path_name, endpoint.method_name) for endpoint in args.endpoints
+    }
+
+    assert ("test", "test") not in endpoints
+    assert ("foo", "foo") in endpoints
+
+
+@pytest.mark.parametrize("mode", ["create", "modify"])
+def test__parse_args__replaces_hyphens_in_application_module_name(
+    mode: str,
+):
+    args = ScaffolderCli()._parse_args([mode, "-n", "test-test"])
+
+    assert "test_test" == args.name
+    assert "test-test" != args.name
+
+
+@pytest.mark.parametrize("mode", ["create", "modify"])
+def test__parse_args__replaces_hyphens_in_endpoint_module_names(
+    mode: str,
+):
+    args = ScaffolderCli()._parse_args([mode, "-n", "test", "-e", "foo-foo"])
+
+    assert args.endpoints is not None
+    endpoints = {
+        (endpoint.url_path_name, endpoint.method_name) for endpoint in args.endpoints
+    }
+    assert ("foo-foo", "foo_foo") in endpoints
+    assert ("foo-foo", "foo-foo") not in endpoints
 
 
 @pytest.mark.parametrize(
@@ -127,6 +189,7 @@ def test__parse_args__supports_specific_modules(
 ):
     args = ScaffolderCli()._parse_args([mode, "-n", "test", "-m", module_name])
 
+    assert args.modules is not None
     assert module_name in args.modules
 
 
@@ -196,6 +259,7 @@ def test__scaffold__sets_log_level_from_value(
 
 @pytest.mark.parametrize("exception_type", [Exception, ValueError, TypeError])
 def test__scaffold__fails_when_log_level_is_any_unexpected_exception(
+    # FIXME what was exception_type for?
     exception_type: type[Exception],
     mocker: MockerFixture,
 ):
@@ -280,7 +344,10 @@ def test__scaffold__uses_argv_for_endpoint_configuration(
     scaffold(argv_values)
 
     endpoint_names = [
-        endpoint.endpoint_name for endpoint in config_mock.call_args.kwargs["endpoints"]
+        endpoint.operation.url_path_name
+        for endpoint in cast(
+            list[ScaffoldEndpoint], config_mock.call_args.kwargs["endpoints"]
+        )
     ]
 
     assert "foo" in endpoint_names
@@ -298,7 +365,37 @@ def test__scaffold__create_mode_uses_argv_for_module_configuration(
     scaffold(argv_values)
 
     module_names = [
-        module.module_name for module in config_mock.call_args.kwargs["modules"]
+        module.module_name
+        for module in cast(
+            list[ScaffoldModule], config_mock.call_args.kwargs["modules"]
+        )
     ]
 
     assert "database" in module_names
+
+
+# this test prevents writing to the filesystem, but still reads templates
+# def test__scaffold__full_test_no_write_to_disk(
+#    mocker: MockerFixture,
+# ):
+#    from pathlib import Path
+#    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.Path", spec=Path, exists=MagicMock(return_value=False))
+#    _ = mocker.patch(
+#        "BL_Python.web.scaffolding.scaffolder.Scaffolder._create_directory"
+#    )
+#    _ = mocker.patch("jinja2.environment.TemplateStream.dump")
+#
+#    argv_values = ["create", "-n", "test", "-e", "foo", "-e", "bar"]
+#
+#    scaffold(argv_values)
+#
+#    # endpoint_names = [
+#    #    endpoint.operation.url_path_name
+#    #    for endpoint in cast(
+#    #        list[ScaffoldEndpoint], config_mock.call_args.kwargs["endpoints"]
+#    #    )
+#    # ]
+#
+#    # assert "foo" in endpoint_names
+#    # assert "bar" in endpoint_names
+#    pass

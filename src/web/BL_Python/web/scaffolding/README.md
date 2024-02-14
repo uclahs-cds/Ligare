@@ -38,8 +38,8 @@ Each template has access to the following configuration variables.
 | **template_type** | `str` | The type of template being scaffolded - either "basic" or "openapi" | `basic` |
 | **modules** | `list[dict[str, Any]]` | A list of the dictionary form of the `ScaffoldModule` type. Contains information on modules to be scaffolded. | `[{'module_name': 'database'}]` |
 | **module** | `dict[str, Any]` | A dynamically configured set of values set from each module's `on_create` hook. | `{'database': {'connection_string': 'sqlite:///:memory:'}}` |
-| **endpoints** | `list[dict[str, Any]]` | A list of the dictionary form of the `ScaffoldEndpoint` type. Contains information on endpoints to be scaffolded. | `[{'endpoint_name': 'foo', 'hostname': 'http://127.0.0.1:5000'}]` |
-| **endpoint** | `dict[str, Any]` | A dictionary form of the `ScaffoldEndpoint` type. For each endpoint to be rendered, this is set to the values for that endpoint and is only available within the templates being rendered for a given endpoint. | `{'endpoint_name': 'foo', 'hostname': 'http://127.0.0.1:5000'}` |
+| **endpoints** | `list[dict[str, Any]]` | A list of the dictionary form of the `ScaffoldEndpoint` type. Contains information on endpoints to be scaffolded. | `[{'operation': {'method_name': 'foo_bar', 'url_path_name': 'foo-bar'}, 'hostname': 'http://127.0.0.1:5000'}]` |
+| **endpoint** | `dict[str, Any]` | A dictionary form of the `ScaffoldEndpoint` type. For each endpoint to be rendered, this is set to the values for that endpoint and is only available within the templates being rendered for a given endpoint. | `{'operation': {'method_name': 'foo_bar', 'url_path_name': 'foo-bar'}, 'hostname': 'http://127.0.0.1:5000'}` |
 | **mode** | `str` | The scaffolding mode. Can either be `create` or `modify`. | `create` |
 
 ### Rendering Modes
@@ -66,7 +66,7 @@ Templates under `base/` are rendered in a "glob" fashion, meaning all discovered
 
 Templates under `basic/` are used when rendering a "basic" `BL_Python.web` application. This is the default behavior of the scaffolder, and can also be set with the `-t basic` switch.
 
-A "basic" template uses auto-discovery of Flask Blueprints to create API endpoints. This can be seen in the `optional/{{application_name}}/endpoints/{{endpoint_name}}.py.j2` template, which makes a distinction between template types.
+A "basic" template uses auto-discovery of Flask Blueprints to create API endpoints. This can be seen in the `optional/{{application_name}}/endpoints/{{operation.method_name}}.py.j2` template, which makes a distinction between template types.
 
 Templates are `basic/` are also globbed.
 
@@ -76,7 +76,7 @@ Templates under `openapi/` are used when rendering an "openapi" `BL_Python.web` 
 
 An "openapi" template uses an `openapi.yaml` file to define endpoints and their request and response details.
 
-OpenAPI applications do not use Flask Blueprints and so rely on a different structure of API template. As such, `base/{{application_name}}/endpoints/application.py.j2` is replaced to reflect this. You can also note the distinction in the `optional/{{application_name}}/endpoints/{{endpoint_name}}.py.j2` template.
+OpenAPI applications do not use Flask Blueprints and so rely on a different structure of API template. As such, `base/{{application_name}}/endpoints/application.py.j2` is replaced to reflect this. You can also note the distinction in the `optional/{{application_name}}/endpoints/{{operation.method_name}}.py.j2` template.
 
 Templates are `openapi/` are also globbed.
 

@@ -1,4 +1,5 @@
 import logging
+import re
 import sys
 import types
 from dataclasses import asdict, dataclass, field
@@ -15,13 +16,28 @@ from pkg_resources import (
     ResourceManager,  # pyright: ignore[reportUnknownVariableType,reportAttributeAccessIssue]
 )
 from pkg_resources import get_provider
+from typing_extensions import final
 
 # fmt: on
 
 
+# @final
+@dataclass
+class EndpointOperation:
+    url_path_name: str
+    method_name: str
+
+    def __init__(  # pyright: ignore[reportMissingSuperCall]
+        self, endpoint_name: str, **kwargs: Any | None
+    ) -> None:
+        endpoint_name = endpoint_name.lower()
+        self.url_path_name = endpoint_name
+        self.method_name = re.sub(r"[^\w_]", "_", endpoint_name)
+
+
 @dataclass
 class ScaffoldEndpoint:
-    endpoint_name: str
+    operation: EndpointOperation
     # This is Flask's default hostname.
     hostname: str = "http://127.0.0.1:5000"
 
@@ -261,6 +277,10 @@ class Scaffolder:
         """
         Render API endpoint templates.
         """
+        # {{application_name}}/endpoints/{{operation.method_name}}.py.j2 is the file name - this is _not_ meant to be an interpolated string
+        endpoint_template_filename = (
+            "{{application_name}}/endpoints/{{operation.method_name}}.py.j2"
+        )
         # technically, `self._config.endpoints` is always set in `__main__`
         # but we do this check to satisfy the type checker.
         if self._config.endpoints is None:
@@ -271,19 +291,16 @@ class Scaffolder:
         # these templates are stored under `optional/` because:
         # 1. they are functionally optional. an application can be
         #    scaffolded without any endpoints, although `__main__` forces
-        #    at least one endpoint.
+        #    at least one endpoint (defaulting to the application name).
         # 2. more than one endpoint can be rendered, so a location
         #    for the templates that is not used to render an entire
         #    directory of templates (like the `base` templates) is needed.
-        for endpoint in [asdict(dc) for dc in self._config.endpoints]:
-            # {{endpoint_name}} is the file name - this is _not_ meant to be an interpolated string
-            template = env.get_template(
-                "{{application_name}}/endpoints/{{endpoint_name}}.py.j2"
-            )
+        for endpoint in [asdict(_dataclass) for _dataclass in self._config.endpoints]:
+            template = env.get_template(endpoint_template_filename)
 
             if template.name is None:
                 self._log.error(
-                    "Could not find template `{{application_name}}/endpoints/{{endpoint_name}}.py.j2`."
+                    f"Could not find template `{endpoint_template_filename}`."
                 )
                 continue
 
@@ -295,8 +312,9 @@ class Scaffolder:
                 template.name, template_string_config
             )
 
+            operation = endpoint["operation"]
             self._log.info(
-                f"\"{endpoint['endpoint_name']}\" will be accessible at {endpoint['hostname']}/{endpoint['endpoint_name']}"
+                f'"{operation["url_path_name"]}" will be accessible at {endpoint["hostname"]}/{operation["url_path_name"]}'
             )
 
             # make the current endpoint configuration available
