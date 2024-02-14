@@ -4,11 +4,12 @@ from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 {% for operation in endpoints|map(attribute="operation") %}
-class {{operation.method_name.capitalize()}}(Base):
-    __tablename__ = "{{operation.method_name}}"
+class {{operation.module_name.capitalize()}}(Base):
+    __tablename__ = "{{operation.module_name}}"
     id = Column(Integer, primary_key=True)
     name = Column(String(50))
 
     def __repr__(self):
-        return f"<{{operation.method_name.capitalize()}} {self.name}>"
+        return f"<{{operation.module_name.capitalize()}} {self.name}>"
+
 {% endfor %}

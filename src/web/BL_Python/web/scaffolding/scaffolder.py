@@ -5,6 +5,7 @@ import types
 from dataclasses import asdict, dataclass, field
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_file_location
+from os import sep as path_separator
 from pathlib import Path
 from typing import Any, final
 
@@ -16,28 +17,33 @@ from pkg_resources import (
     ResourceManager,  # pyright: ignore[reportUnknownVariableType,reportAttributeAccessIssue]
 )
 from pkg_resources import get_provider
-from typing_extensions import final
+from typing_extensions import final, override
 
 # fmt: on
 
 
-# @final
 @dataclass
-class EndpointOperation:
+class Operation:
     url_path_name: str
-    method_name: str
+    module_name: str
+    raw_name: str
 
     def __init__(  # pyright: ignore[reportMissingSuperCall]
-        self, endpoint_name: str, **kwargs: Any | None
+        self, name: str, **kwargs: Any | None
     ) -> None:
-        endpoint_name = endpoint_name.lower()
-        self.url_path_name = endpoint_name
-        self.method_name = re.sub(r"[^\w_]", "_", endpoint_name)
+        name_lower = name.lower()
+        self.raw_name = name
+        self.url_path_name = name_lower
+        self.module_name = re.sub(r"[^\w_]", "_", name_lower)
+
+    @override
+    def __str__(self):
+        return self.url_path_name
 
 
 @dataclass
 class ScaffoldEndpoint:
-    operation: EndpointOperation
+    operation: Operation
     # This is Flask's default hostname.
     hostname: str = "http://127.0.0.1:5000"
 
@@ -50,7 +56,7 @@ class ScaffoldModule:
 @dataclass
 class ScaffoldConfig:
     output_directory: str
-    application_name: str
+    application: Operation
     template_type: str | None = None
     modules: list[ScaffoldModule] | None = None
     module: dict[str, Any] = field(default_factory=dict)
@@ -123,11 +129,11 @@ class Scaffolder:
         :param template_directory_prefix: If not provided, templates will be stored relative to their discovered root in the template environment.
             For example, if the discovered template relative to the template environment exists at `./__init__.py`, the rendered template will be
             stored at `<output directory>/__init__.py`. If the template environment root points to a deeper directory in the template hierarchy,
-            for example, in `{{application_name}}/modules/database/`, and the rendered template is `./__init__.py`, this default behavior
+            for example, in `{{application.module_name}}/modules/database/`, and the rendered template is `./__init__.py`, this default behavior
             is undesired. To resolve this, `template_directory_prefix` can be set in order to cause the rendered template to be stored under a
-            different directory. For example, with the `template_directory_prefix` of `optional/{{application_name}}/modules/database/`, if the
+            different directory. For example, with the `template_directory_prefix` of `optional/{{application.module_name}}/modules/database/`, if the
             file `./__init__.py` is discovered at the template environment root,
-            the file will instead be stored at `<output directory>/{{application_name}}/modules/database/__init__.py`.
+            the file will instead be stored at `<output directory>/{{application.module_name}}/modules/database/__init__.py`.
         :param template_config: A dictionary of values that the template can reference.
         :param template: If provided, this template will be rendered instead of trying to discover the template with the name `template_name`
             in the template environment.
@@ -137,13 +143,22 @@ class Scaffolder:
         if template_config is None:
             template_config = self._config_dict
 
+        rendered_template_path = Path(
+            # This causes paths with jinja2 directives to be rendered.
+            # For example, if `self._config_dict['application'].module_name` is `foo`,
+            # the path `base/{{application.module_name}}` is rendered as `base/foo`.
+            self._render_template_string(template_name).replace(".j2", "")
+        )
+        # strip any leading / or c:/ etc. which should not occur here
+        if rendered_template_path.is_absolute():
+            rendered_template_path = path_separator.join(
+                rendered_template_path.parts[1:]
+            )
+
         template_output_path = Path(
             self._config.output_directory,
             template_directory_prefix,
-            # This causes paths with jinja2 directives to be rendered.
-            # For example, if `self._config_dict['application_name']` is `foo`,
-            # the path `base/{{application_name}}` is rendered as `base/foo`.
-            self._render_template_string(template_name).replace(".j2", ""),
+            rendered_template_path,
         )
 
         if overwrite_existing_files == False and template_output_path.exists():
@@ -250,7 +265,7 @@ class Scaffolder:
         for module in self._config.modules:
             # module templates are stored under `optional/`
             # because we don't always want to render any given module.
-            module_template_directory = f"scaffolding/templates/optional/{{{{application_name}}}}/modules/{module.module_name}"
+            module_template_directory = f"scaffolding/templates/optional/{{{{application.module_name}}}}/modules/{module.module_name}"
             # executed module hooks before any rendering is done
             # so the hooks can modify the config or do other
             # work if it's needed.
@@ -267,7 +282,7 @@ class Scaffolder:
                 # prefix the directory so that rendered templates
                 # are output _not_ relative to the template environment
                 # root, which would store the rendered templates in `./`.
-                template_directory_prefix=f"{self._config.application_name}/modules/{module.module_name}",
+                template_directory_prefix=f"{self._config.application.module_name}/modules/{module.module_name}",
                 overwrite_existing_files=overwrite_existing_files,
             )
 
@@ -277,9 +292,9 @@ class Scaffolder:
         """
         Render API endpoint templates.
         """
-        # {{application_name}}/endpoints/{{operation.method_name}}.py.j2 is the file name - this is _not_ meant to be an interpolated string
+        # {{application.module_name}}/endpoints/{{operation.module_name}}.py.j2 is the file name - this is _not_ meant to be an interpolated string
         endpoint_template_filename = (
-            "{{application_name}}/endpoints/{{operation.method_name}}.py.j2"
+            "{{application.module_name}}/endpoints/{{operation.module_name}}.py.j2"
         )
         # technically, `self._config.endpoints` is always set in `__main__`
         # but we do this check to satisfy the type checker.
@@ -338,7 +353,7 @@ class Scaffolder:
     #      - the scaffolder is run from the scaffolded application's parent directory
     def _check_scaffolded_application_exists(self, test_path: Path):
         """
-        Determine whether the application <config.application_name> is an importable
+        Determine whether the application <config.application.module_name> is an importable
         BL_Python.web application that has been previously scaffolded with
         this tool.
 
@@ -358,17 +373,17 @@ class Scaffolder:
             # if any of these steps fail, then the `test_path`
             # does not already contain a scaffolded application
             loader = SourceFileLoader(
-                self._config.application_name,
+                self._config.application.module_name,
                 str(
                     Path(
                         test_path,
-                        self._config.application_name,
+                        self._config.application.module_name,
                         "__init__.py",
                     )
                 ),
             )
             mod = types.ModuleType(loader.name)
-            sys.modules[self._config.application_name] = mod
+            sys.modules[self._config.application.module_name] = mod
             module = loader.load_module()
             _ = module.__version__
             _ = module._version.__bl_python_scaffold__
@@ -379,8 +394,8 @@ class Scaffolder:
             self._log.debug(str(e), exc_info=True)
             return False
         finally:
-            if self._config.application_name in sys.modules:
-                del sys.modules[self._config.application_name]
+            if self._config.application.module_name in sys.modules:
+                del sys.modules[self._config.application.module_name]
             popped_import_path = sys.path.pop(0)
             self._log.debug(
                 f"Popped `{popped_import_path}` from process module import path. Expected to pop `{application_import_path}`."

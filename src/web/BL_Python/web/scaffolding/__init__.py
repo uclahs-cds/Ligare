@@ -1,5 +1,5 @@
 from .scaffolder import (  # pragma: nocover
-    EndpointOperation,
+    Operation,
     ScaffoldConfig,
     ScaffoldEndpoint,
     Scaffolder,
@@ -7,7 +7,7 @@ from .scaffolder import (  # pragma: nocover
 )
 
 __all__ = (
-    "EndpointOperation",
+    "Operation",
     "ScaffoldConfig",
     "ScaffoldEndpoint",
     "Scaffolder",

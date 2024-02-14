@@ -8,47 +8,47 @@ from sqlalchemy.orm import Session
 {% endif %}
 
 {% if module.database %}
-from {{application_name}}.modules.database import {{endpoint.operation.method_name.capitalize()}}
+from {{application.module_name}}.modules.database import {{endpoint.operation.module_name.capitalize()}}
 {% endif %}
 
 {% if template_type != "openapi" %}
-{{endpoint.operation.method_name}}_blueprint = Blueprint("{{endpoint.operation.method_name}}", __name__, url_prefix="/{{endpoint.operation.url_path_name}}")
+{{endpoint.operation.module_name}}_blueprint = Blueprint("{{endpoint.operation.module_name}}", __name__, url_prefix="/{{endpoint.operation.url_path_name}}")
 {% endif %}
 
 
 @inject
 {% if template_type != "openapi" %}
-@{{endpoint.operation.method_name}}_blueprint.route("/")
+@{{endpoint.operation.module_name}}_blueprint.route("/")
 {% endif %}
 {% if module.database %}
-def get_{{endpoint.operation.method_name}}(session: Session, log: Logger):
-    entries = session.query({{endpoint.operation.method_name.capitalize()}}).all()
+def get_{{endpoint.operation.module_name}}(session: Session, log: Logger):
+    entries = session.query({{endpoint.operation.module_name.capitalize()}}).all()
     return {"names": [x.name for x in entries]}
 {% else %}
-def get_{{endpoint.operation.method_name}}(log: Logger):
+def get_{{endpoint.operation.module_name}}(log: Logger):
     return "Hello, {{endpoint.operation.url_path_name}}!"
 {% endif %}
 
 {% if module.database %}
 @inject
 {% if template_type != "openapi" %}
-@{{endpoint.operation.method_name}}_blueprint.route("/", methods=["POST"])
+@{{endpoint.operation.module_name}}_blueprint.route("/", methods=["POST"])
 {% endif %}
-def add_{{endpoint.operation.method_name}}(session: Session, log: Logger):
+def add_{{endpoint.operation.module_name}}(session: Session, log: Logger):
     name: str|None = None
     try:
         data = request.get_json(force=True)
         if data is None or not (name := data["name"]):
             return "Request JSON must contain a 'name' field with a string value.", 400
 
-        session.add({{endpoint.operation.method_name.capitalize()}}(name = name))
+        session.add({{endpoint.operation.module_name.capitalize()}}(name = name))
     except Exception as e:
         log.critical(str(e), exc_info=True)
         return "Request JSON must contain a 'name' field with a string value.", 400
 
     try:
         session.commit()
-        return f"Added {name} to the {{endpoint.operation.method_name.capitalize()}} table.", 201
+        return f"Added {name} to the {{endpoint.operation.module_name.capitalize()}} table.", 201
     except Exception as e:
         log.critical(str(e), exc_info=True)
         return "An error occurred! Check the application logs.", 500

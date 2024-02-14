@@ -5,7 +5,7 @@ sqlalchemy_echo = false
 
 {% endif %}
 [flask]
-app_name = '{{application_name}}'
+app_name = '{{application.module_name}}'
 env = 'development'
 host = "127.0.0.1"
 # FIXME this should be an int

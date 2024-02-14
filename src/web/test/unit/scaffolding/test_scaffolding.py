@@ -1,13 +1,61 @@
 import logging
+from dataclasses import asdict
 from typing import Any, cast
 
 import pytest
 from BL_Python.web.scaffolding.__main__ import ScaffolderCli, scaffold
-from BL_Python.web.scaffolding.scaffolder import ScaffoldEndpoint, ScaffoldModule
+from BL_Python.web.scaffolding.scaffolder import (
+    Operation,
+    ScaffoldEndpoint,
+    ScaffoldModule,
+)
 from pytest import CaptureFixture
 from pytest_mock import MockerFixture
 
 # pyright: reportPrivateUsage=false
+
+
+@pytest.mark.parametrize(
+    "name,expected_name",
+    [
+        ("foo", "foo"),
+        ("FOO", "foo"),
+        ("foo_bar", "foo_bar"),
+        ("foo-bar", "foo_bar"),
+        ("foo.bar", "foo_bar"),
+        ("foo bar", "foo_bar"),
+        ("foo0bar", "foo0bar"),
+    ],
+)
+def test__operation__normalizes_module_name(name: str, expected_name: str):
+    operation = Operation(name)
+    assert expected_name == operation.module_name
+
+
+@pytest.mark.parametrize(
+    "name,expected_name",
+    [
+        ("foo", "foo"),
+        ("FOO", "foo"),
+        ("foo_bar", "foo_bar"),
+        ("foo-bar", "foo-bar"),
+        ("foo.bar", "foo.bar"),
+        ("foo bar", "foo bar"),
+        ("foo0bar", "foo0bar"),
+    ],
+)
+def test__operation__normalizes_url_path_name(name: str, expected_name: str):
+    operation = Operation(name)
+    assert expected_name == operation.url_path_name
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["foo", "FOO", "foo_bar", "foo-bar", "foo.bar", "foo bar", "foo0bar"],
+)
+def test__operation__does_not_normalize_raw_name(name: str):
+    operation = Operation(name)
+    assert name == operation.raw_name
 
 
 def test__parse_args__requires_run_mode_switch(capsys: CaptureFixture[str]):
@@ -49,10 +97,6 @@ def test__parse_args__disallows_application_to_be_named_application(
     )
 
 
-# write a test for when the application name is "application"
-# and whether that will break the "application" endpoint
-
-
 @pytest.mark.parametrize("mode", ["create", "modify"])
 def test__parse_args__disallows_endpoints_named_application(
     mode: str, capsys: CaptureFixture[str]
@@ -81,7 +125,7 @@ def test__parse_args__lowercases_endpoint_names(
     assert args.endpoints is not None
     endpoint_name_lower = endpoint_name.lower()
     assert (endpoint_name_lower, endpoint_name_lower) in {
-        (endpoint.url_path_name, endpoint.method_name) for endpoint in args.endpoints
+        (endpoint.url_path_name, endpoint.module_name) for endpoint in args.endpoints
     }
 
 
@@ -91,7 +135,7 @@ def test__parse_args__allows_multiple_endpoints(mode: str):
 
     assert args.endpoints is not None
     endpoints = {
-        (endpoint.url_path_name, endpoint.method_name) for endpoint in args.endpoints
+        (endpoint.url_path_name, endpoint.module_name) for endpoint in args.endpoints
     }
     assert ("foo", "foo") in endpoints
     assert ("bar", "bar") in endpoints
@@ -105,7 +149,7 @@ def test__parse_args__uses_application_name_for_endpoint_if_no_endpoints_given(
 
     assert args.endpoints is not None
     assert ("test", "test") in {
-        (endpoint.url_path_name, endpoint.method_name) for endpoint in args.endpoints
+        (endpoint.url_path_name, endpoint.module_name) for endpoint in args.endpoints
     }
 
 
@@ -117,7 +161,7 @@ def test__parse_args__does_not_use_application_name_for_endpoint_if_endpoints_gi
 
     assert args.endpoints is not None
     endpoints = {
-        (endpoint.url_path_name, endpoint.method_name) for endpoint in args.endpoints
+        (endpoint.url_path_name, endpoint.module_name) for endpoint in args.endpoints
     }
 
     assert ("test", "test") not in endpoints
@@ -130,8 +174,18 @@ def test__parse_args__replaces_hyphens_in_application_module_name(
 ):
     args = ScaffolderCli()._parse_args([mode, "-n", "test-test"])
 
-    assert "test_test" == args.name
-    assert "test-test" != args.name
+    assert "test_test" == args.name.module_name
+    assert "test-test" != args.name.module_name
+
+
+@pytest.mark.parametrize("mode", ["create", "modify"])
+def test__parse_args__does_not_replace_hyphens_in_application_url_path_name(
+    mode: str,
+):
+    args = ScaffolderCli()._parse_args([mode, "-n", "test-test"])
+
+    assert "test-test" == args.name.url_path_name
+    assert "test_test" != args.name.url_path_name
 
 
 @pytest.mark.parametrize("mode", ["create", "modify"])
@@ -142,7 +196,7 @@ def test__parse_args__replaces_hyphens_in_endpoint_module_names(
 
     assert args.endpoints is not None
     endpoints = {
-        (endpoint.url_path_name, endpoint.method_name) for endpoint in args.endpoints
+        (endpoint.url_path_name, endpoint.module_name) for endpoint in args.endpoints
     }
     assert ("foo-foo", "foo_foo") in endpoints
     assert ("foo-foo", "foo-foo") not in endpoints
@@ -308,10 +362,10 @@ def test__scaffold__uses_argv_when_sys_argv_not_set(mocker: MockerFixture):
         ("create", "mode", "create"),
         ("create", "template_type", "basic"),
         ("create", "output_directory", "test"),
-        ("create", "application_name", "test"),
+        ("create", "application.module_name", "test"),
         ("modify", "mode", "modify"),
         ("modify", "output_directory", "test"),
-        ("modify", "application_name", "test"),
+        ("modify", "application.module_name", "test"),
     ],
 )
 def test__scaffold__uses_argv_for_basic_scaffold_configuration(
@@ -326,9 +380,14 @@ def test__scaffold__uses_argv_for_basic_scaffold_configuration(
 
     config = config_mock.call_args.kwargs
 
-    assert config_value == config[config_name]
-
-    pass
+    config_name_parts = config_name.split(".")
+    if len(config_name_parts) == 1:
+        assert config_value == config[config_name_parts[0]]
+    else:
+        # tests `config['application']['module_name']`
+        assert (
+            config_value == asdict(config[config_name_parts[0]])[config_name_parts[1]]
+        )
 
 
 @pytest.mark.parametrize("mode", ["create", "modify"])
