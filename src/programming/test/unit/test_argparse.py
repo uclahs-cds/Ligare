@@ -1,7 +1,11 @@
 from argparse import ArgumentError, ArgumentParser, ArgumentTypeError, Namespace
 
 import pytest
-from BL_Python.programming.cli.argparse import DisallowDuplicateValues, disallow
+from BL_Python.programming.cli.argparse import (
+    DisallowDuplicateValues,
+    associate_disallow_duplicate_values,
+    disallow,
+)
 
 
 def test__disallow__raises_ArgumentTypeError_when_disallowed_value_is_used():
@@ -53,8 +57,104 @@ def test__DisallowDuplicateValues__raises_ArgumentError_when_duplicate_value_for
     argument_action = DisallowDuplicateValues(["-a"], "a")
     namespace = ParserNamespace()
 
-    with pytest.raises(ArgumentError):
+    _ = argument_action.__call__(parser, namespace, "value", "-a")
+    with pytest.raises(
+        ArgumentError,
+        match=r"argument -a: The \['-a'] argument does not allow duplicate values\. The value `value` duplicates the value `value`\.",
+    ):
         # the Action is called once for every specification of the argument
         # this would be the equivalent of a command like `cmd -a value -a value`
         _ = argument_action.__call__(parser, namespace, "value", "-a")
-        _ = argument_action.__call__(parser, namespace, "value", "-a")
+
+
+def test__associate_disallow_duplicate_values__allows_use_of_associated_arguments_with_differing_values():
+    class ParserNamespace(Namespace):
+        a: str  # pyright: ignore[reportUninitializedInstanceVariable]
+        b: str  # pyright: ignore[reportUninitializedInstanceVariable]
+
+    parser = ArgumentParser()
+    # associate "b" with "a" - this means "b" cannot have
+    # the same value as "a" but the reverse is not true.
+    action = associate_disallow_duplicate_values("a")
+    argument_action = action(["-b"], "b")
+    namespace = ParserNamespace(a="value")
+
+    # only call for the argument that is associated with another
+    _ = argument_action.__call__(parser, namespace, "other_value", "-b")
+    assert isinstance(namespace.b, list)
+    assert "value" in namespace.a
+    assert "other_value" in namespace.b
+
+
+def test__associate_disallow_duplicate_values__raises_ArgumentError_when_associated_argument_value_is_not_unique():
+    class ParserNamespace(Namespace):
+        a: str  # pyright: ignore[reportUninitializedInstanceVariable]
+        b: str  # pyright: ignore[reportUninitializedInstanceVariable]
+
+    parser = ArgumentParser()
+    action = associate_disallow_duplicate_values("a")
+    argument_action = action(["-b"], "b")
+    namespace = ParserNamespace(a="value")
+
+    # only call for the argument that is associated with another
+    with pytest.raises(
+        ArgumentError,
+        match=r"argument -b: The \['-b'] argument cannot be equivalent to the `a` argument\. The value `value` is equivalent to the value `value`\.",
+    ):
+        _ = argument_action.__call__(parser, namespace, "value", "-b")
+
+
+def test__associate_disallow_duplicate_values__allows_use_of_associated_arguments_when_associated_argument_is_repeated():
+    class ParserNamespace(Namespace):
+        a: list[str]  # pyright: ignore[reportUninitializedInstanceVariable]
+        b: str  # pyright: ignore[reportUninitializedInstanceVariable]
+
+    parser = ArgumentParser()
+    action = associate_disallow_duplicate_values("a")
+    argument_action = action(["-b"], "b")
+    # when an argument is repated for a command it is stored as a list
+    namespace = ParserNamespace(a=["value", "other_value"])
+
+    _ = argument_action.__call__(parser, namespace, "another_value", "-b")
+    assert isinstance(namespace.b, list)
+    assert "value" in namespace.a
+    assert "other_value" in namespace.a
+    assert "another_value" in namespace.b
+
+
+def test__associate_disallow_duplicate_values__raises_ArgumentError_when_handling_non_unique_values_when_associated_argument_is_repeated():
+    class ParserNamespace(Namespace):
+        a: list[str]  # pyright: ignore[reportUninitializedInstanceVariable]
+        b: str  # pyright: ignore[reportUninitializedInstanceVariable]
+
+    parser = ArgumentParser()
+    action = associate_disallow_duplicate_values("a")
+    argument_action = action(["-b"], "b")
+    # when an argument is repated for a command it is stored as a list
+    namespace = ParserNamespace(a=["value", "other_value"])
+
+    with pytest.raises(
+        ArgumentError,
+        match=r"argument -b: The \['-b'] argument cannot be equivalent to the `a` argument\. The value `value` is equivalent to the value `\['value', 'other_value']`\.",
+    ):
+        _ = argument_action.__call__(parser, namespace, "value", "-b")
+
+
+def test__associate_disallow_duplicate_values__falls_back_to_DisallowDuplicateValues_when_associated_argument_value_is_unique():
+    class ParserNamespace(Namespace):
+        a: str  # pyright: ignore[reportUninitializedInstanceVariable]
+        b: str  # pyright: ignore[reportUninitializedInstanceVariable]
+
+    parser = ArgumentParser()
+    action = associate_disallow_duplicate_values("a")
+    argument_action = action(["-b"], "b")
+    namespace = ParserNamespace(a="value")
+
+    _ = argument_action.__call__(parser, namespace, "other_value", "-b")
+    # `associate_disallow_duplicate_values` will always fall back,
+    # we just explicitly test for the behavior here.
+    with pytest.raises(
+        ArgumentError,
+        match=r"argument -b: The \['-b'] argument does not allow duplicate values\. The value `other_value` duplicates the value `other_value`\.",
+    ):
+        _ = argument_action.__call__(parser, namespace, "other_value", "-b")

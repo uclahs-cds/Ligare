@@ -47,7 +47,7 @@ class DisallowDuplicateValues(Action):
                 # Also, while at first glance that statement "The value `foo` duplicates the value `foo`"
                 # doesn't seem helpful, it is possible that an argument's type is something that normalizes
                 # argument values. For example, this message might say "The value `foo-bar` duplicates the value `foo_bar`."
-                f"The `{self.metavar}` argument does not allow duplicate values. The value `{values}` duplicates the value `{duplicate_value}`.",
+                f"The {self.option_strings} argument does not allow duplicate values. The value `{values}` duplicates the value `{duplicate_value}`.",
             )
 
         attr.append(values)
@@ -87,11 +87,12 @@ def associate_disallow_duplicate_values(associated_arg: str):
             values: str | Sequence[Any] | None,
             option_string: str | None = None,
         ) -> None:
-            if (associated_arg_value := getattr(namespace, associated_arg, None)) and associated_arg_value == values:
-                raise ArgumentError(
-                    self,
-                    f"The `{self.metavar}` argument cannot be equivalent to the `{associated_arg}` argument. The value `{values}` is equivalent to the value `{associated_arg_value}`.",
-                )
+            if (associated_arg_value := getattr(namespace, associated_arg, None)):
+                if values in associated_arg_value or associated_arg_value == values:
+                    raise ArgumentError(
+                        self,
+                        f"The {self.option_strings} argument cannot be equivalent to the `{associated_arg}` argument. The value `{values}` is equivalent to the value `{associated_arg_value}`.",
+                    )
 
             # this will set the value as long as the
             # argument value is not duplicated itself
