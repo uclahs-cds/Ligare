@@ -1,6 +1,8 @@
 from logging import Logger
 
+{% if template_type != "openapi" %}
 from flask import Blueprint
+{% endif %}
 from injector import inject
 {% if module.database %}
 from flask import request
