@@ -51,3 +51,11 @@ def create_app():
     {% endif %}
 
     return result
+
+def asgi():
+    """
+    This is used by uvicorn.
+    It can be tested on the command line with `uvicorn --lifespan on --port 5000 {{application_name}}:asgi`
+    The use of `--lifespan on` is optional.
+    """
+    return create_app().app_injector.app
