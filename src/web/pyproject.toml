@@ -30,9 +30,9 @@ classifiers = [
 dependencies = [
     "BL_Python.programming",
 
-    "Flask",
+    "Flask == 3.0.2",
     "flask-injector",
-    "connexion",
+    "connexion == 3.0.6",
     "connexion[uvicorn]",
     "swagger_ui_bundle",
     "python-dotenv",
