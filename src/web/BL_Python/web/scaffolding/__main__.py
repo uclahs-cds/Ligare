@@ -85,7 +85,6 @@ class ScaffolderCli:
         )
         _ = create_parser.add_argument(
             "-e",
-            # action="append",
             metavar="endpoint",
             dest="endpoints",
             type=disallow([APPLICATION_ENDPOINT_PATH_NAME], "endpoint", Operation),
