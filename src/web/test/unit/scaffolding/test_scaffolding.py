@@ -195,7 +195,7 @@ def test__parse_args__disallows_duplicated_endpoint_names(
     captured = capsys.readouterr()
     assert e.value.code == 2
     assert (
-        f"{mode}: error: argument -e: The `endpoint` argument does not allow duplicate values. The value `foo-bar` duplicates the value `foo_bar`."
+        f"{mode}: error: argument -e: The ['-e'] argument does not allow duplicate values. The value `foo-bar` duplicates the value `foo_bar`."
         in captured.err
     )
 
@@ -211,7 +211,7 @@ def test__parse_args__disallows_endpoints_with_same_name_as_application(
     captured = capsys.readouterr()
     assert e.value.code == 2
     assert (
-        f"{mode}: error: argument -e: The `endpoint` argument cannot be equivalent to the `name` argument. The value `foo_bar` is equivalent to the value `foo-bar`."
+        f"{mode}: error: argument -e: The ['-e'] argument cannot be equivalent to the `name` argument. The value `foo_bar` is equivalent to the value `foo-bar`."
         in captured.err
     )
 

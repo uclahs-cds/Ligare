@@ -88,7 +88,7 @@ def associate_disallow_duplicate_values(associated_arg: str):
             option_string: str | None = None,
         ) -> None:
             if (associated_arg_value := getattr(namespace, associated_arg, None)):
-                if values in associated_arg_value or associated_arg_value == values:
+                if associated_arg_value == values or (isinstance(associated_arg_value, Iterable) and values in associated_arg_value):
                     raise ArgumentError(
                         self,
                         f"The {self.option_strings} argument cannot be equivalent to the `{associated_arg}` argument. The value `{values}` is equivalent to the value `{associated_arg_value}`.",

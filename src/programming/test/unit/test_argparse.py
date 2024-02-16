@@ -7,6 +7,9 @@ from BL_Python.programming.cli.argparse import (
     disallow,
 )
 
+# pyright: reportUnknownVariableType=false
+# pyright: reportUninitializedInstanceVariable=false
+
 
 def test__disallow__raises_ArgumentTypeError_when_disallowed_value_is_used():
     argument_type = disallow(["foo"], "argument")
@@ -34,7 +37,7 @@ def test__disallow__returns_argument_value_as_custom_type_when_disallowed_value_
 
 def test__DisallowDuplicateValues__allows_repeated_use_of_argument():
     class ParserNamespace(Namespace):
-        a: str  # pyright: ignore[reportUninitializedInstanceVariable]
+        a: str
 
     parser = ArgumentParser()
     argument_action = DisallowDuplicateValues(["-a"], "a")
@@ -51,7 +54,7 @@ def test__DisallowDuplicateValues__allows_repeated_use_of_argument():
 
 def test__DisallowDuplicateValues__raises_ArgumentError_when_duplicate_value_for_argument_is_used():
     class ParserNamespace(Namespace):
-        a: str  # pyright: ignore[reportUninitializedInstanceVariable]
+        a: str
 
     parser = ArgumentParser()
     argument_action = DisallowDuplicateValues(["-a"], "a")
@@ -69,8 +72,8 @@ def test__DisallowDuplicateValues__raises_ArgumentError_when_duplicate_value_for
 
 def test__associate_disallow_duplicate_values__allows_use_of_associated_arguments_with_differing_values():
     class ParserNamespace(Namespace):
-        a: str  # pyright: ignore[reportUninitializedInstanceVariable]
-        b: str  # pyright: ignore[reportUninitializedInstanceVariable]
+        a: str
+        b: str
 
     parser = ArgumentParser()
     # associate "b" with "a" - this means "b" cannot have
@@ -88,8 +91,8 @@ def test__associate_disallow_duplicate_values__allows_use_of_associated_argument
 
 def test__associate_disallow_duplicate_values__raises_ArgumentError_when_associated_argument_value_is_not_unique():
     class ParserNamespace(Namespace):
-        a: str  # pyright: ignore[reportUninitializedInstanceVariable]
-        b: str  # pyright: ignore[reportUninitializedInstanceVariable]
+        a: str
+        b: str
 
     parser = ArgumentParser()
     action = associate_disallow_duplicate_values("a")
@@ -106,8 +109,8 @@ def test__associate_disallow_duplicate_values__raises_ArgumentError_when_associa
 
 def test__associate_disallow_duplicate_values__allows_use_of_associated_arguments_when_associated_argument_is_repeated():
     class ParserNamespace(Namespace):
-        a: list[str]  # pyright: ignore[reportUninitializedInstanceVariable]
-        b: str  # pyright: ignore[reportUninitializedInstanceVariable]
+        a: list[str]
+        b: str
 
     parser = ArgumentParser()
     action = associate_disallow_duplicate_values("a")
@@ -124,8 +127,8 @@ def test__associate_disallow_duplicate_values__allows_use_of_associated_argument
 
 def test__associate_disallow_duplicate_values__raises_ArgumentError_when_handling_non_unique_values_when_associated_argument_is_repeated():
     class ParserNamespace(Namespace):
-        a: list[str]  # pyright: ignore[reportUninitializedInstanceVariable]
-        b: str  # pyright: ignore[reportUninitializedInstanceVariable]
+        a: list[str]
+        b: str
 
     parser = ArgumentParser()
     action = associate_disallow_duplicate_values("a")
@@ -142,8 +145,8 @@ def test__associate_disallow_duplicate_values__raises_ArgumentError_when_handlin
 
 def test__associate_disallow_duplicate_values__falls_back_to_DisallowDuplicateValues_when_associated_argument_value_is_unique():
     class ParserNamespace(Namespace):
-        a: str  # pyright: ignore[reportUninitializedInstanceVariable]
-        b: str  # pyright: ignore[reportUninitializedInstanceVariable]
+        a: str
+        b: str
 
     parser = ArgumentParser()
     action = associate_disallow_duplicate_values("a")
