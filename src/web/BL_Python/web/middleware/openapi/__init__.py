@@ -201,13 +201,16 @@ def _log_all_api_requests(
             request_headers_safe[REQUEST_COOKIE_HEADER],
         )
 
-    # FIXME are these encoded correctly, or are they bytes, or...?
+    server = request.get("server")
+    client = request.get("client")
     log.info(
         INCOMING_REQUEST_MESSAGE,
         request["method"],
         request["path"],
-        f"{request['server'][0]}:{request['server'][1]}",
-        f"{request['client'][0]}:{request['client'][1]}",
+        # ASGI spec states `server` and `client`
+        # can be `None` if not available.
+        f"{server[0]}:{server[1]}" if server else "None",
+        f"{client[0]}:{client[1]}" if client else "None",
         request.get("remote_user"),  # FIXME fix this when auth is done
         extra={
             "props": {
