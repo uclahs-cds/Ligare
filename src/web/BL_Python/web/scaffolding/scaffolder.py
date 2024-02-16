@@ -37,8 +37,16 @@ class Operation:
         self.module_name = re.sub(r"[^\w_]", "_", name_lower)
 
     @override
-    def __str__(self):
+    def __str__(self) -> str:
         return self.url_path_name
+
+    @override
+    def __eq__(self, __value: object) -> bool:
+
+        return isinstance(__value, Operation) and (
+            self.url_path_name == __value.url_path_name
+            or self.module_name == __value.module_name
+        )
 
 
 @dataclass

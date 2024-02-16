@@ -6,7 +6,10 @@ from os import environ
 from pathlib import Path
 from typing import Callable, Literal, NamedTuple
 
-from BL_Python.programming.cli.argparse import disallow
+from BL_Python.programming.cli.argparse import (
+    associate_disallow_duplicate_values,
+    disallow,
+)
 from BL_Python.web.scaffolding import (
     Operation,
     ScaffoldConfig,
@@ -82,10 +85,11 @@ class ScaffolderCli:
         )
         _ = create_parser.add_argument(
             "-e",
-            action="append",
+            # action="append",
             metavar="endpoint",
             dest="endpoints",
             type=disallow([APPLICATION_ENDPOINT_PATH_NAME], "endpoint", Operation),
+            action=associate_disallow_duplicate_values("name"),
             help="The name of an endpoint to scaffold. Can be specified more than once. If not specified, an endpoint sharing the name of the application will be scaffolded.",
         )
         template_types = ["basic", "openapi"]
@@ -130,10 +134,10 @@ class ScaffolderCli:
         )
         _ = modify_parser.add_argument(
             "-e",
-            action="append",
             metavar="endpoint",
             dest="endpoints",
             type=disallow([APPLICATION_ENDPOINT_PATH_NAME], "endpoint", Operation),
+            action=associate_disallow_duplicate_values("name"),
             help="The name of an endpoint to scaffold. Can be specified more than once. If not specified, an endpoint sharing the name of the application will be scaffolded.",
         )
         _ = modify_parser.add_argument(

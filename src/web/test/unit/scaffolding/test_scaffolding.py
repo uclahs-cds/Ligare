@@ -97,6 +97,34 @@ def test__parse_args__disallows_application_to_be_named_application(
     )
 
 
+@pytest.mark.parametrize(
+    "mode,application_name,expected_url_path_name,expected_module_name",
+    [
+        ("create", "FOO", "foo", "foo"),
+        ("create", "foo", "foo", "foo"),
+        ("create", "FOO_BAR", "foo_bar", "foo_bar"),
+        ("create", "FOO-BAR", "foo-bar", "foo_bar"),
+        ("create", "FOO BAR", "foo bar", "foo_bar"),
+        ("modify", "FOO", "foo", "foo"),
+        ("modify", "foo", "foo", "foo"),
+        ("modify", "FOO_BAR", "foo_bar", "foo_bar"),
+        ("modify", "FOO-BAR", "foo-bar", "foo_bar"),
+        ("modify", "FOO BAR", "foo bar", "foo_bar"),
+    ],
+)
+def test__parse_args__normalizes_application_name(
+    mode: str,
+    application_name: str,
+    expected_url_path_name: str,
+    expected_module_name: str,
+):
+    args = ScaffolderCli()._parse_args([mode, "-n", application_name])
+
+    assert args.name is not None
+    assert expected_url_path_name == args.name.url_path_name
+    assert expected_module_name == args.name.module_name
+
+
 @pytest.mark.parametrize("mode", ["create", "modify"])
 def test__parse_args__disallows_endpoints_named_application(
     mode: str, capsys: CaptureFixture[str]
@@ -113,18 +141,30 @@ def test__parse_args__disallows_endpoints_named_application(
 
 
 @pytest.mark.parametrize(
-    "mode,endpoint_name",
-    [("create", "FOO"), ("create", "foo"), ("modify", "FOO"), ("modify", "foo")],
+    "mode,endpoint_name,expected_url_path_name,expected_module_name",
+    [
+        ("create", "FOO", "foo", "foo"),
+        ("create", "foo", "foo", "foo"),
+        ("create", "FOO_BAR", "foo_bar", "foo_bar"),
+        ("create", "FOO-BAR", "foo-bar", "foo_bar"),
+        ("create", "FOO BAR", "foo bar", "foo_bar"),
+        ("modify", "FOO", "foo", "foo"),
+        ("modify", "foo", "foo", "foo"),
+        ("modify", "FOO_BAR", "foo_bar", "foo_bar"),
+        ("modify", "FOO-BAR", "foo-bar", "foo_bar"),
+        ("modify", "FOO BAR", "foo bar", "foo_bar"),
+    ],
 )
-def test__parse_args__lowercases_endpoint_names(
+def test__parse_args__normalizes_endpoint_names(
     mode: str,
     endpoint_name: str,
+    expected_url_path_name: str,
+    expected_module_name: str,
 ):
     args = ScaffolderCli()._parse_args([mode, "-n", "test", "-e", endpoint_name])
 
     assert args.endpoints is not None
-    endpoint_name_lower = endpoint_name.lower()
-    assert (endpoint_name_lower, endpoint_name_lower) in {
+    assert (expected_url_path_name, expected_module_name) in {
         (endpoint.url_path_name, endpoint.module_name) for endpoint in args.endpoints
     }
 
@@ -139,6 +179,41 @@ def test__parse_args__allows_multiple_endpoints(mode: str):
     }
     assert ("foo", "foo") in endpoints
     assert ("bar", "bar") in endpoints
+
+
+@pytest.mark.parametrize("mode", ["create", "modify"])
+def test__parse_args__disallows_duplicated_endpoint_names(
+    mode: str, capsys: CaptureFixture[str]
+):
+    with pytest.raises(SystemExit) as e:
+        # foo-bar and foo_bar are normalized and are equivalent.
+        # no need to duplicate the name normalization tests; just use the exact values here
+        _ = ScaffolderCli()._parse_args(
+            [mode, "-n", "test", "-e", "foo", "-e", "foo_bar", "-e", "foo-bar"]
+        )
+        # T
+    captured = capsys.readouterr()
+    assert e.value.code == 2
+    assert (
+        f"{mode}: error: argument -e: The `endpoint` argument does not allow duplicate values. The value `foo-bar` duplicates the value `foo_bar`."
+        in captured.err
+    )
+
+
+@pytest.mark.parametrize("mode", ["create", "modify"])
+def test__parse_args__disallows_endpoints_with_same_name_as_application(
+    mode: str, capsys: CaptureFixture[str]
+):
+    with pytest.raises(SystemExit) as e:
+        # foo-bar and foo_bar are normalized and are equivalent.
+        # no need to duplicate the name normalization tests; just use the exact values here
+        _ = ScaffolderCli()._parse_args([mode, "-n", "foo-bar", "-e", "foo_bar"])
+    captured = capsys.readouterr()
+    assert e.value.code == 2
+    assert (
+        f"{mode}: error: argument -e: The `endpoint` argument cannot be equivalent to the `name` argument. The value `foo_bar` is equivalent to the value `foo-bar`."
+        in captured.err
+    )
 
 
 @pytest.mark.parametrize("mode", ["create", "modify"])
@@ -166,40 +241,6 @@ def test__parse_args__does_not_use_application_name_for_endpoint_if_endpoints_gi
 
     assert ("test", "test") not in endpoints
     assert ("foo", "foo") in endpoints
-
-
-@pytest.mark.parametrize("mode", ["create", "modify"])
-def test__parse_args__replaces_hyphens_in_application_module_name(
-    mode: str,
-):
-    args = ScaffolderCli()._parse_args([mode, "-n", "test-test"])
-
-    assert "test_test" == args.name.module_name
-    assert "test-test" != args.name.module_name
-
-
-@pytest.mark.parametrize("mode", ["create", "modify"])
-def test__parse_args__does_not_replace_hyphens_in_application_url_path_name(
-    mode: str,
-):
-    args = ScaffolderCli()._parse_args([mode, "-n", "test-test"])
-
-    assert "test-test" == args.name.url_path_name
-    assert "test_test" != args.name.url_path_name
-
-
-@pytest.mark.parametrize("mode", ["create", "modify"])
-def test__parse_args__replaces_hyphens_in_endpoint_module_names(
-    mode: str,
-):
-    args = ScaffolderCli()._parse_args([mode, "-n", "test", "-e", "foo-foo"])
-
-    assert args.endpoints is not None
-    endpoints = {
-        (endpoint.url_path_name, endpoint.module_name) for endpoint in args.endpoints
-    }
-    assert ("foo-foo", "foo_foo") in endpoints
-    assert ("foo-foo", "foo-foo") not in endpoints
 
 
 @pytest.mark.parametrize(
@@ -278,21 +319,27 @@ def test__parse_args__uses_application_name_for_output_directory_if_no_outout_di
     assert "test" == args.output_directory
 
 
-def test__scaffold__sets_log_level_from_envvar_when_not_specified(
+@pytest.mark.parametrize("env_log_level", [str(logging.DEBUG), str(logging.INFO)])
+def test__scaffold__sets_log_level_from_envvar_when_parameter_not_specified(
+    env_log_level: str,
     mocker: MockerFixture,
 ):
-    _ = mocker.patch("BL_Python.web.scaffolding.__main__.ScaffolderCli.run")
+    scaffolder_cli_mock = mocker.patch(
+        "BL_Python.web.scaffolding.__main__.ScaffolderCli"
+    )
     environ_mock = mocker.patch(
-        "BL_Python.web.scaffolding.__main__.environ.get", return_value=logging.DEBUG
+        "BL_Python.web.scaffolding.__main__.environ.get",
+        return_value=env_log_level,
     )
 
     scaffold()
 
     environ_mock.assert_called_once_with("LOG_LEVEL")
+    scaffolder_cli_mock.assert_called_with(env_log_level)
 
 
 @pytest.mark.parametrize("log_level", ["DEBUG", "debug", "10", 10])
-def test__scaffold__sets_log_level_from_value(
+def test__scaffold__sets_log_level_from_value_when_parameter_specified(
     log_level: str | int, mocker: MockerFixture
 ):
     _ = mocker.patch("BL_Python.web.scaffolding.__main__.ScaffolderCli.run")
@@ -311,10 +358,7 @@ def test__scaffold__sets_log_level_from_value(
         assert expected_log_level == call_args["level"]
 
 
-@pytest.mark.parametrize("exception_type", [Exception, ValueError, TypeError])
 def test__scaffold__fails_when_log_level_is_any_unexpected_exception(
-    # FIXME what was exception_type for?
-    exception_type: type[Exception],
     mocker: MockerFixture,
 ):
     _ = mocker.patch("BL_Python.web.scaffolding.__main__.ScaffolderCli.run")
