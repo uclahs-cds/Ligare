@@ -3,13 +3,13 @@ servers:
   - url: http://localhost:5000/
     description: Local development
 info:
-  title: {{application_name}}
+  title: {{application.raw_name}}
   version: 3.0.3
 paths:
   /healthcheck:
     get:
       description: "Check whether the application is running."
-      operationId: "{{application_name}}.endpoints.application.healthcheck"
+      operationId: "{{application.module_name}}.endpoints.application.healthcheck"
       parameters: []
       responses:
         "200":
@@ -19,15 +19,15 @@ paths:
                 type: string
           description: "Application is running correctly."
       summary: "A simple method that returns 200 as long as the application is running."
-  {% for endpoint in endpoints %}
-  /{{endpoint.endpoint_name}}:
+  {% for operation in endpoints|map(attribute="operation") %}
+  /{{operation.url_path_name}}:
     get:
       {% if module.database %}
-      description: "Get all entries in the {{endpoint.endpoint_name}} table."
+      description: "Get all entries in the {{operation.module_name}} table."
       {% else %}
-      description: "Hello, {{endpoint.endpoint_name}}!"
+      description: "Hello, {{operation.url_path_name}}!"
       {% endif %}
-      operationId: "{{application_name}}.endpoints.{{endpoint.endpoint_name}}.get_{{endpoint.endpoint_name}}"
+      operationId: "{{application.module_name}}.endpoints.{{operation.module_name}}.get_{{operation.module_name}}"
       responses:
         "200":
           content:
@@ -38,8 +38,8 @@ paths:
       summary: "A simple method that returns 200 as long as the endpoint is working correctly."
     {% if module.database %}
     post:
-      description: Add a new {{endpoint.endpoint_name.capitalize()}} to the {{endpoint.endpoint_name}} table.
-      operationId: "{{application_name}}.endpoints.{{endpoint.endpoint_name}}.add_{{endpoint.endpoint_name}}"
+      description: Add a new {{operation.module_name.capitalize()}} to the {{operation.module_name}} table.
+      operationId: "{{application.module_name}}.endpoints.{{operation.module_name}}.add_{{operation.module_name}}"
       requestBody:
         content:
           application/json:
@@ -52,7 +52,7 @@ paths:
                   type: string
       responses:
         201:
-          description: "The new {{endpoint.endpoint_name.capitalize()}} was successfully added to the {{endpoint.endpoint_name}} table."
+          description: "The new {{operation.module_name.capitalize()}} was successfully added to the {{operation.module_name}} table."
           content:
             application/json:
               schema:

@@ -8,4 +8,4 @@ from injector import inject
 @inject
 def healthcheck(log: Logger):
     log.info("Healthcheck")
-    return "healthcheck: '{{application_name}}' is running"
+    return "healthcheck: '{{application.raw_name}}' is running"

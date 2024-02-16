@@ -1,6 +1,6 @@
 # isort: off
-from {{application_name}}._version import __version__
-from {{application_name}}._app_type import AppType
+from {{application.module_name}}._version import __version__
+from {{application.module_name}}._app_type import AppType
 # isort: on
 
 {% if module.database %}
@@ -8,7 +8,7 @@ from typing import Any, cast
 from sqlalchemy import MetaData
 
 from sqlalchemy.orm import Session
-from {{application_name}}.modules.database import Base
+from {{application.module_name}}.modules.database import Base
 {% endif %}
 
 def create_app():
@@ -25,7 +25,7 @@ def create_app():
     # fmt: off
     from BL_Python.web.application import App
     result = App[AppType].create(
-        config_filename="{{application_name}}/config.toml",
+        config_filename="{{application.module_name}}/config.toml",
         application_configs=application_configs,
         application_modules=application_modules
     )
