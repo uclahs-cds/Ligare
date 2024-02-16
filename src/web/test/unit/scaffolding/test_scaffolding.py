@@ -475,30 +475,3 @@ def test__scaffold__create_mode_uses_argv_for_module_configuration(
     ]
 
     assert "database" in module_names
-
-
-# this test prevents writing to the filesystem, but still reads templates
-# def test__scaffold__full_test_no_write_to_disk(
-#    mocker: MockerFixture,
-# ):
-#    from pathlib import Path
-#    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.Path", spec=Path, exists=MagicMock(return_value=False))
-#    _ = mocker.patch(
-#        "BL_Python.web.scaffolding.scaffolder.Scaffolder._create_directory"
-#    )
-#    _ = mocker.patch("jinja2.environment.TemplateStream.dump")
-#
-#    argv_values = ["create", "-n", "test", "-e", "foo", "-e", "bar"]
-#
-#    scaffold(argv_values)
-#
-#    # endpoint_names = [
-#    #    endpoint.operation.url_path_name
-#    #    for endpoint in cast(
-#    #        list[ScaffoldEndpoint], config_mock.call_args.kwargs["endpoints"]
-#    #    )
-#    # ]
-#
-#    # assert "foo" in endpoint_names
-#    # assert "bar" in endpoint_names
-#    pass
