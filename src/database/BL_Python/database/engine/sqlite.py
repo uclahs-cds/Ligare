@@ -1,3 +1,4 @@
+from sqlite3 import Connection
 from typing import Any, Callable
 
 from BL_Python.database.config import DatabaseConnectArgsConfig
@@ -5,6 +6,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.pool import Pool, StaticPool
+from sqlalchemy.pool.base import _ConnectionRecord
 
 
 class SQLiteScopedSession(ScopedSession):
@@ -55,10 +57,10 @@ class SQLiteScopedSession(ScopedSession):
         This will be removed at a later date.
         """
 
-        def _fk_pragma_on_connect(dbapi_con: Any, con_record: Any):
+        def _fk_pragma_on_connect(dbapi_con: Connection, con_record: _ConnectionRecord):
             """
             Called immediately after a connection is established.
             """
-            dbapi_con.execute("pragma foreign_keys=ON")
+            _ = dbapi_con.execute("pragma foreign_keys=ON")
 
         event.listen(self.bind, "connect", _fk_pragma_on_connect)
