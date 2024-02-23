@@ -6,7 +6,8 @@ A collection of Python libraries for creating web applications, working with dat
 
 **🚩** `BL_Python` has a minimum Python version requirement of `>= 3.10`.
 
-*  Create a BL_Python [web application](src/web/README.md)
+* Create a BL_Python [web application](src/web/README.md)
+* Contribute to [BL_Python Development](https://github.com/uclahs-cds/BL_Python/wiki/BL_Python-Development)
 
 
 # Available Libraries
@@ -107,16 +108,4 @@ Review the `BL_Python.web` [readme](src/web/README.md)
 
 # Development
 
-`BL_Python` is a mono-repo containing several independent libraries, which are noted under [Available Libraries](#available-libraries).
-
-When developing from within the mono-repo, the libraries can be individually installed by referencing their path. Both the mono-repo and each library have their own set of dependencies.
-
-To install the base dependencies, run `pip install -e .` from the mono-repo root. Development dependencies can be installed with `pip install -e .[dev-dependencies]`
-
-To install the library dependencies, run, for example, `pip install -e src/web` to install `BL_Python.web`. Similar to the mono-repo, development dependencies can be installed with `pip install -e src/web[dev-dependencies]`. To install all libraries, you can run `./install_all.sh`.
-
-## Important requirement!
-
-Due to limitations in `pip`, some `BL_Python` libraries that depend on other `BL_Python` libraries need those dependencies explicitly defined in applications using those libraries.
-
-The libraries that require this will outline their explicit dependencies in their respective readme files. `pip` will also show an error if these requirements are not met, which will aid in discovery of invalid dependency configurations in your software.
+Review [BL_Python Development](https://github.com/uclahs-cds/BL_Python/wiki/BL_Python-Development) for detailed information.
