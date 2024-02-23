@@ -1,5 +1,6 @@
 from typing import Any, Callable
 
+from BL_Python.database.config import DatabaseConnectArgsConfig
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import sessionmaker
@@ -12,6 +13,7 @@ class SQLiteScopedSession(ScopedSession):
         connection_string: str,
         echo: bool = False,
         execution_options: dict[str, Any] | None = None,
+        connect_args: DatabaseConnectArgsConfig | None = None,
     ):
         """
         Create a new session factory for SQLite.
@@ -31,6 +33,7 @@ class SQLiteScopedSession(ScopedSession):
             connection_string,
             echo=echo,
             execution_options=execution_options or {},
+            connect_args=connect_args.model_dump() if connect_args is not None else {},
             poolclass=poolclass,
         )
 

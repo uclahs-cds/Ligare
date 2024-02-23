@@ -45,7 +45,10 @@ class ScopedSessionModule(Module):
         Defaults to using the `sessionmaker` Session factory.
         """
         return DatabaseEngine.get_session_from_connection_string(
-            database_config.connection_string, database_config.sqlalchemy_echo
+            database_config.connection_string,
+            database_config.sqlalchemy_echo,
+            {},
+            database_config.connect_args,
         )
 
     @inject
