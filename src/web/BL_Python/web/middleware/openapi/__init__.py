@@ -166,9 +166,7 @@ def _headers_as_dict(
     request_response: MiddlewareRequestDict | MiddlewareResponseDict,
 ):
     if (
-        isinstance(
-            request_response, dict
-        )  # pyright: ignore[reportUnnecessaryIsInstance]
+        isinstance(request_response, dict)  # pyright: ignore[reportUnnecessaryIsInstance]
         and "headers" in request_response.keys()
     ):
         # FIXME does this work for a middleware _response_ as well?
@@ -430,16 +428,18 @@ class CorrelationIDMiddleware:
                     _ = uuid.UUID(request_correlation_id.decode(encoding))
                 else:
                     request_correlation_id = str(uuid4()).encode(encoding)
-                    request_headers.append(
-                        (correlation_id_header_encoded, request_correlation_id)
-                    )
+                    request_headers.append((
+                        correlation_id_header_encoded,
+                        request_correlation_id,
+                    ))
                     log.info(
                         f'Generated new UUID "{request_correlation_id}" for {CORRELATION_ID_HEADER} request header.'
                     )
 
-                response_headers.append(
-                    (correlation_id_header_encoded, request_correlation_id)
-                )
+                response_headers.append((
+                    correlation_id_header_encoded,
+                    request_correlation_id,
+                ))
 
                 return await send(message)
             except ValueError as e:

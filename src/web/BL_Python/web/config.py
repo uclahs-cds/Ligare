@@ -59,15 +59,13 @@ class FlaskSessionCookieConfig(BaseModel):
         if not self.secret_key:
             raise Exception("`flask.session.cookie.secret_key` must be set in config.")
 
-        environ.update(
-            {
-                "SECRET_KEY": self.secret_key,
-                "SESSION_COOKIE_NAME": self.name,
-                "SESSION_COOKIE_HTTPONLY": str(1 if self.httponly else 0),
-                "SESSION_COOKIE_SECURE": str(1 if self.secure else 0),
-                "SESSION_COOKIE_SAMESITE": self.samesite,
-            }
-        )
+        environ.update({
+            "SECRET_KEY": self.secret_key,
+            "SESSION_COOKIE_NAME": self.name,
+            "SESSION_COOKIE_HTTPONLY": str(1 if self.httponly else 0),
+            "SESSION_COOKIE_SECURE": str(1 if self.secure else 0),
+            "SESSION_COOKIE_SAMESITE": self.samesite,
+        })
 
     def _update_flask_config(self, flask_app_config: FlaskAppConfig):
         class ConfigObject:
@@ -87,17 +85,11 @@ class FlaskSessionConfig(BaseModel):
     refresh_each_request: bool = True
 
     def _prepare_env_for_flask(self):
-        environ.update(
-            {
-                "PERMANENT_SESSION": str(1 if self.permanent else 0),
-                "PERMANENT_SESSION_LIFETIME": (
-                    str(self.lifetime) if self.lifetime else ""
-                ),
-                "SESSION_REFRESH_EACH_REQUEST": str(
-                    1 if self.refresh_each_request else 0
-                ),
-            }
-        )
+        environ.update({
+            "PERMANENT_SESSION": str(1 if self.permanent else 0),
+            "PERMANENT_SESSION_LIFETIME": (str(self.lifetime) if self.lifetime else ""),
+            "SESSION_REFRESH_EACH_REQUEST": str(1 if self.refresh_each_request else 0),
+        })
         self.cookie._prepare_env_for_flask()  # pyright: ignore[reportPrivateUsage]
 
     def _update_flask_config(self, flask_app_config: FlaskAppConfig):

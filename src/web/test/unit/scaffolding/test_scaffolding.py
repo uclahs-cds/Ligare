@@ -188,10 +188,9 @@ def test__parse_args__disallows_duplicated_endpoint_names(
     with pytest.raises(SystemExit) as e:
         # foo-bar and foo_bar are normalized and are equivalent.
         # no need to duplicate the name normalization tests; just use the exact values here
-        _ = ScaffolderCli()._parse_args(
-            [mode, "-n", "test", "-e", "foo", "-e", "foo_bar", "-e", "foo-bar"]
-        )
-        # T
+        # fmt: off
+        _ = ScaffolderCli()._parse_args([mode, "-n", "test", "-e", "foo", "-e", "foo_bar", "-e", "foo-bar"])
+        # fmt: on
     captured = capsys.readouterr()
     assert e.value.code == 2
     assert (

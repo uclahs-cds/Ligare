@@ -2,7 +2,7 @@
 # pylint: disable=E1003
 # pylint: disable=W0613
 # pylint: disable=C0204
-""" Module containg Singleton metaclass """
+"""Module containg Singleton metaclass"""
 
 # pyright: reportPrivateUsage=false
 
