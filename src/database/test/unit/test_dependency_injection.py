@@ -1,10 +1,7 @@
-from typing import cast
-
 from BL_Python.database.config import DatabaseConfig
 from BL_Python.database.dependency_injection import ScopedSessionModule
 from BL_Python.programming.dependency_injection import ConfigModule
 from injector import Injector
-from sqlalchemy.engine import Engine
 from sqlalchemy.orm.session import Session
 
 
