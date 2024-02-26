@@ -223,7 +223,7 @@ jobs:
       - name: Check code style
         run: |
           source .github-venv/bin/activate
-          black --check src
+          ruff format --preview --respect-gitignore --check
 
       - name: Check import order
         run: |

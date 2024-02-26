@@ -89,7 +89,7 @@ dev-dependencies = [
     # which allows us to catch new types of problems.
     "pyright",
     "isort",
-    "black"
+    "ruff == 0.2.2"
 ]
 
 [tool.pyright]
@@ -214,8 +214,29 @@ omit = [
 ]
 branch = true
 
-[tool.black]
-exclude = "src/.+/(typings|build)"
+[tool.ruff]
+include = [
+    "pyproject.toml",
+    "src/**/*.py",
+    "src/**/*.pyi",
+    "test/**/*.py",
+    "test/**.*.pyi",
+]
+[tool.ruff.format]
+exclude = [
+    "typings/**/*.py",
+    "typings/**/*.pyi",
+    "src/**/typings/**/*.py",
+    "src/**/typings/**/*.pyi",
+    "src/**/build/**/*.py",
+    "src/**/build/**/*.pyi",
+]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
 
 [tool.isort]
 profile = "black"
