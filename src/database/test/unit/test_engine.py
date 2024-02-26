@@ -31,9 +31,22 @@ def test__DatabaseEngine__get_session_from_connection_string__returns_correct_se
 def test__DatabaseEngine__get_session_from_connection_string__raises_exception_with_unknown_connection_string():
     # use a legitimate but unsupported (by BL_Python.database) connection string
     connection_string = "mssql+pyodbc://localhost/noop"
+    connection_string_serialized = f"{connection_string=}"
     with pytest.raises(
         ValueError,
-        match=rf"^Unexpected connection string.+\"{re.escape(connection_string)}\".+",
+        match=rf"^Unsupported connection string.+{re.escape(connection_string_serialized)}",
+    ):
+        _ = DatabaseEngine.get_session_from_connection_string(connection_string)
+
+
+@pytest.mark.parametrize("connection_string", ["", "://", None, " ", "foo"])
+def test__DatabaseEngine__get_session_from_connection_string__raises_exception_with_invalid_connection_string(
+    connection_string: str,
+):
+    connection_string_serialized = f"{connection_string=}"
+    with pytest.raises(
+        ValueError,
+        match=rf"^Invalid connection string.+{re.escape(connection_string_serialized)}",
     ):
         _ = DatabaseEngine.get_session_from_connection_string(connection_string)
 
