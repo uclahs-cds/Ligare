@@ -256,9 +256,7 @@ class CreateApp:
         with ExitStack() as stack:
             result = flask_app_getter()
 
-            if not isinstance(
-                result, AppInjector
-            ) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
+            if not isinstance(result, AppInjector) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
                 result.app, Flask
             ):
                 raise Exception(
@@ -284,7 +282,9 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
                 ),
                 domain="localhost",
                 # fmt: off
-                max_age=app.config['PERMANENT_SESSION_LIFETIME'] if app.config['PERMANENT_SESSION'] else None,
+                max_age=app.config["PERMANENT_SESSION_LIFETIME"]
+                if app.config["PERMANENT_SESSION"]
+                else None,
                 # fmt: on
             )
 
@@ -296,9 +296,7 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
         with ExitStack() as stack:
             result = flask_app_getter()
 
-            if not isinstance(
-                result, AppInjector
-            ) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
+            if not isinstance(result, AppInjector) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
                 result.app, FlaskApp
             ):
                 raise Exception(

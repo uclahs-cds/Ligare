@@ -26,9 +26,7 @@ class AppModule(Module):
         super().__init__()
         if isinstance(app, Flask):
             self._flask_app = app
-        elif isinstance(
-            app, FlaskApp
-        ):  # pyright: ignore[reportUnnecessaryIsInstance] guard against things like not using `MagicMock(spec=...)`
+        elif isinstance(app, FlaskApp):  # pyright: ignore[reportUnnecessaryIsInstance] guard against things like not using `MagicMock(spec=...)`
             self._flask_app = app.app
         else:
             raise ValueError(

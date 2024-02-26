@@ -71,9 +71,7 @@ class GitHub:
         repository = self._client.get_repo(f"{organization_name}/{repository_name}")
         organization: Organization = self._client.get_organization(organization_name)
         # fixes the PyGithub API URLs for working with the organiztion owning the repository
-        cast(
-            Any, repository._organization  # pyright: ignore[reportPrivateUsage]
-        )._value = organization
+        cast(Any, repository._organization)._value = organization  # pyright: ignore[reportPrivateUsage]
         return repository
 
     def create_repository(

@@ -23,9 +23,7 @@ APPLICATION_ENDPOINT_PATH_NAME = "application"
 
 
 class ScaffoldInputArgs(Namespace):
-    mode: Literal[  # pyright: ignore[reportUninitializedInstanceVariable]
-        "create", "modify"
-    ]
+    mode: Literal["create", "modify"]  # pyright: ignore[reportUninitializedInstanceVariable]
     mode_executor: "Callable[[ScaffoldParsedArgs], None]"  # pyright: ignore[reportUninitializedInstanceVariable]
     name: Operation  # pyright: ignore[reportUninitializedInstanceVariable]
     endpoints: list[Operation] | None = None

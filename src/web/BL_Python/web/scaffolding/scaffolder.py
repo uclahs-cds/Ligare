@@ -42,7 +42,6 @@ class Operation:
 
     @override
     def __eq__(self, __value: object) -> bool:
-
         return isinstance(__value, Operation) and (
             self.url_path_name == __value.url_path_name
             or self.module_name == __value.module_name
