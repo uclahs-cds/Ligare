@@ -1,7 +1,11 @@
 import logging
+from dataclasses import dataclass
 from logging import Logger
 
-from BL_Python.programming.patterns.dependency_injection import LoggerModule
+from BL_Python.programming.patterns.dependency_injection import (
+    BatchModule,
+    LoggerModule,
+)
 from BL_Python.programming.str import get_random_str
 from injector import Injector
 from pytest import LogCaptureFixture
@@ -31,3 +35,27 @@ def test__LoggerModule__correctly_configures_STDOUT_log_handler(
     logger.info(random_str)
 
     assert random_str in {record.msg for record in caplog.records}
+
+
+def test__BatchModule__binds_multiple_types():
+    @dataclass
+    class Foo:
+        x: int = 123
+
+    @dataclass
+    class Bar:
+        x: str = "456"
+
+    class Baz:
+        x: str = "abc"
+
+        def __init__(self, x: str) -> None:  # pyright: ignore[reportMissingSuperCall]
+            self.x = x
+
+    registrations = {Foo: Foo(x=999), Bar: Bar(x="999"), Baz: Baz(x="ABC")}
+    batch_module = BatchModule(registrations)  # pyright: ignore[reportArgumentType]
+    injector = Injector(batch_module)
+
+    assert injector.get(Foo) == registrations[Foo]
+    assert injector.get(Bar) == registrations[Bar]
+    assert injector.get(Baz) == registrations[Baz]
