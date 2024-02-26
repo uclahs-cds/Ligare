@@ -6,7 +6,9 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.pool import Pool, StaticPool
-from sqlalchemy.pool.base import _ConnectionRecord
+from sqlalchemy.pool.base import (
+    _ConnectionRecord,  # pyright: ignore[reportPrivateUsage]
+)
 
 
 class SQLiteScopedSession(ScopedSession):
