@@ -8,7 +8,6 @@ def test__AppModule__binds_extra_dependencies():
     flask_mock = MagicMock(spec=Flask)
     flask_mock.name = f"{test__AppModule__binds_extra_dependencies.__name__}-app_name"
     flask_mock.config = {}
-    flask_mock.configure_mock()
     extra_dependency_mock = MagicMock()
 
     class TestDependencyType: ...
