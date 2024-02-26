@@ -13,9 +13,7 @@ class ScopedSessionModule(Module):
     """
 
     @override
-    def configure(
-        self, binder: Binder, database_config: DatabaseConfig | None = None
-    ) -> None:
+    def configure(self, binder: Binder) -> None:
         # Any ScopedSession dependency should be the same for the lifetime of the application.
         # ScopeSession is a factory that creates a Session per thread.
         # The Session returned is the same for the lifetime of the thread.
@@ -31,11 +29,6 @@ class ScopedSessionModule(Module):
         # ScopedSession. ScopedSession handles all thread local concerns.
         # It is safe for this method to be called multiple times.
         binder.bind(Session, to=CallableProvider(self._get_session))
-
-        # it is possible for DatabaseConfig to have been registered
-        # in another module for the IoC container.
-        if database_config:
-            binder.bind(DatabaseConfig, database_config)
 
     @inject
     def _get_scoped_session(self, database_config: DatabaseConfig) -> ScopedSession:
