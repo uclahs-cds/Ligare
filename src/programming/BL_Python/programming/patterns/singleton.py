@@ -23,7 +23,30 @@ class Singleton(type):
 
     `class Foo(metaclass=Singleton): ...`
 
-    In addition to making a class a Singleton, these classes cannot have their attributes changed.
+    By default, the classes created by Singleton cannot have their attributes changed.
+    To change this behavior, define an attribute named `_block_change` whose value is `False`.
+    Not defining this attribute, or setting any other value, uses the default behavior.
+    Be _VERY CAREFUL_ when using `_block_change = False` as `Singleton` is _NOT_ threadsafe.
+
+    For example, these are all equivalent:
+    ```
+    class Foo(metaclass=Singleton): ...
+
+    class Foo(metaclass=Singleton):
+        _block_change = True
+
+    class Foo(metaclass=Singleton):
+        _block_change = None
+
+    class Foo(metaclass=Singleton):
+        _block_change = 123
+    ```
+
+    While this example is how to enable changes of attributes.
+    ```
+    class Foo(metaclass=Singleton):
+        _block_change = False
+    ```
     """
 
     def __new__(
@@ -37,25 +60,33 @@ class Singleton(type):
 
         def __new__(cls: Any, *args: Any, **kwargs: Any):
             nonlocal _instance
+
+            block_change_attr_name = "_block_change"
+
             if _instance is None:
                 _instance = cast(Any, super(_new_type, cls)).__new__(cls)
                 child_init = _instance.__init__
 
                 def __init__(cls: _SingletonType, *args: Any, **kwargs: Any):
                     child_init(*args, **kwargs)
-                    cls._block_change = True
+                    block_change = getattr(cls, block_change_attr_name, None)
+
+                    cls._block_change = (
+                        block_change is None or block_change is not False
+                    )
+
+                _new_type.__init__ = __init__
 
                 def __setattr__(self: _SingletonType, name: str, value: Any):
-                    if hasattr(self, "_block_change") and self._block_change:
+                    if hasattr(self, block_change_attr_name) and self._block_change:
                         return
                     object.__setattr__(self, name, value)
 
                 def __delattr__(self: _SingletonType, name: str):
-                    if hasattr(self, "_block_change") and self._block_change:
+                    if hasattr(self, block_change_attr_name) and self._block_change:
                         return
                     object.__delattr__(self, name)
 
-                _new_type.__init__ = __init__
                 _new_type.__setattr__ = __setattr__
                 _new_type.__delattr__ = __delattr__
             return _instance
