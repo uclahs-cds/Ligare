@@ -98,11 +98,11 @@ class Singleton(type):
 
                 _new_type.__init__ = __init__
 
-                def __getattribute__(self: _SingletonType, __name: str) -> Any:
-                    value = super(cls, self).__getattribute__(__name)
+                def __getattribute__(self: _SingletonType, name: str) -> Any:
+                    value = super(cls, self).__getattribute__(name)
                     if isinstance(value, Singleton.InstanceValue):
                         if value._deleted:
-                            raise AttributeError(self, __name)
+                            raise AttributeError(self, name)
                         return value._value
                     return value
 
