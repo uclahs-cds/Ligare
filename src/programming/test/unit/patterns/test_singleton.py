@@ -1,3 +1,5 @@
+# pyright: reportPrivateUsage=false
+
 from typing import Any
 
 import pytest
@@ -146,11 +148,11 @@ def test__prevents_arbitrary_class_attribute_deletion_on_instances(block_change:
 
     # when _block_change is True, deletion is ignored
     if block_change:
-        del foo._arbitrary  # pyright: ignore[reportPrivateUsage]
+        del foo._arbitrary
         delattr(foo, "_arbitrary")
     else:
         with pytest.raises(AttributeError):
-            del foo._arbitrary  # pyright: ignore[reportPrivateUsage]
+            del foo._arbitrary
 
         with pytest.raises(AttributeError):
             delattr(foo, "_arbitrary")
@@ -170,7 +172,7 @@ def test__allows_arbitrary_class_attribute_deletion_on_classes(block_change: boo
     # This cannot be intercepted, even
     # by the `__delete__` descriptor.
     # As such, it is always allowed.
-    del Foo._arbitrary  # pyright: ignore[reportPrivateUsage]
+    del Foo._arbitrary
 
     assert not hasattr(foo, "_arbitrary")
     assert not hasattr(Foo, "_arbitrary")

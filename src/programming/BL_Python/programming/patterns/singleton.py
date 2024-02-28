@@ -6,7 +6,6 @@
 
 # pyright: reportPrivateUsage=false
 
-import types
 from typing import Any, NewType, Type, cast
 
 
@@ -55,7 +54,7 @@ class Singleton(type):
         _value: Any
         _deleted: bool
 
-        def __init__(self, value: Any) -> None:  # pyright[reportMissingSuperCall]
+        def __init__(self, value: Any) -> None:  # pyright: ignore[reportMissingSuperCall]
             self._value = value
             self._deleted = False
 
