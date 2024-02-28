@@ -6,7 +6,9 @@ import pytest
 from BL_Python.web.scaffolding.__main__ import ScaffolderCli, scaffold
 from BL_Python.web.scaffolding.scaffolder import (
     Operation,
+    ScaffoldConfig,
     ScaffoldEndpoint,
+    Scaffolder,
     ScaffoldModule,
 )
 from pytest import CaptureFixture
@@ -474,3 +476,87 @@ def test__scaffold__create_mode_uses_argv_for_module_configuration(
     ]
 
     assert "database" in module_names
+
+
+def test__scaffold__create_mode_database_module_configures_database(
+    mocker: MockerFixture,
+):
+    # TODO refactor Scaffolder so all these mocks don't need to happen
+    _ = mocker.patch("builtins.input", return_value="Y")
+    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.BaseLoader")
+    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.Environment")
+    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.PackageLoader")
+    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.Template")
+    _ = mocker.patch(
+        "BL_Python.web.scaffolding.scaffolder.Scaffolder._create_directory"
+    )
+    _ = mocker.patch(
+        "BL_Python.web.scaffolding.scaffolder.Scaffolder._scaffold_directory"
+    )
+    _ = mocker.patch(
+        "BL_Python.web.scaffolding.scaffolder.Scaffolder._scaffold_endpoints"
+    )
+    _ = mocker.patch(
+        "BL_Python.web.scaffolding.scaffolder.Scaffolder._check_scaffolded_application_exists",
+        return_value=False,
+    )
+    module_hook_mock = mocker.patch(
+        "BL_Python.web.scaffolding.scaffolder.Scaffolder._execute_module_hooks"
+    )
+
+    argv_values = ["create", "-n", "test", "-m", "database", "-o", "/dev/null"]
+
+    scaffold(argv_values)
+
+    pass
+    module_hook_mock.assert_called_once_with(
+        "scaffolding/templates/optional/{{application.module_name}}/modules/database"
+    )
+
+
+@pytest.fixture
+def scaffold_config():
+    return ScaffoldConfig(
+        output_directory="/dev/null",
+        application=Operation(name="foo"),
+        template_type="basic",
+        modules=[ScaffoldModule(module_name="database")],
+    )
+
+
+def test__database_module__on_create__asks_for_connection_string(
+    scaffold_config: ScaffoldConfig,
+    mocker: MockerFixture,
+):
+    input_mock = mocker.patch("builtins.input", return_value="")
+
+    mock_log = mocker.patch("logging.Logger", spec=logging.Logger)
+    scaffolder = Scaffolder(config=scaffold_config, log=mock_log)
+    scaffolder._execute_module_hooks(
+        "scaffolding/templates/optional/{{application.module_name}}/modules/database",
+    )
+
+    input_mock.assert_called()
+    assert [
+        arg
+        for arg in input_mock.call_args.args
+        if "Enter a database connection string" in arg
+    ]
+
+
+def test__database_module__on_create__uses_user_input_connection_string(
+    scaffold_config: ScaffoldConfig,
+    mocker: MockerFixture,
+):
+    _ = mocker.patch("builtins.input", return_value="sqlite:///dev/null")
+
+    mock_log = mocker.patch("logging.Logger", spec=logging.Logger)
+    scaffolder = Scaffolder(config=scaffold_config, log=mock_log)
+    scaffolder._execute_module_hooks(
+        "scaffolding/templates/optional/{{application.module_name}}/modules/database",
+    )
+
+    assert (
+        scaffolder._config_dict["module"]["database"]["connection_string"]
+        == "sqlite:///dev/null"
+    )

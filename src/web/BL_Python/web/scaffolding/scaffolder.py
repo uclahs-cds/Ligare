@@ -7,7 +7,7 @@ from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_file_location
 from os import sep as path_separator
 from pathlib import Path
-from typing import Any, final
+from typing import Any, Literal, final
 
 from BL_Python.programming.collections.dict import merge
 from jinja2 import BaseLoader, Environment, PackageLoader, Template
@@ -16,8 +16,8 @@ from jinja2 import BaseLoader, Environment, PackageLoader, Template
 from pkg_resources import (
     ResourceManager,  # pyright: ignore[reportUnknownVariableType,reportAttributeAccessIssue]
 )
-from pkg_resources import get_provider
-from typing_extensions import final, override
+from pkg_resources import IResourceProvider, get_provider
+from typing_extensions import override
 
 # fmt: on
 
@@ -64,7 +64,7 @@ class ScaffoldModule:
 class ScaffoldConfig:
     output_directory: str
     application: Operation
-    template_type: str | None = None
+    template_type: Literal["basic", "openapi"] | None = None
     modules: list[ScaffoldModule] | None = None
     module: dict[str, Any] = field(default_factory=dict)
     endpoints: list[ScaffoldEndpoint] | None = None
@@ -73,6 +73,12 @@ class ScaffoldConfig:
 
 @final
 class Scaffolder:
+    # These are used to aid in discovering files that are
+    # part of the BL_Python.web module. Relative path lookups
+    # do not work, so they are done using _provider.
+    _manager: Any
+    _provider: IResourceProvider
+
     def __init__(self, config: ScaffoldConfig, log: logging.Logger) -> None:
         self._config = config
         self._config_dict = asdict(config)
@@ -82,6 +88,8 @@ class Scaffolder:
         self._base_env = Environment(
             loader=BaseLoader  # pyright: ignore[reportArgumentType]
         )
+        self._manager = ResourceManager()
+        self._provider = get_provider("BL_Python.web")
 
     def _create_directory(self, directory: Path, overwrite_existing_files: bool = True):
         """Create the directories that the rendered templates will be stored in."""
@@ -212,11 +220,11 @@ class Scaffolder:
                 overwrite_existing_files=overwrite_existing_files,
             )
 
-    # These are used to aid in discovering files that are
-    # part of the BL_Python.web module. Relative path lookups
-    # do not work, so they are done using _provider.
-    _manager: Any = ResourceManager()
-    _provider = get_provider("BL_Python.web")
+    #    # These are used to aid in discovering files that are
+    #    # part of the BL_Python.web module. Relative path lookups
+    #    # do not work, so they are done using _provider.
+    #    _manager: Any = ResourceManager()
+    #    _provider = get_provider("BL_Python.web")
 
     def _execute_module_hooks(self, module_template_directory: str):
         """
@@ -426,7 +434,7 @@ class Scaffolder:
         # parent directory.
         if self._config.mode == "modify" and not in_parent_directory:
             self._log.critical(
-                f"Attempted to modify an existing application from a directory that is not the existing application's parent directory. This is not supported. Change your working directory to the application's parent directory."
+                "Attempted to modify an existing application from a directory that is not the existing application's parent directory. This is not supported. Change your working directory to the application's parent directory."
             )
             return
 
@@ -453,7 +461,7 @@ class Scaffolder:
         base_env = Environment(
             trim_blocks=True,
             lstrip_blocks=True,
-            loader=PackageLoader("BL_Python.web", f"scaffolding/templates/base"),
+            loader=PackageLoader("BL_Python.web", "scaffolding/templates/base"),
         )
         # used for the selected template type templates
         # that can replace files from the base templates.
@@ -468,7 +476,7 @@ class Scaffolder:
         optional_env = Environment(
             trim_blocks=True,
             lstrip_blocks=True,
-            loader=PackageLoader("BL_Python.web", f"scaffolding/templates/optional"),
+            loader=PackageLoader("BL_Python.web", "scaffolding/templates/optional"),
         )
 
         if self._config.mode == "create":
