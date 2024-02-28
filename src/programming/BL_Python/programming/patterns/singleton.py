@@ -6,7 +6,7 @@
 
 # pyright: reportPrivateUsage=false
 
-from typing import Any, NewType, Type, cast
+from typing import Any, NewType, Type, cast, final
 
 
 class _Singleton(Type[Any]):
@@ -16,12 +16,15 @@ class _Singleton(Type[Any]):
 _SingletonType = NewType("_SingletonType", _Singleton)
 
 
+@final
 class Singleton(type):
     """
     Singleton metaclass.
     Create a new Singleton type by setting that class's metaclass:
 
     `class Foo(metaclass=Singleton): ...`
+
+    Classes created as Singletons should be considered `@final`.
 
     By default, the classes created by Singleton cannot have their attributes changed.
     To change this behavior, define an attribute named `_block_change` whose value is `False`.
@@ -51,24 +54,24 @@ class Singleton(type):
     """
 
     class InstanceValue:
-        _value: Any
-        _deleted: bool
+        __value: Any
+        __deleted: bool
 
         def __init__(self, value: Any) -> None:  # pyright: ignore[reportMissingSuperCall]
-            self._value = value
-            self._deleted = False
+            self.__value = value
+            self.__deleted = False
 
-        def __get__(
-            self,
-            obj: _SingletonType | None,
-            objtype: type[_SingletonType] | None = None,
-        ):
-            if obj is not None:
-                return getattr(obj, "_value")
-            return self
+        @property
+        def value(self):
+            return self.__value
 
-        def delete(self):
-            object.__setattr__(self, "_deleted", True)
+        @value.deleter
+        def value(self):
+            self.__deleted = True
+
+        @property
+        def deleted(self):
+            return self.__deleted
 
     def __new__(
         cls: "type[Singleton]",
@@ -98,9 +101,9 @@ class Singleton(type):
                 def __getattribute__(self: _SingletonType, name: str) -> Any:
                     value = super(cls, self).__getattribute__(name)
                     if isinstance(value, Singleton.InstanceValue):
-                        if value._deleted:
+                        if value.deleted:
                             raise AttributeError(self, name)
-                        return value._value
+                        return value.value
                     return value
 
                 def __setattr__(self: _SingletonType, name: str, value: Any):
@@ -124,7 +127,7 @@ class Singleton(type):
 
                     value = super(cls, self).__getattribute__(name)
                     if isinstance(value, Singleton.InstanceValue):
-                        value._deleted = True
+                        del value.value
                     else:
                         object.__delattr__(self, name)
 
@@ -134,9 +137,8 @@ class Singleton(type):
 
             return _instance
 
-        if _block_change is None:
-            block_change = getattr(_new_type, BLOCK_CHANGE_ATTR_NAME, True)
-            _block_change = block_change is None or block_change is not False
-            cls._block_change = _block_change
+        block_change = getattr(_new_type, BLOCK_CHANGE_ATTR_NAME, True)
+        _block_change = block_change is None or block_change is not False
+        cls._block_change = _block_change
         _new_type.__new__ = __new__
         return _new_type

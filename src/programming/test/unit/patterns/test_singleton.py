@@ -13,6 +13,16 @@ def test__multiple_instantiation_returns_same_instance():
     assert Foo() == Foo()
 
 
+@pytest.mark.parametrize("block_change", [True, False, None])
+def test__multiple_instantiation_returns_same_instance_when_block_change_declared(
+    block_change: bool | None,
+):
+    class Foo(metaclass=Singleton):
+        _block_change = block_change
+
+    assert Foo() == Foo()
+
+
 def test__prevents_attribute_changes_by_default():
     class Foo(metaclass=Singleton):
         x: int = 123
@@ -104,7 +114,7 @@ def test__allows_attribute_changes_when_configured_with_non_blocking_value_when_
     assert Foo.x == 123
 
 
-def test__allows_attribute_deletion_when_configured_with_non_blocking_value_when_block_change_is_false():
+def test__allows_attribute_deletion_when_configured_with_non_blocking_value():
     class Foo(metaclass=Singleton):
         _block_change = False
         x: int = 123
@@ -138,8 +148,10 @@ def test__raises_attribute_error_when_deleted_attribute_is_accessed_when_block_c
         getattr(foo, "x")
 
 
-@pytest.mark.parametrize("block_change", [True, False])
-def test__prevents_arbitrary_class_attribute_deletion_on_instances(block_change: bool):
+@pytest.mark.parametrize("block_change", [True, False, None])
+def test__prevents_arbitrary_class_attribute_deletion_on_instances(
+    block_change: bool | None,
+):
     class Foo(metaclass=Singleton):
         _block_change = block_change
         _arbitrary = True
@@ -147,7 +159,7 @@ def test__prevents_arbitrary_class_attribute_deletion_on_instances(block_change:
     foo = Foo()
 
     # when _block_change is True, deletion is ignored
-    if block_change:
+    if block_change or block_change is None:
         del foo._arbitrary
         delattr(foo, "_arbitrary")
     else:
@@ -161,8 +173,10 @@ def test__prevents_arbitrary_class_attribute_deletion_on_instances(block_change:
     assert hasattr(Foo, "_arbitrary")
 
 
-@pytest.mark.parametrize("block_change", [True, False])
-def test__allows_arbitrary_class_attribute_deletion_on_classes(block_change: bool):
+@pytest.mark.parametrize("block_change", [True, False, None])
+def test__allows_arbitrary_class_attribute_deletion_on_classes(
+    block_change: bool | None,
+):
     class Foo(metaclass=Singleton):
         _block_change = block_change
         _arbitrary = True
@@ -176,3 +190,23 @@ def test__allows_arbitrary_class_attribute_deletion_on_classes(block_change: boo
 
     assert not hasattr(foo, "_arbitrary")
     assert not hasattr(Foo, "_arbitrary")
+
+
+@pytest.mark.parametrize("block_change", [True, False, None])
+def test__allows_or_prevents_arbitrary_instance_attribute_without_setting_class_attribute(
+    block_change: bool | None,
+):
+    class Foo(metaclass=Singleton):
+        _block_change = block_change
+
+    foo = Foo()
+
+    setattr(foo, "y", 123)
+
+    if block_change or block_change is None:
+        assert not hasattr(foo, "y")
+    else:
+        assert hasattr(foo, "y")
+        assert getattr(foo, "y") == 123
+
+    assert not hasattr(Foo, "y")
