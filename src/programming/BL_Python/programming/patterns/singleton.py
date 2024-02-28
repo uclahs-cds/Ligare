@@ -6,6 +6,7 @@
 
 # pyright: reportPrivateUsage=false
 
+import types
 from typing import Any, NewType, Type, cast
 
 
@@ -54,7 +55,7 @@ class Singleton(type):
         _value: Any
         _deleted: bool
 
-        def __init__(self, value: Any) -> None:
+        def __init__(self, value: Any) -> None:  # pyright[reportMissingSuperCall]
             self._value = value
             self._deleted = False
 
@@ -71,30 +72,27 @@ class Singleton(type):
             object.__setattr__(self, "_deleted", True)
 
     def __new__(
-        cls: type,
+        cls: "type[Singleton]",
         cls_name: str,
         bases: tuple[Type[Any]],
         members: dict[str, Any],
     ):
         _new_type: Type[Any] = type(cls_name, bases, members)
         _instance: _SingletonType | None = None
+        BLOCK_CHANGE_ATTR_NAME = "_block_change"
+        _block_change: bool | None = None
 
         def __new__(cls: Any, *args: Any, **kwargs: Any):
             nonlocal _instance
-
-            block_change_attr_name = "_block_change"
 
             if _instance is None:
                 _instance = cast(Any, super(_new_type, cls)).__new__(cls)
                 child_init = _instance.__init__
 
                 def __init__(cls: _SingletonType, *args: Any, **kwargs: Any):
-                    child_init(*args, **kwargs)
-                    block_change = getattr(cls, block_change_attr_name, None)
+                    nonlocal _block_change
 
-                    cls._block_change = (
-                        block_change is None or block_change is not False
-                    )
+                    child_init(*args, **kwargs)
 
                 _new_type.__init__ = __init__
 
@@ -107,7 +105,11 @@ class Singleton(type):
                     return value
 
                 def __setattr__(self: _SingletonType, name: str, value: Any):
-                    if hasattr(self, block_change_attr_name) and self._block_change:
+                    nonlocal _block_change
+
+                    if _block_change or (
+                        hasattr(self, BLOCK_CHANGE_ATTR_NAME) and self._block_change
+                    ):
                         return
 
                     if hasattr(cls, name):
@@ -116,14 +118,26 @@ class Singleton(type):
                         object.__setattr__(self, name, Singleton.InstanceValue(value))
 
                 def __delattr__(self: _SingletonType, name: str):
-                    if hasattr(self, block_change_attr_name):
-                        if self.__getattribute__(block_change_attr_name):
-                            return
-                    object.__delattr__(self, name)
+                    nonlocal _block_change
+
+                    if _block_change or getattr(self, BLOCK_CHANGE_ATTR_NAME, True):
+                        return
+
+                    value = super(cls, self).__getattribute__(name)
+                    if isinstance(value, Singleton.InstanceValue):
+                        value._deleted = True
+                    else:
+                        object.__delattr__(self, name)
 
                 _new_type.__setattr__ = __setattr__
                 _new_type.__delattr__ = __delattr__
+                _new_type.__getattribute__ = __getattribute__
+
             return _instance
 
+        if _block_change is None:
+            block_change = getattr(_new_type, BLOCK_CHANGE_ATTR_NAME, True)
+            _block_change = block_change is None or block_change is not False
+            cls._block_change = _block_change
         _new_type.__new__ = __new__
         return _new_type
