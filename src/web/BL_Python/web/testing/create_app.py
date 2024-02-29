@@ -251,6 +251,7 @@ class CreateApp:
         mocker: MockerFixture,
         openapi_mock_controller: OpenAPIMockController,
     ) -> OpenAPIAppInjector:
+        _ = mocker.patch("BL_Python.web.application.json_logging")
         openapi_mock_controller.begin()
         return next(self.__get_openapi_app(openapi_config, mocker))
 
