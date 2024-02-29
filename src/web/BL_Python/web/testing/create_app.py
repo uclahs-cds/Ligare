@@ -246,8 +246,12 @@ class CreateApp:
 
     @pytest.fixture()
     def _get_openapi_app(
-        self, openapi_config: Config, mocker: MockerFixture
+        self,
+        openapi_config: Config,
+        mocker: MockerFixture,
+        openapi_mock_controller: OpenAPIMockController,
     ) -> OpenAPIAppInjector:
+        openapi_mock_controller.begin()
         return next(self.__get_openapi_app(openapi_config, mocker))
 
     def _flask_client(
