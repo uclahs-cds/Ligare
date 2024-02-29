@@ -249,7 +249,7 @@ class TestCreateApp(CreateApp):
         connexion_mock = mocker.patch("BL_Python.web.application.FlaskApp")
 
         app_name = f"{TestCreateApp.test__configure_openapi__creates_flask_app_using_config.__name__}-app_name"
-        spec_path = "."
+        spec_path = ".."
 
         _ = configure_openapi(
             Config(

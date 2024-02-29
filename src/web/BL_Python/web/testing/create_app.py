@@ -196,7 +196,7 @@ class CreateApp:
     def _openapi_config(self) -> Config:
         config = self._basic_config()
         cast(FlaskConfig, config.flask).openapi = FlaskOpenApiConfig(
-            spec_path="config.toml", use_swagger=False
+            spec_path="openapi.yaml", use_swagger=False
         )
         return config
 
@@ -222,7 +222,7 @@ class CreateApp:
             app = App[Flask].create()
             yield app.app_injector
 
-    def __get_openapi_app(
+    def _get_real_openapi_app(
         self, config: Config, mocker: MockerFixture
     ) -> Generator[OpenAPIAppInjector, Any, None]:
         # prevents the creation of a Connexion application
@@ -253,7 +253,7 @@ class CreateApp:
     ) -> OpenAPIAppInjector:
         _ = mocker.patch("BL_Python.web.application.json_logging")
         openapi_mock_controller.begin()
-        return next(self.__get_openapi_app(openapi_config, mocker))
+        return next(self._get_real_openapi_app(openapi_config, mocker))
 
     def _flask_client(
         self, flask_app_getter: AppGetter[Flask]
@@ -377,7 +377,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
         self, mocker: MockerFixture
     ) -> OpenAPIClientInjectorConfigurable:
         return self._client_configurable(
-            mocker, self.__get_openapi_app, self._openapi_client
+            mocker, self._get_real_openapi_app, self._openapi_client
         )
 
     def _flask_request(
@@ -555,7 +555,7 @@ paths:
             ("toml.decoder.loads", {}),
             ("BL_Python.web.application._import_blueprint_modules", []),
             ("BL_Python.web.application._get_program_dir", "."),
-            ("BL_Python.web.application._get_exec_dir", "."),
+            ("BL_Python.web.application._get_exec_dir", ".."),
         ]
 
         for mock_target in mock_targets:
