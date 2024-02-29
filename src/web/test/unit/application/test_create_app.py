@@ -8,12 +8,11 @@ from BL_Python.programming.config import AbstractConfig
 from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import App, configure_blueprint_routes, configure_openapi
 from BL_Python.web.config import Config, FlaskConfig, FlaskOpenApiConfig
+from BL_Python.web.testing.create_app import CreateApp, FlaskClientInjectorConfigurable
 from flask import Blueprint, Flask
 from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
-
-from ..create_app import CreateApp, FlaskClientInjectorConfigurable
 
 
 class TestCreateApp(CreateApp):

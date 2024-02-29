@@ -10,18 +10,17 @@ from BL_Python.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
-from connexion import FlaskApp
-from flask import Flask, abort
-from mock import MagicMock
-from pytest_mock import MockerFixture
-from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
-
-from ..create_app import (
+from BL_Python.web.testing.create_app import (
     CreateApp,
     OpenAPIClientInjectorConfigurable,
     OpenAPIMockController,
     RequestConfigurable,
 )
+from connexion import FlaskApp
+from flask import Flask, abort
+from mock import MagicMock
+from pytest_mock import MockerFixture
+from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
 
 class TestOpenAPIMiddleware(CreateApp):

@@ -7,8 +7,7 @@ from BL_Python.programming.patterns.singleton import Singleton
 
 
 def test__multiple_instantiation_returns_same_instance():
-    class Foo(metaclass=Singleton):
-        ...
+    class Foo(metaclass=Singleton): ...
 
     assert Foo() == Foo()
 

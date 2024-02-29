@@ -4,8 +4,7 @@ from injector import Injector
 
 
 def test__ConfigModule__injector_binds_Config_module_to_AbstractConfig_by_default():
-    class FooConfig(AbstractConfig):
-        ...
+    class FooConfig(AbstractConfig): ...
 
     foo_config = FooConfig()
     config_module = ConfigModule(foo_config)

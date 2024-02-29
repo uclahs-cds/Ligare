@@ -12,11 +12,14 @@ from BL_Python.web.middleware.consts import (
     OUTGOING_RESPONSE_MESSAGE,
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
+from BL_Python.web.testing.create_app import (
+    CreateApp,
+    FlaskClientInjector,
+    FlaskClientInjectorConfigurable,
+)
 from flask import Flask, Response
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
-
-from ..create_app import CreateApp, FlaskClientInjector, FlaskClientInjectorConfigurable
 
 
 class TestApiResponseHandlers(CreateApp):
