@@ -2,7 +2,7 @@ import uuid
 from typing import Literal
 
 import pytest
-from BL_Python.web.application import OpenAPIAppInjector
+from BL_Python.web.application import OpenAPIAppResult
 from BL_Python.web.config import Config
 from BL_Python.web.middleware import bind_errorhandler
 from BL_Python.web.middleware.consts import CORRELATION_ID_HEADER
@@ -168,7 +168,6 @@ class TestOpenAPIMiddleware(CreateApp):
     def test__bind_errorhandler__binds_flask_errorhandler(
         self,
         code_or_exception: type[Exception] | int,
-        # openapi_client: OpenAPIClientInjector,
         openapi_config: Config,
         openapi_client_configurable: OpenAPIClientInjectorConfigurable,
         openapi_mock_controller: OpenAPIMockController,
@@ -176,8 +175,8 @@ class TestOpenAPIMiddleware(CreateApp):
     ):
         flask_errorhandler_mock = mocker.patch("flask.Flask.errorhandler")
 
-        def app_init_hook(app: OpenAPIAppInjector):
-            _ = bind_errorhandler(app.app, code_or_exception)
+        def app_init_hook(app: OpenAPIAppResult):
+            _ = bind_errorhandler(app.app_injector.app, code_or_exception)
 
         openapi_mock_controller.begin()
         _ = openapi_client_configurable(openapi_config, app_init_hook)
