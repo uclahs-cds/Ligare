@@ -25,6 +25,7 @@ from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import (
     App,
     AppInjector,
+    CreateAppResult,
     FlaskAppInjector,
     OpenAPIAppInjector,
     T_app,
@@ -71,7 +72,7 @@ class AppGetter(Protocol[T_app]):
     and returns the application with its IoC container.
     """
 
-    def __call__(self) -> AppInjector[T_app]: ...
+    def __call__(self) -> AppInjector[T_app] | CreateAppResult[T_app]: ...
 
 
 TAppInitHook = Callable[[AppInjector[T_app]], None] | None
@@ -180,12 +181,15 @@ class OpenAPIMockController(MockController):
 
 
 class CreateApp:
+    app_name: str = "test_app"
+    auto_mock_dependencies: bool = True
+
     _automatic_mocks: dict[str, MagicMock] = defaultdict()
 
     def _basic_config(self) -> Config:
         return Config(
             flask=FlaskConfig(
-                app_name="test_app",
+                app_name=self.app_name,
                 env="Testing",
                 session=FlaskSessionConfig(
                     cookie=FlaskSessionCookieConfig(secret_key=get_random_str())
@@ -301,18 +305,22 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
         with ExitStack() as stack:
             result = flask_app_getter()
 
-            if not isinstance(result, AppInjector) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
-                result.app, FlaskApp
-            ):
+            if isinstance(result, AppInjector) and isinstance(result.app, FlaskApp):  # pyright: ignore[reportUnnecessaryIsInstance]
+                result = CreateAppResult[FlaskApp](
+                    flask_app=result.app.app,
+                    app_injector=AppInjector(
+                        app=result.app, flask_injector=result.flask_injector
+                    ),
+                )
+            elif not isinstance(result, CreateAppResult):
                 raise Exception(
                     f"""This fixture created a `{type(result)}.{type(result.app) if getattr(result, "app", None) else "None"}` application, but is only meant for `{FlaskApp}`.
 Ensure either that [openapi] is set in the [flask] config, or use the `flask_client` fixture."""
                 )
-            app = result.app
-            app.add_middleware(
+            result.app_injector.app.add_middleware(
                 TrustedHostMiddleware, allowed_hosts=["localhost", "localhost:5000"]
             )
-            client = stack.enter_context(app.test_client())
+            client = stack.enter_context(result.app_injector.app.test_client())
             # TODO OpenAPI requires more work before sessions are working. Flask can use this code, but BL_Python.web doesn't support sessions yet anyway.
             # client.cookies.set(
             #    cast(str, app.config["SESSION_COOKIE_NAME"]),
@@ -329,7 +337,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
             #                )
             # pass
             # app = cast(Flask, client.app.app)
-            yield ClientInjector(client, result.flask_injector)
+            yield ClientInjector(client, result.app_injector.flask_injector)
 
     @pytest.fixture()
     def flask_client(
@@ -376,6 +384,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
     def openapi_client_configurable(
         self, mocker: MockerFixture
     ) -> OpenAPIClientInjectorConfigurable:
+        _ = mocker.patch("BL_Python.web.application.json_logging")
         return self._client_configurable(
             mocker, self._get_real_openapi_app, self._openapi_client
         )
@@ -558,16 +567,17 @@ paths:
             ("BL_Python.web.application._get_exec_dir", ".."),
         ]
 
-        for mock_target in mock_targets:
-            if len(mock_target) == 1:
-                (target_name,) = mock_target
-                mock = mocker.patch(target_name)
-            else:
-                (target_name, return_value) = mock_target
-                mock = mocker.patch(target_name)
-                mock.return_value = return_value
+        if self.auto_mock_dependencies:
+            for mock_target in mock_targets:
+                if len(mock_target) == 1:
+                    (target_name,) = mock_target
+                    mock = mocker.patch(target_name)
+                else:
+                    (target_name, return_value) = mock_target
+                    mock = mocker.patch(target_name)
+                    mock.return_value = return_value
 
-            self._automatic_mocks[target_name] = mock
+                self._automatic_mocks[target_name] = mock
 
         return log_formatters
 
