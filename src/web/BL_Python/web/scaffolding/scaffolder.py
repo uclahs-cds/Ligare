@@ -302,7 +302,7 @@ class Scaffolder:
             )
             # set a test module-specific "meta" config for
             # use by whatever templates this loop will render
-            self._config_dict["module"]["test"]["meta"] = config
+            self._config_dict["meta"] = config
 
             self._render_template(
                 template_name,

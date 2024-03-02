@@ -1,0 +1,52 @@
+from BL_Python.web.testing.create_app import CreateApp
+from {{application.module_name}} import create_app
+
+{% if module.database %}
+from {{application.module_name}}.modules.database import {{meta.operation.module_name.capitalize()}}
+from sqlalchemy.orm import Session
+{% endif %}
+
+from pytest_mock import MockerFixture
+
+BASIC_REQUEST_HEADERS = {"Host": "localhost:5000"}
+
+
+class TestApp(CreateApp):
+    app_name: str = "{{application.module_name}}"
+    auto_mock_dependencies: bool = False
+
+    def test__{{application.module_name}}__application_starts(self):
+        _app = self.get_app(create_app)
+
+        assert _app.client.app.app.name == "{{application.module_name}}"
+
+{% if module.database %}
+    def test__{{meta.operation.module_name}}__post__stores_data_in_{{meta.operation.module_name}}_table(self):
+        _app = self.get_app(create_app)
+        client = _app.client
+
+        test_post_data = {"name": "test"}
+
+        post_response = client.post(
+            "/{{meta.operation.module_name}}", json=test_post_data, headers=BASIC_REQUEST_HEADERS
+        )
+        session = _app.injector.injector.get(Session)
+        _{{meta.operation.module_name}} = session.query({{meta.operation.module_name.capitalize()}}).one()
+
+        assert post_response.status_code == 201
+        assert _{{meta.operation.module_name}}.id == 1
+        assert _{{meta.operation.module_name}}.name == test_post_data["name"]
+
+    def test__{{meta.operation.module_name}}__get__returns_stored_data(self):
+        _app = self.get_app(create_app)
+        client = _app.client
+
+        test_post_data = {"name": "test"}
+        test_get_data = {"names": [test_post_data["name"]]}
+
+        _ = client.post("/{{meta.operation.module_name}}", json=test_post_data, headers=BASIC_REQUEST_HEADERS)
+        get_response = client.get("/{{meta.operation.module_name}}", headers=BASIC_REQUEST_HEADERS)
+
+        assert get_response.status_code == 200
+        assert get_response.json() == test_get_data
+{% endif %}
