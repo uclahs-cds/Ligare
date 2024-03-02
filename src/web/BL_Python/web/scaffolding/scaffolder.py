@@ -52,7 +52,7 @@ class Operation:
 class ScaffoldEndpoint:
     operation: Operation
     # This is Flask's default hostname.
-    hostname: str = "http://127.0.0.1:5000"
+    hostname: str = "http://localhost:5000"
 
 
 @dataclass
@@ -211,14 +211,30 @@ class Scaffolder:
         with `<output directory>/template_directory_prefix`.
         Only files ending with `.j2` are rendered.
         """
+        META_TEMPLATE_NAME = "__meta__.j2"
         # render the base templates
-        for template_name in env.list_templates(extensions=["j2"]):
+        templates = env.list_templates(extensions=["j2"])
+        # if a module have a `__meta__.j2` file, then
+        # that module is responsible for rendering its
+        # own templates.
+        # the template name will be without its parent directory
+        # because the module renderer uses the module
+        # template directory as the root directory.
+        if META_TEMPLATE_NAME in templates:
             self._render_template(
-                template_name,
+                META_TEMPLATE_NAME,
                 env,
                 template_directory_prefix=template_directory_prefix,
                 overwrite_existing_files=overwrite_existing_files,
             )
+        else:
+            for template_name in templates:
+                self._render_template(
+                    template_name,
+                    env,
+                    template_directory_prefix=template_directory_prefix,
+                    overwrite_existing_files=overwrite_existing_files,
+                )
 
     #    # These are used to aid in discovering files that are
     #    # part of the BL_Python.web module. Relative path lookups
@@ -266,6 +282,37 @@ class Scaffolder:
                 # method will be called.
                 module_var(self._config_dict, self._log)
 
+    def render_module_template(
+        self,
+        module: ScaffoldModule,
+        module_template_directory: Path,
+        overwrite_existing_files: bool = True,
+    ):
+        def _render_module_template(
+            template_name: str,
+            config: dict[Any, Any],
+        ):
+            meta_module_env = Environment(
+                trim_blocks=True,
+                lstrip_blocks=True,
+                loader=PackageLoader(
+                    "BL_Python.web",
+                    str(Path(module_template_directory, "templates")),
+                ),
+            )
+            # set a test module-specific "meta" config for
+            # use by whatever templates this loop will render
+            self._config_dict["module"]["test"]["meta"] = config
+
+            self._render_template(
+                template_name,
+                meta_module_env,
+                template_directory_prefix=f"{self._config.application.module_name}/modules/{module.module_name}",
+                overwrite_existing_files=overwrite_existing_files,
+            )
+
+        return _render_module_template
+
     def _scaffold_modules(self, overwrite_existing_files: bool = True):
         """
         Render any modules configured to render.
@@ -280,16 +327,44 @@ class Scaffolder:
         for module in self._config.modules:
             # module templates are stored under `optional/`
             # because we don't always want to render any given module.
-            module_template_directory = f"scaffolding/templates/optional/{{{{application.module_name}}}}/modules/{module.module_name}"
+            module_template_directory = Path(
+                f"scaffolding/templates/optional/{{{{application.module_name}}}}/modules/{module.module_name}"
+            )
             # executed module hooks before any rendering is done
             # so the hooks can modify the config or do other
             # work if it's needed.
-            self._execute_module_hooks(module_template_directory)
+            self._execute_module_hooks(str(module_template_directory))
 
-            module_env = Environment(
-                trim_blocks=True,
-                lstrip_blocks=True,
-                loader=PackageLoader("BL_Python.web", str(module_template_directory)),
+            # all modules contain templates under templates/
+            # but only modules with __meta__.j2 control how
+            # their own templates are rendered.
+            if self._provider.has_resource(  # pyright: ignore[reportUnknownMemberType]
+                str(Path(module_template_directory, "__meta__.j2"))
+            ):
+                module_env = Environment(
+                    trim_blocks=True,
+                    lstrip_blocks=True,
+                    loader=PackageLoader(
+                        "BL_Python.web", str(Path(module_template_directory))
+                    ),
+                )
+            else:
+                module_env = Environment(
+                    trim_blocks=True,
+                    lstrip_blocks=True,
+                    loader=PackageLoader(
+                        "BL_Python.web",
+                        str(Path(module_template_directory, "templates")),
+                    ),
+                )
+
+            # this is necessary to overwrite for every module
+            # because the directory and module config are
+            # unique for each one.
+            module_env.globals["render_module_template"] = self.render_module_template(  # pyright: ignore[reportArgumentType]
+                module=module,
+                module_template_directory=module_template_directory,
+                overwrite_existing_files=overwrite_existing_files,
             )
 
             self._scaffold_directory(

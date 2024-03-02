@@ -1,0 +1,3 @@
+{% for operation in endpoints|map(attribute="operation") %}
+{{ render_module_template("test_{{module.test.meta.operation.module_name}}.py.j2", {"operation":operation} ) }}
+{% endfor %}

@@ -28,7 +28,7 @@ class ScaffoldInputArgs(Namespace):
     name: Operation  # pyright: ignore[reportUninitializedInstanceVariable]
     endpoints: list[Operation] | None = None
     template_type: Literal["basic", "openapi"] = "basic"
-    modules: list[Literal["database"]] | None = None
+    modules: list[Literal["database", "test"]] | None = None
     output_directory: str | None = None
 
 
@@ -38,7 +38,7 @@ class ScaffoldParsedArgs(NamedTuple):
     name: Operation
     endpoints: list[Operation]
     template_type: Literal["basic", "openapi"]
-    modules: list[Literal["database"]] | None
+    modules: list[Literal["database", "test"]] | None
     output_directory: str
 
 
@@ -98,7 +98,7 @@ class ScaffolderCli:
             default="basic",
             help="The type of template to scaffold.",
         )
-        modules = ["database"]
+        modules = ["database", "test"]
         _ = create_parser.add_argument(
             "-m",
             choices=modules,
