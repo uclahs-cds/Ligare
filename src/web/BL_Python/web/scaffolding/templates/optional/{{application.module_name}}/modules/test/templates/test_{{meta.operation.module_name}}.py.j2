@@ -1,12 +1,12 @@
 from BL_Python.web.testing.create_app import CreateApp
 from {{application.module_name}} import create_app
+from BL_Python.web.testing.config import UseInmemoryDatabase
 
 {% if module.database %}
 from {{application.module_name}}.modules.database import {{meta.operation.module_name.capitalize()}}
 from sqlalchemy.orm import Session
 {% endif %}
 
-from pytest_mock import MockerFixture
 
 BASIC_REQUEST_HEADERS = {"Host": "localhost:5000"}
 
@@ -21,7 +21,7 @@ class TestApp(CreateApp):
         assert _app.client.app.app.name == "{{application.module_name}}"
 
 {% if module.database %}
-    def test__{{meta.operation.module_name}}__post__stores_data_in_{{meta.operation.module_name}}_table(self):
+    def test__{{meta.operation.module_name}}__post__stores_data_in_{{meta.operation.module_name}}_table(self, use_inmemory_database: UseInmemoryDatabase):
         _app = self.get_app(create_app)
         client = _app.client
 
@@ -37,7 +37,7 @@ class TestApp(CreateApp):
         assert _{{meta.operation.module_name}}.id == 1
         assert _{{meta.operation.module_name}}.name == test_post_data["name"]
 
-    def test__{{meta.operation.module_name}}__get__returns_stored_data(self):
+    def test__{{meta.operation.module_name}}__get__returns_stored_data(self, use_inmemory_database: UseInmemoryDatabase):
         _app = self.get_app(create_app)
         client = _app.client
 
