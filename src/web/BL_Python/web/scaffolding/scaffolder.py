@@ -134,6 +134,7 @@ class Scaffolder:
         template_config: dict[str, Any] | None = None,
         template: Template | None = None,
         overwrite_existing_files: bool = True,
+        write_rendered_template: bool = True,
     ):
         """
         Render a template that can either be found by name in
@@ -154,6 +155,8 @@ class Scaffolder:
             in the template environment.
         :param overwrite_existing_files: If True, any existing files will be overwritten. If False, the template will not be rendered, and
             the file at the output location will not be overwritten.
+        :param write_rendered_template: If True, the template will be written to the filesystem. If False, the template will be rendered, but
+            not output anywhere.
         """
         if template_config is None:
             template_config = self._config_dict
@@ -195,9 +198,14 @@ class Scaffolder:
         if not template:
             template = template_environment.get_template(template_name)
 
-        template.stream(  # pyright: ignore[reportUnknownMemberType]
-            **template_config
-        ).dump(str(template_output_path))
+        if write_rendered_template:
+            template.stream(  # pyright: ignore[reportUnknownMemberType]
+                **template_config
+            ).dump(str(template_output_path))
+        else:
+            template_stream = template.stream(**template_config)
+            while next(template_stream, None):
+                pass
 
     def _scaffold_directory(
         self,
@@ -226,6 +234,7 @@ class Scaffolder:
                 env,
                 template_directory_prefix=template_directory_prefix,
                 overwrite_existing_files=overwrite_existing_files,
+                write_rendered_template=False,
             )
         else:
             for template_name in templates:
