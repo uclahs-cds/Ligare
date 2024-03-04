@@ -298,6 +298,9 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
 
             yield ClientInjector(client, result.app_injector.flask_injector)
 
+    def get_app(self, flask_app_getter: AppGetter[FlaskApp]):
+        return next(self._openapi_client(flask_app_getter))
+
     def _openapi_client(
         self, flask_app_getter: AppGetter[FlaskApp]
     ) -> Generator[OpenAPIClientInjector, Any, None]:
@@ -312,7 +315,8 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
 Ensure either that [openapi] is set in the [flask] config, or use the `flask_client` fixture."""
                 )
             result.app_injector.app.add_middleware(
-                TrustedHostMiddleware, allowed_hosts=["localhost", "localhost:5000"]
+                TrustedHostMiddleware,
+                allowed_hosts=["localhost", "localhost:5000"],
             )
             client = stack.enter_context(result.app_injector.app.test_client())
             # TODO OpenAPI requires more work before sessions are working. Flask can use this code, but BL_Python.web doesn't support sessions yet anyway.

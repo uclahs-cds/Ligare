@@ -1,4 +1,5 @@
 import logging
+import re
 from dataclasses import asdict
 from typing import Any, cast
 
@@ -202,19 +203,10 @@ def test__parse_args__disallows_duplicated_endpoint_names(
 
 
 @pytest.mark.parametrize("mode", ["create", "modify"])
-def test__parse_args__disallows_endpoints_with_same_name_as_application(
-    mode: str, capsys: CaptureFixture[str]
-):
-    with pytest.raises(SystemExit) as e:
-        # foo-bar and foo_bar are normalized and are equivalent.
-        # no need to duplicate the name normalization tests; just use the exact values here
-        _ = ScaffolderCli()._parse_args([mode, "-n", "foo-bar", "-e", "foo_bar"])
-    captured = capsys.readouterr()
-    assert e.value.code == 2
-    assert (
-        f"{mode}: error: argument -e: The ['-e'] argument cannot be equivalent to the `name` argument. The value `foo_bar` is equivalent to the value `foo-bar`."
-        in captured.err
-    )
+def test__parse_args__allows_endpoints_with_same_name_as_application(mode: str):
+    # foo-bar and foo_bar are normalized and are equivalent.
+    # no need to duplicate the name normalization tests; just use the exact values here
+    _ = ScaffolderCli()._parse_args([mode, "-n", "foo-bar", "-e", "foo_bar"])
 
 
 @pytest.mark.parametrize("mode", ["create", "modify"])
@@ -289,7 +281,9 @@ def test__parse_args__supports_specific_modules(
     assert module_name in args.modules
 
 
-@pytest.mark.parametrize("mode,module_name", [("create", "DATABASE")])
+@pytest.mark.parametrize(
+    "mode,module_name", [("create", "DATABASE"), ("create", "TEST")]
+)
 def test__parse_args__does_not_lowercase_modules(
     mode: str, module_name: str, capsys: CaptureFixture[str]
 ):
@@ -299,8 +293,11 @@ def test__parse_args__does_not_lowercase_modules(
     captured = capsys.readouterr()
     assert e.value.code == 2
     assert (
-        f"{mode}: error: argument -m: invalid choice: 'DATABASE' (choose from 'database')"
-        in captured.err
+        re.search(
+            rf"{mode}: error: argument -m: invalid choice: '{module_name}' \(choose from.+'{module_name.lower()}'",
+            captured.err,
+        )
+        is not None
     )
 
 
