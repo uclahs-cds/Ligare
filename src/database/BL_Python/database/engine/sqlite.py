@@ -42,7 +42,8 @@ class SQLiteScopedSession(ScopedSession):
             schema_translate_map = {
                 base.__table_args__.get("schema"): None
                 for base in bases
-                if isinstance(base.__table_args__, dict)
+                if hasattr(base, "__table_args__")
+                and isinstance(base.__table_args__, dict)
                 and base.__table_args__.get("schema")
             }
 
@@ -65,7 +66,9 @@ class SQLiteScopedSession(ScopedSession):
             for metadata_base in bases:
                 for table_subclass in metadata_base.__subclasses__():
                     schema: str | None = None
-                    if isinstance(metadata_base.__table_args__, dict):
+                    if hasattr(metadata_base, "__table_args__") and isinstance(
+                        metadata_base.__table_args__, dict
+                    ):
                         schema = metadata_base.__table_args__.get("schema")
 
                     if schema:
