@@ -1,4 +1,5 @@
 from BL_Python.database.config import DatabaseConnectArgsConfig
+from BL_Python.database.types import MetaBase
 
 from .postgresql import PostgreSQLScopedSession
 from .sqlite import SQLiteScopedSession
@@ -16,7 +17,8 @@ class DatabaseEngine:
         echo: bool = False,
         execution_options: dict[str, str] | None = None,
         connect_args: DatabaseConnectArgsConfig | None = None,
-    ):
+        bases: list[type[MetaBase]] | None = None,
+    ) -> SQLiteScopedSession | PostgreSQLScopedSession:
         schema_rindex = connection_string.find(":") if connection_string else -1
         if schema_rindex == -1 or schema_rindex == 0:
             raise ValueError(
@@ -31,9 +33,17 @@ class DatabaseEngine:
                 f"Unsupported connection string used for database engine. {connection_string=}"
             )
 
-        return session_type.create(
+        scoped_session = session_type.create(
             connection_string,
             echo,
             execution_options=execution_options,
             connect_args=connect_args,
+            bases=bases,
         )
+
+        if not scoped_session:
+            raise Exception(
+                f"Unexpected failure when creating scoped session of type `{session_type.__name__}`"
+            )
+
+        return scoped_session

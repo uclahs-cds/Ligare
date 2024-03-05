@@ -2,6 +2,7 @@ from sqlite3 import Connection
 from typing import Any, Callable
 
 from BL_Python.database.config import DatabaseConnectArgsConfig
+from BL_Python.database.types import MetaBase
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import sessionmaker
@@ -18,7 +19,8 @@ class SQLiteScopedSession(ScopedSession):
         echo: bool = False,
         execution_options: dict[str, Any] | None = None,
         connect_args: DatabaseConnectArgsConfig | None = None,
-    ):
+        bases: list[type[MetaBase]] | None = None,
+    ) -> "SQLiteScopedSession":
         """
         Create a new session factory for SQLite.
         """
@@ -33,13 +35,59 @@ class SQLiteScopedSession(ScopedSession):
         if ":memory:" in connection_string:
             poolclass = StaticPool
 
+        if not execution_options:
+            execution_options = {}
+
+        if bases:
+            schema_translate_map = {
+                base.__table_args__.get("schema"): None
+                for base in bases
+                if isinstance(base.__table_args__, dict)
+                and base.__table_args__.get("schema")
+            }
+
+            if schema_translate_map:
+                execution_options["schema_translate_map"] = schema_translate_map
+
         engine = create_engine(
             connection_string,
             echo=echo,
-            execution_options=execution_options or {},
+            execution_options=execution_options,
             connect_args=connect_args.model_dump() if connect_args is not None else {},
             poolclass=poolclass,
         )
+
+        if bases:
+            # SQLite does not have schemas, which are mapped to None above,
+            # however, we can "fake" it by querying table names with periods,
+            # e.g., `SELECT * FROM 'cap.assay'`.
+            # This renames all tables to include the schema name in their name.
+            for metadata_base in bases:
+                for table_subclass in metadata_base.__subclasses__():
+                    schema: str | None = None
+                    if isinstance(metadata_base.__table_args__, dict):
+                        schema = metadata_base.__table_args__.get("schema")
+
+                    if schema:
+                        table_name: str = table_subclass.__tablename__
+                        # If the table has already been renamed, skip it.
+                        if table_name.split(".")[0] == schema:
+                            continue
+
+                        # The type member name needs to be changed to support
+                        # constructs like insert(Assay).
+                        table_subclass.__tablename__ = f"{schema}.{table_name}"
+
+                        for table in metadata_base.metadata.sorted_tables:
+                            # If the table has already been renamed, skip it.
+                            if table.name.split(".")[0] == table.schema:
+                                continue
+
+                            # The metadata name needs to be changed to support most constructs
+                            table.name = f"{table.schema}.{table.name}"
+                            table.fullname = (
+                                f"{table.schema}.{table.schema}.{table.name}"
+                            )
 
         return SQLiteScopedSession(
             sessionmaker(autocommit=False, autoflush=False, bind=engine)

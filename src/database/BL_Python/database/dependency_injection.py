@@ -1,4 +1,5 @@
 from BL_Python.database.engine import DatabaseEngine
+from BL_Python.database.types import MetaBase
 from injector import Binder, CallableProvider, Module, inject, singleton
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import Session
@@ -11,6 +12,8 @@ class ScopedSessionModule(Module):
     """
     Configure SQLAlchemy Session depedencies for Injector.
     """
+
+    _bases: list[type[MetaBase]] | None = None
 
     @override
     def configure(self, binder: Binder) -> None:
@@ -30,6 +33,10 @@ class ScopedSessionModule(Module):
         # It is safe for this method to be called multiple times.
         binder.bind(Session, to=CallableProvider(self._get_session))
 
+    def __init__(self, bases: list[type[MetaBase]] | None = None) -> None:
+        super().__init__()
+        self._bases = bases
+
     @inject
     def _get_scoped_session(self, database_config: DatabaseConfig) -> ScopedSession:
         """
@@ -42,6 +49,7 @@ class ScopedSessionModule(Module):
             database_config.sqlalchemy_echo,
             {},
             database_config.connect_args,
+            bases=self._bases,
         )
 
     @inject

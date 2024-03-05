@@ -4,9 +4,15 @@ import pytest
 from BL_Python.database.engine import DatabaseEngine
 from BL_Python.database.engine.postgresql import PostgreSQLScopedSession
 from BL_Python.database.engine.sqlite import SQLiteScopedSession
+
+# importing the fixtures makes pytest load them
+from BL_Python.database.testing import (
+    mock_postgresql_connection,  # pyright: ignore[reportUnusedImport]
+)
+from BL_Python.database.testing import MockPostgreSQLConnection
 from pytest_mock import MockerFixture
 from sqlalchemy.pool import Pool, StaticPool
-from sqlalchemy.pool.impl import NullPool
+from sqlalchemy.pool.impl import NullPool, QueuePool
 
 
 @pytest.mark.parametrize(
@@ -99,3 +105,27 @@ def test__SQLiteScopedSession__create__enables_foreign_key_constraints():
         "PRAGMA foreign_keys;"  # pyright: ignore[reportArgumentType]
     )
     assert statement.one() == (1,)
+
+
+@pytest.mark.parametrize(
+    "connection_string,connection_pool_type",
+    [
+        ("postgresql://example:example@0.0.0.0:0/example", QueuePool),
+    ],
+)
+def test__PostgreSQLScopedSession__create__uses_correct_connection_pool_type(
+    connection_string: str, connection_pool_type: type[QueuePool]
+):
+    session = PostgreSQLScopedSession.create(connection_string)
+    assert isinstance(session.bind.pool, connection_pool_type)  # type: ignore[reportUnknownMemberType,reportAttributeAccessIssue,reportOptionalMemberAccess]
+
+
+def test__PostgreSQLScopedSession__create__example(
+    mock_postgresql_connection: MockPostgreSQLConnection,
+):
+    connection_string = "postgresql://example:example@0.0.0.0:0/example"
+    session = SQLiteScopedSession.create(connection_string, echo=True)
+    statement = session().execute(
+        "SELECT 1;"  # pyright: ignore[reportArgumentType]
+    )
+    _ = statement.all()
