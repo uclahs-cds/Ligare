@@ -95,7 +95,7 @@ jobs:
           # As such, this will install the latest Pyright, including
           # potentionally breaking changes.
           npm install -g pyright
-          ./install_all.sh -e
+          ./install_all.sh cicd
 
       # TODO see note above about 3rd party dependencies.
       #- name: Save dependency cache
