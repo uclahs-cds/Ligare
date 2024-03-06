@@ -1,3 +1,4 @@
+from importlib.util import find_spec
 from typing import Any, Callable, Union
 
 from BL_Python.database.config import DatabaseConnectArgsConfig
@@ -17,6 +18,11 @@ class PostgreSQLScopedSession(ScopedSession):
         connect_args: DatabaseConnectArgsConfig | None = None,
         bases: list[type[MetaBase]] | None = None,
     ) -> "PostgreSQLScopedSession":
+        if find_spec("psycopg2") is None:
+            raise ModuleNotFoundError(
+                "No module named 'psycopg2'. Install PostgreSQL support through `BL_Python.database[postgres]` or `BL_Python.database[postgres-binary]`."
+            )
+
         engine = create_engine(
             connection_string,
             echo=echo,
