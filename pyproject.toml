@@ -89,7 +89,7 @@ dev-dependencies = [
     # which allows us to catch new types of problems.
     "pyright",
     "isort",
-    "ruff == 0.2.2"
+    "ruff == 0.3.0"
 ]
 
 [tool.pyright]
