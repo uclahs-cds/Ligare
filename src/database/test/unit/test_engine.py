@@ -115,6 +115,7 @@ def test__SQLiteScopedSession__create__enables_foreign_key_constraints():
     assert statement.one() == (1,)
 
 
+@patch.object(MetaData, "reflect", MagicMock())
 @pytest.mark.parametrize(
     "connection_string,connection_pool_type",
     [
@@ -205,7 +206,18 @@ def test__SQLiteScopedSession__create__prepends_schema_to_table_name():
 
 
 @patch.object(MetaData, "reflect", MagicMock())
-def test__ScopedSession__create__correctly_resets_schema_when_using_sqlite_then_postgres(
+@pytest.mark.parametrize(
+    "first_session_type,second_session_type",
+    [
+        (SQLiteScopedSession, PostgreSQLScopedSession),
+        (PostgreSQLScopedSession, SQLiteScopedSession),
+        (SQLiteScopedSession, SQLiteScopedSession),
+        (PostgreSQLScopedSession, PostgreSQLScopedSession),
+    ],
+)
+def test__ScopedSession__create__correctly_resets_schema_when_creating_engine_multiple_times(
+    first_session_type: type[SQLiteScopedSession] | type[PostgreSQLScopedSession],
+    second_session_type: type[SQLiteScopedSession] | type[PostgreSQLScopedSession],
     mock_postgresql_connection: MockPostgreSQLConnection,
 ):
     schema_name = "foo_schema"
@@ -220,37 +232,18 @@ def test__ScopedSession__create__correctly_resets_schema_when_using_sqlite_then_
         __tablename__ = tablename
         foo_id = Column("foo_id", Integer, primary_key=True)
 
-    _ = SQLiteScopedSession.create(SQLITE_TEST_CONNECTION_STR, echo=True, bases=[Base])
-    _ = PostgreSQLScopedSession.create(
+    _ = first_session_type.create(SQLITE_TEST_CONNECTION_STR, echo=True, bases=[Base])
+    _ = second_session_type.create(
         POSTGRESQL_TEST_CONNECTION_STR, echo=True, bases=[Base]
     )
 
-    assert Foo.__tablename__ == tablename
-    assert Foo.__table__.name == tablename  # pyright: ignore[reportUnknownMemberType]
-    assert Foo.__table__.fullname == f"{schema_name}.{tablename}"  # pyright: ignore[reportUnknownMemberType]
-
-
-@patch.object(MetaData, "reflect", MagicMock())
-def test__ScopedSession__create__correctly_resets_schema_when_using_postgres_then_sqlite(
-    mock_postgresql_connection: MockPostgreSQLConnection,
-):
-    schema_name = "foo_schema"
-    tablename = "foo"
-
-    class _Base:
-        __table_args__ = {"schema": schema_name}
-
-    Base = declarative_base(cls=_Base)
-
-    class Foo(Base):  # pyright: ignore[reportUntypedBaseClass]
-        __tablename__ = tablename
-        foo_id = Column("foo_id", Integer, primary_key=True)
-
-    _ = PostgreSQLScopedSession.create(
-        POSTGRESQL_TEST_CONNECTION_STR, echo=True, bases=[Base]
-    )
-    _ = SQLiteScopedSession.create(SQLITE_TEST_CONNECTION_STR, echo=True, bases=[Base])
-
-    assert Foo.__tablename__ == f"{schema_name}.{tablename}"
-    assert Foo.__table__.name == f"{schema_name}.{tablename}"  # pyright: ignore[reportUnknownMemberType]
-    assert Foo.__table__.fullname == f"{schema_name}.{schema_name}.{Foo.__tablename__}"  # pyright: ignore[reportUnknownMemberType]
+    if second_session_type is SQLiteScopedSession:
+        assert Foo.__tablename__ == f"{schema_name}.{tablename}"
+        assert Foo.__table__.name == f"{schema_name}.{tablename}"  # pyright: ignore[reportUnknownMemberType]
+        assert (
+            Foo.__table__.fullname == f"{schema_name}.{schema_name}.{Foo.__tablename__}"  # pyright: ignore[reportUnknownMemberType]
+        )
+    else:
+        assert Foo.__tablename__ == tablename
+        assert Foo.__table__.name == tablename  # pyright: ignore[reportUnknownMemberType]
+        assert Foo.__table__.fullname == f"{schema_name}.{tablename}"  # pyright: ignore[reportUnknownMemberType]

@@ -4,6 +4,7 @@ from typing import Any, Callable
 from BL_Python.database.config import DatabaseConnectArgsConfig
 from BL_Python.database.types import MetaBase
 from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.pool import Pool, StaticPool
@@ -35,7 +36,7 @@ class SQLiteScopedSession(ScopedSession):
         if ":memory:" in connection_string:
             poolclass = StaticPool
 
-        if not execution_options:
+        if not execution_options:  # pragma: nocover
             execution_options = {}
 
         if bases:
@@ -59,42 +60,45 @@ class SQLiteScopedSession(ScopedSession):
         )
 
         if bases:
-            # SQLite does not have schemas, which are mapped to None above,
-            # however, we can "fake" it by querying table names with periods,
-            # e.g., `SELECT * FROM 'cap.assay'`.
-            # This renames all tables to include the schema name in their name.
-            for metadata_base in bases:
-                for table_subclass in metadata_base.__subclasses__():
-                    schema: str | None = None
-                    if hasattr(metadata_base, "__table_args__") and isinstance(
-                        metadata_base.__table_args__, dict
-                    ):
-                        schema = metadata_base.__table_args__.get("schema")
-
-                    if schema:
-                        table_name: str = table_subclass.__tablename__
-                        # If the table has already been renamed, skip it.
-                        if table_name.split(".")[0] == schema:
-                            continue
-
-                        # The type member name needs to be changed to support
-                        # constructs like insert(Assay).
-                        table_subclass.__tablename__ = f"{schema}.{table_name}"
-
-                        for table in metadata_base.metadata.sorted_tables:
-                            # If the table has already been renamed, skip it.
-                            if table.name.split(".")[0] == table.schema:
-                                continue
-
-                            # The metadata name needs to be changed to support most constructs
-                            table.name = f"{table.schema}.{table.name}"
-                            table.fullname = (
-                                f"{table.schema}.{table.schema}.{table.name}"
-                            )
+            SQLiteScopedSession._alter_base_schemas(engine, bases)
 
         return SQLiteScopedSession(
             sessionmaker(autocommit=False, autoflush=False, bind=engine)
         )
+
+    @staticmethod
+    def _alter_base_schemas(engine: Engine, bases: list[type[MetaBase]]):
+        # SQLite does not have schemas, which are mapped to None above,
+        # however, we can "fake" it by querying table names with periods,
+        # e.g., `SELECT * FROM 'cap.assay'`.
+        # This renames all tables to include the schema name in their name.
+        for metadata_base in bases:
+            metadata_base.metadata.reflect(bind=engine)
+            for table_subclass in metadata_base.__subclasses__():
+                schema: str | None = None
+                if hasattr(metadata_base, "__table_args__") and isinstance(
+                    metadata_base.__table_args__, dict
+                ):
+                    schema = metadata_base.__table_args__.get("schema")
+
+                if schema:
+                    table_name: str = table_subclass.__tablename__
+                    # If the table has already been renamed, skip it.
+                    if table_name.split(".")[0] == schema:
+                        continue
+
+                    # The type member name needs to be changed to support
+                    # constructs like insert(Assay).
+                    table_subclass.__tablename__ = f"{schema}.{table_name}"
+
+            for table in metadata_base.metadata.sorted_tables:
+                # If the table has already been renamed, skip it.
+                if table.name.split(".")[0] == table.schema:
+                    continue
+
+                # The metadata name needs to be changed to support most constructs
+                table.name = f"{table.schema}.{table.name}"
+                table.fullname = f"{table.schema}.{table.schema}.{table.name}"
 
     def __init__(
         self,

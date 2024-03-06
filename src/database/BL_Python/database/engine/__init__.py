@@ -41,9 +41,4 @@ class DatabaseEngine:
             bases=bases,
         )
 
-        if not scoped_session:
-            raise Exception(
-                f"Unexpected failure when creating scoped session of type `{session_type.__name__}`"
-            )
-
         return scoped_session
