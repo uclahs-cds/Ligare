@@ -245,12 +245,6 @@ class Scaffolder:
                     overwrite_existing_files=overwrite_existing_files,
                 )
 
-    #    # These are used to aid in discovering files that are
-    #    # part of the BL_Python.web module. Relative path lookups
-    #    # do not work, so they are done using _provider.
-    #    _manager: Any = ResourceManager()
-    #    _provider = get_provider("BL_Python.web")
-
     def _execute_module_hooks(self, module_template_directory: str):
         """
         Modules may have a file named `__hook__.py`. If it exists, it
