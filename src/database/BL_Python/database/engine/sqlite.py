@@ -70,7 +70,7 @@ class SQLiteScopedSession(ScopedSession):
     def _alter_base_schemas(engine: Engine, bases: list[type[MetaBase]]):
         # SQLite does not have schemas, which are mapped to None above,
         # however, we can "fake" it by querying table names with periods,
-        # e.g., `SELECT * FROM 'cap.assay'`.
+        # e.g., `SELECT * FROM 'foo.table'`.
         # This renames all tables to include the schema name in their name.
         for metadata_base in bases:
             metadata_base.metadata.reflect(bind=engine)
