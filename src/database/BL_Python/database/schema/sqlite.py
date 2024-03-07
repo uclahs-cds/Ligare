@@ -7,10 +7,16 @@ from typing_extensions import override
 
 @final
 class SQLiteDialect(DialectBase):
+    DIALECT_NAME = "sqlite"
     _dialect: Dialect
     supports_schemas: bool = False
 
     def __init__(self, dialect: Dialect) -> None:
+        if dialect.name != SQLiteDialect.DIALECT_NAME:
+            raise ValueError(
+                f"Invalid Dialect with name `{dialect.name}` provided for `{SQLiteDialect.__name__}`. Expected `sqlite`."
+            )
+
         self._dialect = dialect
 
     @property
@@ -20,5 +26,5 @@ class SQLiteDialect(DialectBase):
 
     @property
     @override
-    def get_timestamp_sql(self):
+    def timestamp_sql(self):
         return "CURRENT_TIMESTAMP"

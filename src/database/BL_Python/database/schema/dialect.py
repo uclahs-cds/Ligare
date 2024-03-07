@@ -9,7 +9,7 @@ class DialectBase(ABC):
 
     @staticmethod
     def get_schema(meta: MetaBase):
-        table_args = meta.__table_args__
+        table_args = hasattr(meta, "__table_args__") and meta.__table_args__ or None
 
         if isinstance(table_args, dict):
             return table_args.get("schema")
@@ -60,8 +60,8 @@ class DialectBase(ABC):
 
     @property
     @abstractmethod
-    def dialect(self) -> Dialect: ...
+    def dialect(self) -> Dialect: ...  # pragma: nocover
 
     @property
     @abstractmethod
-    def get_timestamp_sql(self) -> str: ...
+    def timestamp_sql(self) -> str: ...  # pragma: nocover
