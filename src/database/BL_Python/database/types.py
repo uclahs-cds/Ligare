@@ -16,7 +16,7 @@ class MetaBase(Protocol):
 
 
 class TableNameCallback(Protocol):
-    def __call__(
+    def __call__(  # pragma: nocover
         self,
         dialect_schema: str | None,
         full_table_name: str,
@@ -29,6 +29,6 @@ class Connection(Protocol):
     dialect: Dialect
 
 
-class Op(Protocol):
+class Op(Protocol):  # pragma: nocover
     @staticmethod
     def get_bind() -> Connection: ...
