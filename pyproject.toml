@@ -83,6 +83,7 @@ dev-dependencies = [
     "pytest-mock",
     "mock",
     "pytest-cov ~= 4.1",
+    "coverage ~= 7.4",
     "pyright ~= 1.1",
     "isort ~= 5.13",
     "ruff ~= 0.3"
