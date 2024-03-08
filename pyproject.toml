@@ -79,17 +79,13 @@ packages = [
 #
 [project.optional-dependencies]
 dev-dependencies = [
-    "pytest",
+    "pytest ~= 8.0",
     "pytest-mock",
     "mock",
-    "pytest-cov",
-
-    # code quality. allow minor version updates.
-    # this can possibly change behavior of quality checks,
-    # which allows us to catch new types of problems.
-    "pyright",
-    "isort",
-    "ruff == 0.2.2"
+    "pytest-cov ~= 4.1",
+    "pyright ~= 1.1",
+    "isort ~= 5.13",
+    "ruff ~= 0.3"
 ]
 
 [tool.pyright]

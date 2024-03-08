@@ -91,11 +91,8 @@ jobs:
           source .github-venv/bin/activate
 
           echo 'prefix=${{ github.workspace }}/node_modules' >> ~/.npmrc
-          # Note that currently pyproject.toml does not specify a version.
-          # As such, this will install the latest Pyright, including
-          # potentionally breaking changes.
-          npm install -g pyright
-          ./install_all.sh -e
+          npm install -g pyright@`pyright --version | awk '{print $2}'`
+          ./install_all.sh cicd
 
       # TODO see note above about 3rd party dependencies.
       #- name: Save dependency cache
