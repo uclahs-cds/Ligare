@@ -49,6 +49,10 @@ get-project-name() {
 
 trap 'spinwait-stop' ERR
 trap 'spinwait-stop; exit' SIGINT SIGTERM
+initialize() {
+    pip install -U build twine
+}
+
 build() {
     dir="$1"
     pushd $dir 1> /dev/null
@@ -84,6 +88,8 @@ declare -a packages=( \
     src/testing \
     src/web
 )
+
+initialize
 
 for package in ${packages[@]}; do
     build $package

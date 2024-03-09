@@ -37,6 +37,11 @@ ifeq ($(GITHUB_WORKSPACE),)
   GITHUB_WORKSPACE := $(CURDIR)
 endif
 
+# Can be overridden. Use "pypi" to publish to production.
+ifeq ($(PYPI_REPO),)
+  PYPI_REPO := testpypi
+endif
+
 
 ACTIVATE_VENV := . $(VENV)/bin/activate
 
@@ -129,6 +134,11 @@ test-pytest :
 
 test : CMD_PREFIX=@
 test : clean-test test-isort test-ruff test-pyright test-pytest
+
+publish-all :
+	$(ACTIVATE_VENV)
+
+	./publish_all.sh $(PYPI_REPO)
 
 clean-build :
 	find . -type d \( \
