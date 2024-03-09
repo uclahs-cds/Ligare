@@ -6,13 +6,13 @@ spinwait_col=
 spinwait() {
     IFS=';'
     # inspiration https://unix.stackexchange.com/a/183121
-    read -sdR -p $'\E[6n' spinwait_row spinwait_col
+    read -sdRr -p $'\E[6n' spinwait_row spinwait_col
     spinwait_row="${spinwait_row#*[}"
 
     s=(\| / - \\)
     i=0
     while true; do
-        tput cup $((spinwait_row-1)) $spinwait_col 2> /dev/null
+        tput cup $((spinwait_row-1)) "$spinwait_col" 2> /dev/null
         echo -en "  ${s[i]}"; i=$(( (i + 1) % ${#s[@]}))
         sleep 0.2
     done &
@@ -21,7 +21,7 @@ spinwait() {
 spinwait-stop() {
     optional_msg=$1
     kill $spinwait_pid 2> /dev/null
-    tput cup $((spinwait_row-1)) $spinwait_col 2> /dev/null
+    tput cup $((spinwait_row-1)) "$spinwait_col" 2> /dev/null
     [ -n "$optional_msg" ] && echo -e "  $optional_msg" || echo -e "   "
 }
 
@@ -55,13 +55,13 @@ initialize() {
 
 build() {
     dir="$1"
-    pushd $dir 1> /dev/null
+    pushd "$dir" 1> /dev/null
     get-project-name
-    echo -n Building $project_name
+    echo -n "Building $project_name"
     spinwait
     rm -rf dist/
     python -m build 1> /dev/null
-    spinwait-stop done
+    spinwait-stop 'done'
     popd 1> /dev/null
 }
 
@@ -70,10 +70,10 @@ publish() {
     local dir="$1"
     local repository
     [ -n "$2" ] && repository="$2" || repository="testpypi"
-    pushd $dir 1> /dev/null
+    pushd "$dir" 1> /dev/null
     get-project-name
-    echo Publishing $project_name to $repository
-    python -m twine upload --repository $repository dist/*
+    echo "Publishing $project_name to $repository"
+    python -m twine upload --repository "$repository" dist/*
     popd 1> /dev/null
 }
 
