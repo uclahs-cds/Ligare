@@ -83,16 +83,12 @@ jobs:
         #if: ${{ success() && (inputs.use_dependency_cache == 'false' || !steps.restore-dependency-cache.outputs.cache-hit) }}
         run: |
           echo Setting up dependencies
-          python -m pip install -U pip
-          python -m pip install toml
+          VENV=.github-venv \
           REWRITE_DEPENDENCIES=${{ inputs.rewrite_dependencies }} \
-            ./.github/workflows/CICD-scripts/pyproject_dependency_rewrite.py
-          ${{ steps.install_python.outputs.python-path }} -m venv .github-venv
-          source .github-venv/bin/activate
+            make cicd
 
           echo 'prefix=${{ github.workspace }}/node_modules' >> ~/.npmrc
           npm install -g pyright@`pyright --version | awk '{print $2}'`
-          ./install_all.sh cicd
 
       # TODO see note above about 3rd party dependencies.
       #- name: Save dependency cache
@@ -141,8 +137,10 @@ jobs:
       - name: Test with pyright
         run: |
           echo Running pyright
-          source ${{ github.workspace }}/.github-venv/bin/activate
-          ./node_modules/bin/pyright
+
+          VENV=.github-venv \
+          PYRIGHT_MODE=npm \
+            make test-pyright
 
   Pytest:
     name: Automated testing
@@ -173,10 +171,10 @@ jobs:
       - name: Test with pytest and generate reports
         run: |
           echo Running pytest
-          source ${{ github.workspace }}/.github-venv/bin/activate
-          pytest -k "not acceptance"
 
-          coverage html
+          VENV=.github-venv \
+          PYTEST_FLAGS="-k 'not acceptance'" \
+            make test-pytest
 
       - name: Output pytest report
         uses: actions/upload-artifact@v4
@@ -187,7 +185,7 @@ jobs:
             pytest.xml
             cov.xml
             .coverage
-            htmlcov/
+            coverage/
           retention-days: 1
           if-no-files-found: error
 
@@ -219,13 +217,13 @@ jobs:
 
       - name: Check code style
         run: |
-          source .github-venv/bin/activate
-          ruff format --preview --respect-gitignore --check
+          VENV=.github-venv \
+            make test-ruff
 
       - name: Check import order
         run: |
-          source .github-venv/bin/activate
-          isort --check-only src
+          VENV=.github-venv \
+            make test-isort
 
   Final-status-check:
     name: Check workflow success
