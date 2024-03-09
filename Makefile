@@ -55,7 +55,7 @@ dev : venv filesystem-deps latest-pip
 
 	pip install -e .[dev-dependencies]
 #	By default, psycopg2 is not installed
-#   but it should be for development
+#	but it should be for development
 	pip install -e src/database[postgres-binary]
 
 #	rm -rf $(PACKAGE_INSTALL_DIR)
@@ -66,7 +66,7 @@ cicd : venv filesystem-deps latest-pip
 
 	pip install .[dev-dependencies]
 #	By default, psycopg2 is not installed
-#   but it should be for CI/CD
+#	but it should be for CI/CD
 	pip install src/database[postgres-binary]
 
 filesystem-deps : venv latest-pip
@@ -113,15 +113,15 @@ test-pyright :
 	$(ACTIVATE_VENV)
 
   ifeq "$(PYRIGHT_MODE)" "pip"
-		pyright
+	pyright
   else
   ifeq "$(PYRIGHT_MODE)" "npm"
-#		this isn't the real install path everywhere,
-#       but this is used for CI/CD
-		./node_modules/bin/pyright
+#	this isn't the real install path everywhere,
+#	but this is used for CI/CD
+	./node_modules/bin/pyright
   else
-		@echo "Invalid PYRIGHT_MODE '$(PYRIGHT_MODE)'"
-		@exit 1
+	@echo "Invalid PYRIGHT_MODE '$(PYRIGHT_MODE)'"
+	@exit 1
   endif
   endif
 
