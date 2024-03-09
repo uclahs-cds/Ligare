@@ -50,6 +50,7 @@ PACKAGE_INSTALL_DIR := $(VENV)/lib/python*/site-packages/BL_Python
 # used to suppress outputs of targets (see `test` and `clean-test`)
 CMD_PREFIX=
 
+
 dev : venv filesystem-deps latest-pip
 	$(ACTIVATE_VENV)
 
@@ -87,6 +88,7 @@ latest-pip : venv
 venv :
 	test -d $(VENV) || env python$(PYTHON_VERSION) -m venv $(VENV)
 
+
 format-isort :
 	$(ACTIVATE_VENV)
 
@@ -98,6 +100,7 @@ format-ruff :
 	ruff format --preview --respect-gitignore
 
 format : format-isort format-ruff
+
 
 test-isort :
 	$(ACTIVATE_VENV)
@@ -131,14 +134,15 @@ test-pytest :
 	pytest $(PYTEST_FLAGS)
 	coverage html -d coverage
 
-
 test : CMD_PREFIX=@
 test : clean-test test-isort test-ruff test-pyright test-pytest
+
 
 publish-all :
 	$(ACTIVATE_VENV)
 
 	./publish_all.sh $(PYPI_REPO)
+
 
 clean-build :
 	find . -type d \( \
