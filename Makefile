@@ -58,7 +58,7 @@ dev : venv filesystem-deps latest-pip
 #	but it should be for development
 	pip install -e src/database[postgres-binary]
 
-#	rm -rf $(PACKAGE_INSTALL_DIR)
+	rm -rf $(PACKAGE_INSTALL_DIR)
 	@echo '\nActivate your venv with `. $(VENV)/bin/activate`'
 
 cicd : venv filesystem-deps latest-pip
