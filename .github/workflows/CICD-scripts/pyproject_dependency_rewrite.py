@@ -24,7 +24,7 @@ module_path = Path(
 )
 spec = importlib.util.spec_from_file_location(programming_module_name, str(module_path))
 if spec is None or not spec.loader:
-    raise Exception(f"Could not module `{programming_module_name}`.")
+    raise Exception(f"Could not find module `{programming_module_name}`.")
 BL_Python_argparse = importlib.util.module_from_spec(spec)
 sys.modules[programming_module_name] = BL_Python_argparse
 spec.loader.exec_module(BL_Python_argparse)
