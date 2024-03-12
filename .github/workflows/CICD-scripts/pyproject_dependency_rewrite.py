@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
+import argparse
+import importlib.util
 import re
+import sys
+from argparse import Namespace
 from glob import glob
 from os import environ, linesep
 from pathlib import Path
@@ -8,6 +12,50 @@ from sys import exit
 from typing import Any
 
 import toml
+
+# Import BL_Python.programming.cli.argparse.
+# This must be done this way as this script is not used within an
+# environment in which BL_Python has been installed, and so
+# the modules cannot be imported the usual way.
+programming_module_name = "BL_Python.programming.cli.argparse"
+module_path = Path(
+    Path(__file__).parent,
+    "../../../src/programming/BL_Python/programming/cli/argparse.py",
+)
+spec = importlib.util.spec_from_file_location(programming_module_name, str(module_path))
+if spec is None or not spec.loader:
+    raise Exception(f"Could not module `{programming_module_name}`.")
+BL_Python_argparse = importlib.util.module_from_spec(spec)
+sys.modules[programming_module_name] = BL_Python_argparse
+spec.loader.exec_module(BL_Python_argparse)
+# finish import
+
+
+class RewriteArgs(Namespace):
+    config: list[Path] | None = None
+
+
+parser = argparse.ArgumentParser(
+    description="""
+This script accepts the following environment variables:
+    - REWRITE_DEPENDENCIES: If true, this script will rewrite dependencies in pyproject.toml files.
+        Otherwise, the script exits.
+    - GITHUB_REF: The Git or GitHub ref triggering the script from a GitHub Action.
+        If this starts with `refs/tags` or is not set, the script exits.
+    - GITHUB_WORKSPACE: The directory the script is running within.
+        If not set, the script exits.
+"""
+)
+_ = parser.add_argument(
+    "-c",
+    "--config",
+    type=Path,
+    action=BL_Python_argparse.PathExists,
+    # action="append",
+    help="The path to the pyproject.toml file to rewrite. If not specified, all pyproject.toml under src/*/pyproject.toml, and pyproject.toml will be processed.",
+    required=False,
+)
+args = parser.parse_args(namespace=RewriteArgs)
 
 BL_PYTHON = "BL_Python"
 WORKFLOW_DISPATCH_REWRITE_DEPENDENCIES = environ.get("REWRITE_DEPENDENCIES") or "true"
@@ -38,9 +86,14 @@ WORKDIR = environ.get("GITHUB_WORKSPACE")
 if WORKDIR is None:
     raise ValueError("GITHUB_WORKSPACE is not set.")
 
-pyproject_files = [str(Path(WORKDIR, "pyproject.toml"))] + glob(
-    str(Path(WORKDIR, "src/*/pyproject.toml"))
-)
+
+pyproject_files: list[str]
+if args.config:
+    pyproject_files = [str(Path(WORKDIR, path)) for path in args.config]
+else:
+    pyproject_files = [str(Path(WORKDIR, "pyproject.toml"))] + glob(
+        str(Path(WORKDIR, "src/*/pyproject.toml"))
+    )
 
 for pyproject_file in pyproject_files:
     print(

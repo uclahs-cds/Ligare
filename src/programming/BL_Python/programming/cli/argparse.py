@@ -6,11 +6,53 @@ from argparse import (
     FileType,
     Namespace,
 )
+from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence, TypeVar
 
 from typing_extensions import override
 
 _T = TypeVar("_T")
+
+
+class PathExists(Action):
+    """
+    Checks if one or more paths specified are valid paths.
+
+    :param PathExists Action: self
+    :raises ArgumentError: Raised when a value is not a path, or the path does not exist.
+    """
+
+    @override
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Path | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
+        attr: list[Any] | None
+        if not (attr := getattr(namespace, self.dest, None)):
+            attr = []
+            setattr(namespace, self.dest, attr)
+
+        if values is None:
+            raise ArgumentError(self, "Path cannot be `None`")
+
+        def _check_path(path: str | Path):
+            _path = Path(path)
+            if not _path.exists():
+                raise ArgumentError(self, f"Path does not exists: `{path}`")
+
+        # check all paths first
+        if isinstance(values, str) or isinstance(values, Path):
+            _check_path(values)
+        else:
+            for value in values:
+                _check_path(value)
+
+        # add the values once all paths are checked
+        attr.append(values)
+        setattr(namespace, self.dest, attr)
 
 
 class DisallowDuplicateValues(Action):
