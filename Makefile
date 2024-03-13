@@ -205,7 +205,8 @@ test : $(VENV) $(DEFAULT_TARGET) clean-test test-isort test-ruff test-pyright te
 
 
 # Publishing should use a real install, which `cicd` fulfills
-publish-all : $(VENV) cicd
+publish-all : REWRITE_DEPENDENCIES=false
+publish-all : reset $(VENV)
 	$(ACTIVATE_VENV)
 
 	./publish_all.sh $(PYPI_REPO)
