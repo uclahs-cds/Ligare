@@ -51,7 +51,6 @@ _ = parser.add_argument(
     "--config",
     type=Path,
     action=BL_Python_argparse.PathExists,
-    # action="append",
     help="The path to the pyproject.toml file to rewrite. If not specified, all pyproject.toml under src/*/pyproject.toml, and pyproject.toml will be processed.",
     required=False,
 )
