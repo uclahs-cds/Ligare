@@ -44,6 +44,7 @@ endif
 
 
 ACTIVATE_VENV := . $(VENV)/bin/activate
+REPORT_VENV_USAGE := echo '\nActivate your venv with `. $(VENV)/bin/activate`'
 
 PACKAGE_INSTALL_DIR := $(VENV)/lib/python*/site-packages/BL_Python
 
@@ -65,8 +66,6 @@ endef
 PYPROJECT_FILES=./pyproject.toml $(wildcard src/*/pyproject.toml)
 PACKAGE_PATHS=$(subst /pyproject.toml,,$(PYPROJECT_FILES))
 PACKAGES=BL_Python.all $(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
-
-REPORT_VENV_USAGE := echo '\nActivate your venv with `. $(VENV)/bin/activate`'
 
 # Rather than duplicating BL_Python.all,
 # just prereq it.
