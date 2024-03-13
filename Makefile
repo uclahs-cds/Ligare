@@ -33,7 +33,7 @@ DEFAULT_TARGET ?= dev
 .DEFAULT_GOAL = $(DEFAULT_TARGET)
 
 define assign_default_target
-	DEFAULT_TARGET := $(1)
+    DEFAULT_TARGET := $(1)
 endef
 
 ifeq ($(DEFAULT_TARGET),dev)
@@ -236,7 +236,7 @@ remake :
 	make
 
 reset-check:
-#   https://stackoverflow.com/a/47839479
+#	https://stackoverflow.com/a/47839479
 	@echo -n "This will make destructive changes! Considering stashing changes first.\n"
 	@( read -p "Are you sure? [y/N]: " response && case "$$response" in [yY]) true;; *) false;; esac )
 
