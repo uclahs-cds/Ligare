@@ -215,6 +215,7 @@ publish-all : reset $(VENV)
 clean-build :
 	find . -type d \( \
 		-name build \
+		-o -name dist \
 		-o -name __pycache__ \
 		-o -name \*.egg-info \
 		-o -name .pytest-cache \
