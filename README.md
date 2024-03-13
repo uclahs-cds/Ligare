@@ -7,7 +7,7 @@ A collection of Python libraries for creating web applications, working with dat
 **🚩** `BL_Python` has a minimum Python version requirement of `>= 3.10`.
 
 * Create a BL_Python [web application](src/web/README.md)
-* Contribute to [BL_Python Development](https://github.com/uclahs-cds/BL_Python/wiki/BL_Python-Development)
+* Contribute to [BL_Python Development](https://github.com/uclahs-cds/BL_Python/wiki/BL_Python-Development). Run `make` to get started!
 
 
 # Available Libraries
