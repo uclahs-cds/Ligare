@@ -213,7 +213,12 @@ publish-all : reset $(VENV)
 
 
 clean-build :
-	find . -type d \( \
+	find . -type d \
+	\( \
+		-path ./$(VENV) \
+		-o -path ./.git \
+	\) -prune -false \
+	-o \( \
 		-name build \
 		-o -name dist \
 		-o -name __pycache__ \
@@ -233,8 +238,8 @@ clean : clean-build clean-test
 	@echo '\nDeactivate your venv with `deactivate`'
 
 remake :
-	make clean
-	make
+	$(MAKE) clean
+	$(MAKE)
 
 reset-check:
 #	https://stackoverflow.com/a/47839479
