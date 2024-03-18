@@ -30,6 +30,8 @@ PYPI_REPO ?= testpypi
 # The directory to write ephermal reports to,
 # such as pytest coverage reports.
 REPORTS_DIR ?= reports
+BANDIT_REPORT := bandit.sarif
+PYTEST_REPORT := pytest
 
 
 # Can be overridden. This is used to change the prereqs
@@ -76,8 +78,6 @@ PACKAGE_PATHS=$(subst /pyproject.toml,,$(PYPROJECT_FILES))
 PACKAGES=$(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
 
 .PHONY: dev
-# Rather than duplicating BL_Python.all,
-# just prereq it.
 dev : $(VENV) $(SETUP_DEPENDENCIES)
 	$(MAKE) _dev_build DEFAULT_TARGET=dev
 _dev_configure : $(VENV) $(PYPROJECT_FILES)
@@ -171,6 +171,7 @@ format-ruff : $(VENV) $(BUILD_TARGET)
 
 	ruff format --preview --respect-gitignore
 
+.PHONY: format format-ruff format-isort
 format : $(VENV) $(BUILD_TARGET) format-isort format-ruff
 
 
@@ -217,12 +218,12 @@ test-pytest : $(VENV) $(BUILD_TARGET)
 		&& PYTEST_EXIT_CODE=0 \
 		|| PYTEST_EXIT_CODE=$$?
 
-	-coverage html --data-file=$(REPORTS_DIR)/pytest/.coverage
-	-junit2html $(REPORTS_DIR)/pytest/pytest.xml $(REPORTS_DIR)/pytest/pytest.html
+	-coverage html --data-file=$(REPORTS_DIR)/$(PYTEST_REPORT)/.coverage
+	-junit2html $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.xml $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.html
 
 	exit $$PYTEST_EXIT_CODE
 
-.PHONY: test test-pytest test-pyright test-ruff test-isort
+.PHONY: test test-pytest test-bandit test-pyright test-ruff test-isort
 _test : $(VENV) $(BUILD_TARGET) test-isort test-ruff test-pyright test-bandit test-pytest
 test : CMD_PREFIX=@
 test : clean-test
@@ -230,8 +231,8 @@ test : clean-test
 
 
 .PHONY: publish-all
-# Publishing should use a real install, which `cicd` fulfills
 publish-all : REWRITE_DEPENDENCIES=false
+# Publishing should use a real install. Reset the build env.
 publish-all : reset $(VENV)
 	$(ACTIVATE_VENV)
 
@@ -254,7 +255,8 @@ clean-build :
 
 clean-test :
 	$(CMD_PREFIX)rm -rf \
-		$(REPORTS_DIR)/pytest
+		$(REPORTS_DIR)/$(PYTEST_REPORT) \
+		$(REPORTS_DIR)/$(BANDIT_REPORT)
 
 .PHONY: clean clean-test clean-build
 clean : clean-build clean-test
