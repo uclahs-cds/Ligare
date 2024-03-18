@@ -74,9 +74,9 @@ PYPROJECT_FILES=./pyproject.toml $(wildcard src/*/pyproject.toml)
 PACKAGE_PATHS=$(subst /pyproject.toml,,$(PYPROJECT_FILES))
 PACKAGES=BL_Python.all $(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
 
+.PHONY: dev
 # Rather than duplicating BL_Python.all,
 # just prereq it.
-.PHONY: dev
 dev : dev_mode BL_Python.all
 
 .PHONY: cicd
@@ -217,8 +217,8 @@ test : clean-test
 	$(MAKE) -j --keep-going _test
 
 
-# Publishing should use a real install, which `cicd` fulfills
 .PHONY: publish-all
+# Publishing should use a real install, which `cicd` fulfills
 publish-all : REWRITE_DEPENDENCIES=false
 publish-all : reset $(VENV)
 	$(ACTIVATE_VENV)
