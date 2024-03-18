@@ -231,6 +231,7 @@ test : clean-test
 
 
 .PHONY: publish-all
+# Publishing should use a real install, which `cicd` fulfills
 publish-all : REWRITE_DEPENDENCIES=false
 # Publishing should use a real install. Reset the build env.
 publish-all : reset $(VENV)
