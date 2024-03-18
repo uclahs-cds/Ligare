@@ -173,9 +173,9 @@ addopts = [
     # and
     # https://github.com/microsoft/vscode-python/issues/21845
     "--cov=.",
-    "--junitxml=pytest.xml",
+    "--junitxml=reports/pytest/pytest.xml",
     "-o=junit_family=xunit2",
-    "--cov-report=xml:cov.xml",
+    "--cov-report=xml:reports/pytest/cov.xml",
     "--cov-report=term-missing",
 ]
 
@@ -187,9 +187,11 @@ norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv .github-venv"
 include_namespace_packages = true
 
 [tool.coverage.html]
+directory = "reports/pytest/coverage"
 show_contexts = true
 
 [tool.coverage.run]
+data_file = "reports/pytest/.coverage"
 dynamic_context = "test_function"
 relative_files = true
 omit = [
