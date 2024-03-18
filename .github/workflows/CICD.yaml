@@ -182,10 +182,7 @@ jobs:
         with:
           name: pytest-and-coverage-report
           path: |
-            pytest.xml
-            cov.xml
-            .coverage
-            coverage/
+            reports/pytest/
           retention-days: 1
           if-no-files-found: error
 
