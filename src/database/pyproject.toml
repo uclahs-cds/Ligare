@@ -57,6 +57,9 @@ exclude = ["build*"]
 [tool.setuptools.package-data]
 "BL_Python.database" = ["py.typed"]
 
+[project.scripts]
+bl-alembic = "BL_Python.database.migrations.alembic.__main__:bl_alembic"
+
 [project.optional-dependencies]
 postgres = [
     "psycopg2 ~= 2.9"
