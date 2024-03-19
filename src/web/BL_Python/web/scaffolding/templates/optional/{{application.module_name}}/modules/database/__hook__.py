@@ -4,6 +4,7 @@ from typing import Any
 
 def on_create(config: dict[str, Any], log: Logger):
     """Called when an application is created."""
+    log.debug(f"Database module hook executed")
 
     config["module"]["database"] = {}
 

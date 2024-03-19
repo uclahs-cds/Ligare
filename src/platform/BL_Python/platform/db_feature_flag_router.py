@@ -1,7 +1,6 @@
 from logging import Logger
 from typing import Protocol, Type, cast
 
-from BL_Python.programming.patterns import Singleton
 from injector import inject
 from sqlalchemy import Boolean, Column, Unicode
 from sqlalchemy.exc import NoResultFound
@@ -19,7 +18,7 @@ class FeatureFlag(Protocol):
     description: Column[Unicode] | str
 
 
-class FeatureFlagTable(Singleton):
+class FeatureFlagTable:
     def __new__(cls, base: Type[DeclarativeMeta]):
         class FeatureFlag(base):
             """

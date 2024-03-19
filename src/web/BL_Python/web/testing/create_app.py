@@ -24,9 +24,9 @@ import yaml
 from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import (
     App,
-    AppInjector,
-    FlaskAppInjector,
-    OpenAPIAppInjector,
+    CreateAppResult,
+    FlaskAppResult,
+    OpenAPIAppResult,
     T_app,
 )
 from BL_Python.web.config import (
@@ -71,10 +71,10 @@ class AppGetter(Protocol[T_app]):
     and returns the application with its IoC container.
     """
 
-    def __call__(self) -> AppInjector[T_app]: ...
+    def __call__(self) -> CreateAppResult[T_app]: ...
 
 
-TAppInitHook = Callable[[AppInjector[T_app]], None] | None
+TAppInitHook = Callable[[CreateAppResult[T_app]], None] | None
 
 
 class ClientInjectorConfigurable(Protocol[T_app, T_flask_client]):
@@ -180,12 +180,15 @@ class OpenAPIMockController(MockController):
 
 
 class CreateApp:
+    app_name: str = "test_app"
+    auto_mock_dependencies: bool = True
+
     _automatic_mocks: dict[str, MagicMock] = defaultdict()
 
     def _basic_config(self) -> Config:
         return Config(
             flask=FlaskConfig(
-                app_name="test_app",
+                app_name=self.app_name,
                 env="Testing",
                 session=FlaskSessionConfig(
                     cookie=FlaskSessionCookieConfig(secret_key=get_random_str())
@@ -196,7 +199,7 @@ class CreateApp:
     def _openapi_config(self) -> Config:
         config = self._basic_config()
         cast(FlaskConfig, config.flask).openapi = FlaskOpenApiConfig(
-            spec_path="config.toml", use_swagger=False
+            spec_path="openapi.yaml", use_swagger=False
         )
         return config
 
@@ -210,7 +213,7 @@ class CreateApp:
 
     def __get_basic_flask_app(
         self, config: Config, mocker: MockerFixture
-    ) -> Generator[FlaskAppInjector, Any, None]:
+    ) -> Generator[FlaskAppResult, Any, None]:
         # prevents the creation of a Connexion application
         if config.flask is not None:
             config.flask.openapi = None
@@ -220,11 +223,11 @@ class CreateApp:
             return_value=config,
         ):
             app = App[Flask].create()
-            yield app.app_injector
+            yield app
 
-    def __get_openapi_app(
+    def _get_real_openapi_app(
         self, config: Config, mocker: MockerFixture
-    ) -> Generator[OpenAPIAppInjector, Any, None]:
+    ) -> Generator[OpenAPIAppResult, Any, None]:
         # prevents the creation of a Connexion application
         if config.flask is None or config.flask.openapi is None:
             raise Exception(
@@ -236,19 +239,24 @@ class CreateApp:
             return_value=config,
         ):
             app = App[FlaskApp].create()
-            yield app.app_injector
+            yield app
 
     @pytest.fixture()
     def _get_basic_flask_app(
         self, basic_config: Config, mocker: MockerFixture
-    ) -> FlaskAppInjector:
+    ) -> FlaskAppResult:
         return next(self.__get_basic_flask_app(basic_config, mocker))
 
     @pytest.fixture()
     def _get_openapi_app(
-        self, openapi_config: Config, mocker: MockerFixture
-    ) -> OpenAPIAppInjector:
-        return next(self.__get_openapi_app(openapi_config, mocker))
+        self,
+        openapi_config: Config,
+        mocker: MockerFixture,
+        openapi_mock_controller: OpenAPIMockController,
+    ) -> OpenAPIAppResult:
+        _ = mocker.patch("BL_Python.web.application.json_logging")
+        openapi_mock_controller.begin()
+        return next(self._get_real_openapi_app(openapi_config, mocker))
 
     def _flask_client(
         self, flask_app_getter: AppGetter[Flask]
@@ -256,15 +264,15 @@ class CreateApp:
         with ExitStack() as stack:
             result = flask_app_getter()
 
-            if not isinstance(result, AppInjector) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
-                result.app, Flask
+            if not isinstance(result, CreateAppResult) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
+                result.app_injector.app, Flask
             ):
                 raise Exception(
-                    f"""This fixture created a `{type(result)}.{type(result.app) if getattr(result, "app", None) else "None"}` application, but is only meant for `{Flask}`.
+                    f"""This fixture created a `{type(result)}.{type(result.app_injector.app) if getattr(result, "app", None) else "None"}` application, but is only meant for `{Flask}`.
 Ensure either that [openapi] is not set in the [flask] config, or use the `openapi_client` fixture."""
                 )
 
-            app = result.app
+            app = result.app_injector.app
             client = stack.enter_context(app.test_client())
 
             app = client.application
@@ -288,7 +296,10 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
                 # fmt: on
             )
 
-            yield ClientInjector(client, result.flask_injector)
+            yield ClientInjector(client, result.app_injector.flask_injector)
+
+    def get_app(self, flask_app_getter: AppGetter[FlaskApp]):
+        return next(self._openapi_client(flask_app_getter))
 
     def _openapi_client(
         self, flask_app_getter: AppGetter[FlaskApp]
@@ -296,18 +307,18 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
         with ExitStack() as stack:
             result = flask_app_getter()
 
-            if not isinstance(result, AppInjector) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
-                result.app, FlaskApp
+            if not isinstance(result, CreateAppResult) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
+                result.app_injector.app, FlaskApp
             ):
                 raise Exception(
-                    f"""This fixture created a `{type(result)}.{type(result.app) if getattr(result, "app", None) else "None"}` application, but is only meant for `{FlaskApp}`.
+                    f"""This fixture created a `{type(result)}.{type(result.app_injector.app) if getattr(result, "app", None) else "None"}` application, but is only meant for `{FlaskApp}`.
 Ensure either that [openapi] is set in the [flask] config, or use the `flask_client` fixture."""
                 )
-            app = result.app
-            app.add_middleware(
-                TrustedHostMiddleware, allowed_hosts=["localhost", "localhost:5000"]
+            result.app_injector.app.add_middleware(
+                TrustedHostMiddleware,
+                allowed_hosts=["localhost", "localhost:5000"],
             )
-            client = stack.enter_context(app.test_client())
+            client = stack.enter_context(result.app_injector.app.test_client())
             # TODO OpenAPI requires more work before sessions are working. Flask can use this code, but BL_Python.web doesn't support sessions yet anyway.
             # client.cookies.set(
             #    cast(str, app.config["SESSION_COOKIE_NAME"]),
@@ -324,17 +335,15 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
             #                )
             # pass
             # app = cast(Flask, client.app.app)
-            yield ClientInjector(client, result.flask_injector)
+            yield ClientInjector(client, result.app_injector.flask_injector)
 
     @pytest.fixture()
-    def flask_client(
-        self, _get_basic_flask_app: FlaskAppInjector
-    ) -> FlaskClientInjector:
+    def flask_client(self, _get_basic_flask_app: FlaskAppResult) -> FlaskClientInjector:
         return next(self._flask_client(lambda: _get_basic_flask_app))
 
     @pytest.fixture()
     def openapi_client(
-        self, _get_openapi_app: AppInjector[FlaskApp]
+        self, _get_openapi_app: CreateAppResult[FlaskApp]
     ) -> OpenAPIClientInjector:
         return next(self._openapi_client(lambda: _get_openapi_app))
 
@@ -342,7 +351,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
         self,
         mocker: MockerFixture,
         app_getter: Callable[
-            [Config, MockerFixture], Generator[AppInjector[T_app], Any, None]
+            [Config, MockerFixture], Generator[CreateAppResult[T_app], Any, None]
         ],
         client_getter: Callable[
             [AppGetter[T_app]],
@@ -371,8 +380,9 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
     def openapi_client_configurable(
         self, mocker: MockerFixture
     ) -> OpenAPIClientInjectorConfigurable:
+        _ = mocker.patch("BL_Python.web.application.json_logging")
         return self._client_configurable(
-            mocker, self.__get_openapi_app, self._openapi_client
+            mocker, self._get_real_openapi_app, self._openapi_client
         )
 
     def _flask_request(
@@ -550,19 +560,20 @@ paths:
             ("toml.decoder.loads", {}),
             ("BL_Python.web.application._import_blueprint_modules", []),
             ("BL_Python.web.application._get_program_dir", "."),
-            ("BL_Python.web.application._get_exec_dir", "."),
+            ("BL_Python.web.application._get_exec_dir", ".."),
         ]
 
-        for mock_target in mock_targets:
-            if len(mock_target) == 1:
-                (target_name,) = mock_target
-                mock = mocker.patch(target_name)
-            else:
-                (target_name, return_value) = mock_target
-                mock = mocker.patch(target_name)
-                mock.return_value = return_value
+        if self.auto_mock_dependencies:
+            for mock_target in mock_targets:
+                if len(mock_target) == 1:
+                    (target_name,) = mock_target
+                    mock = mocker.patch(target_name)
+                else:
+                    (target_name, return_value) = mock_target
+                    mock = mocker.patch(target_name)
+                    mock.return_value = return_value
 
-            self._automatic_mocks[target_name] = mock
+                self._automatic_mocks[target_name] = mock
 
         return log_formatters
 

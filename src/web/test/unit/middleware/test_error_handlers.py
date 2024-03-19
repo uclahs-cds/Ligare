@@ -2,10 +2,9 @@ from json.decoder import JSONDecoder
 from typing import Callable
 
 import pytest
+from BL_Python.web.testing.create_app import CreateApp, FlaskClientInjector
 from flask import Response, abort
 from werkzeug.exceptions import Unauthorized
-
-from ..create_app import CreateApp, FlaskClientInjector
 
 
 def _raise_custom_unauthorized_exception():

@@ -1,8 +1,8 @@
 import logging
 import sys
-from typing import Any
+from typing import Callable, TypeVar
 
-from injector import Binder, Module
+from injector import Binder, Module, Provider
 from typing_extensions import override
 
 
@@ -26,8 +26,13 @@ class LoggerModule(Module):
         binder.bind(logging.Logger, to=self._logger)
 
 
+T = TypeVar("T")
+
+
 class BatchModule(Module):
-    def __init__(self, registrations: dict[Any, Any]) -> None:
+    def __init__(
+        self, registrations: dict[type[T], None | T | Callable[..., T] | Provider[T]]
+    ) -> None:
         super().__init__()
         self._registrations = registrations
 

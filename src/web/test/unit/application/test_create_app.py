@@ -8,12 +8,11 @@ from BL_Python.programming.config import AbstractConfig
 from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import App, configure_blueprint_routes, configure_openapi
 from BL_Python.web.config import Config, FlaskConfig, FlaskOpenApiConfig
+from BL_Python.web.testing.create_app import CreateApp, FlaskClientInjectorConfigurable
 from flask import Blueprint, Flask
 from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
-
-from ..create_app import CreateApp, FlaskClientInjectorConfigurable
 
 
 class TestCreateApp(CreateApp):
@@ -28,14 +27,12 @@ class TestCreateApp(CreateApp):
     def test__configure_blueprint_routes__creates_flask_app_using_config(
         self, mocker: MockerFixture
     ):
+        _ = mocker.patch("BL_Python.web.application.json_logging")
         flask_mock = mocker.patch("BL_Python.web.application.Flask")
 
         app_name = f"{TestCreateApp.test__configure_blueprint_routes__creates_flask_app_using_config.__name__}-app_name"
 
-        with pytest.raises(
-            RuntimeError, match=r"^app is not a valid flask.app.Flask app instance$"
-        ):
-            _ = configure_blueprint_routes(Config(flask=FlaskConfig(app_name=app_name)))
+        _ = configure_blueprint_routes(Config(flask=FlaskConfig(app_name=app_name)))
 
         flask_mock.assert_called_with(app_name)
 
@@ -248,23 +245,20 @@ class TestCreateApp(CreateApp):
     def test__configure_openapi__creates_flask_app_using_config(
         self, mocker: MockerFixture
     ):
+        _ = mocker.patch("BL_Python.web.application.json_logging")
         connexion_mock = mocker.patch("BL_Python.web.application.FlaskApp")
 
         app_name = f"{TestCreateApp.test__configure_openapi__creates_flask_app_using_config.__name__}-app_name"
-        spec_path = "."
+        spec_path = ".."
 
-        with pytest.raises(
-            RuntimeError,
-            match=r"^app is not a valid connexion.app.Connexion app instance$",
-        ):
-            _ = configure_openapi(
-                Config(
-                    flask=FlaskConfig(
-                        app_name=app_name,
-                        openapi=FlaskOpenApiConfig(spec_path=spec_path),
-                    )
+        _ = configure_openapi(
+            Config(
+                flask=FlaskConfig(
+                    app_name=app_name,
+                    openapi=FlaskOpenApiConfig(spec_path=spec_path),
                 )
             )
+        )
 
         connexion_mock.assert_called_with(app_name, specification_dir=spec_path)
 

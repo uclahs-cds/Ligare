@@ -39,14 +39,14 @@ class AppInjector(Generic[T_app]):
     flask_injector: FlaskInjector
 
 
-FlaskAppInjector = AppInjector[Flask]
-OpenAPIAppInjector = AppInjector[FlaskApp]
-
-
 @dataclass
 class CreateAppResult(Generic[T_app]):
     flask_app: Flask
     app_injector: AppInjector[T_app]
+
+
+FlaskAppResult = CreateAppResult[Flask]
+OpenAPIAppResult = CreateAppResult[FlaskApp]
 
 
 # In Python 3.12 we can use generics in functions,

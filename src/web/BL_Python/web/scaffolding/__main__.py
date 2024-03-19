@@ -6,10 +6,7 @@ from os import environ
 from pathlib import Path
 from typing import Callable, Literal, NamedTuple
 
-from BL_Python.programming.cli.argparse import (
-    associate_disallow_duplicate_values,
-    disallow,
-)
+from BL_Python.programming.cli.argparse import DisallowDuplicateValues, disallow
 from BL_Python.web.scaffolding import (
     Operation,
     ScaffoldConfig,
@@ -28,7 +25,7 @@ class ScaffoldInputArgs(Namespace):
     name: Operation  # pyright: ignore[reportUninitializedInstanceVariable]
     endpoints: list[Operation] | None = None
     template_type: Literal["basic", "openapi"] = "basic"
-    modules: list[Literal["database"]] | None = None
+    modules: list[Literal["database", "test"]] | None = None
     output_directory: str | None = None
 
 
@@ -38,7 +35,7 @@ class ScaffoldParsedArgs(NamedTuple):
     name: Operation
     endpoints: list[Operation]
     template_type: Literal["basic", "openapi"]
-    modules: list[Literal["database"]] | None
+    modules: list[Literal["database", "test"]] | None
     output_directory: str
 
 
@@ -86,7 +83,7 @@ class ScaffolderCli:
             metavar="endpoint",
             dest="endpoints",
             type=disallow([APPLICATION_ENDPOINT_PATH_NAME], "endpoint", Operation),
-            action=associate_disallow_duplicate_values("name"),
+            action=DisallowDuplicateValues,
             help="The name of an endpoint to scaffold. Can be specified more than once. If not specified, an endpoint sharing the name of the application will be scaffolded.",
         )
         template_types = ["basic", "openapi"]
@@ -98,7 +95,7 @@ class ScaffolderCli:
             default="basic",
             help="The type of template to scaffold.",
         )
-        modules = ["database"]
+        modules = ["database", "test"]
         _ = create_parser.add_argument(
             "-m",
             choices=modules,
@@ -134,7 +131,7 @@ class ScaffolderCli:
             metavar="endpoint",
             dest="endpoints",
             type=disallow([APPLICATION_ENDPOINT_PATH_NAME], "endpoint", Operation),
-            action=associate_disallow_duplicate_values("name"),
+            action=DisallowDuplicateValues,
             help="The name of an endpoint to scaffold. Can be specified more than once. If not specified, an endpoint sharing the name of the application will be scaffolded.",
         )
         _ = modify_parser.add_argument(

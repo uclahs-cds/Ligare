@@ -1,0 +1,5 @@
+{% for operation in endpoints|map(attribute="operation") %}
+{% set module_config={"operation":operation} %}
+{{ render_module_template("test_{{meta.operation.module_name}}.py.j2", module_config) }}
+{% endfor %}
+{{ render_module_template("conftest.py.j2", module_config) }}
