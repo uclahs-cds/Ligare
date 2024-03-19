@@ -1,4 +1,5 @@
-from BL_Python.programming.collections.dict import AnyDict
+from typing import Any
+
 from BL_Python.programming.config import AbstractConfig
 from pydantic import BaseModel
 from pydantic.config import ConfigDict
@@ -26,7 +27,7 @@ class SQLiteDatabaseConnectArgsConfig(DatabaseConnectArgsConfig):
 
 
 class DatabaseConfig(BaseModel, AbstractConfig):
-    def __init__(self, **data: AnyDict):
+    def __init__(self, **data: Any):
         super().__init__(**data)
 
         model_data = self.connect_args.model_dump() if self.connect_args else {}
