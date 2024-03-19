@@ -208,13 +208,13 @@ test-pytest : $(VENV) $(DEFAULT_TARGET)
 	$(ACTIVATE_VENV)
 
 	pytest $(PYTEST_FLAGS) \
-		&& PYTEST_SUCCESS=0 \
-		|| PYTEST_SUCCESS=$$?
+		&& PYTEST_EXIT_CODE=0 \
+		|| PYTEST_EXIT_CODE=$$?
 
 	-coverage html --data-file=$(REPORTS_DIR)/pytest/.coverage
 	-junit2html $(REPORTS_DIR)/pytest/pytest.xml $(REPORTS_DIR)/pytest/pytest.html
 
-	exit $$PYTEST_SUCCESS
+	exit $$PYTEST_EXIT_CODE
 
 .PHONY: test test-pytest test-pyright test-ruff test-isort
 _test : $(VENV) $(DEFAULT_TARGET) test-isort test-ruff test-pyright test-pytest
