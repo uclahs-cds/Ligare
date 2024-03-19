@@ -39,7 +39,7 @@ class DatabaseConfig(BaseModel, AbstractConfig):
     sqlalchemy_echo: bool = False
     # the static field allows Pydantic to store
     # values from a dictionary
-    connect_args: DatabaseConnectArgsConfig | None
+    connect_args: DatabaseConnectArgsConfig | None = None
 
 
 class Config(BaseModel, AbstractConfig):
