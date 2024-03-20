@@ -5,7 +5,7 @@ from os import environ
 from pathlib import Path
 
 # this is Alembic's main entry point
-from alembic.config import CommandLine
+from alembic.config import main as alembic_main
 
 
 def bl_alembic(argv: list[str] | None = None, log_level: int | str | None = None):
@@ -19,11 +19,6 @@ def bl_alembic(argv: list[str] | None = None, log_level: int | str | None = None
 
     if not argv:
         argv = sys.argv[1:]
-
-    # do some set up stuff
-
-    alembic_command_line = CommandLine(None)
-    # alembic_parsed_args = alembic_command_line.parser.parse_args(argv)
 
     # if a config file has been specified on the
     # command line, use it and don't create
@@ -40,7 +35,7 @@ def bl_alembic(argv: list[str] | None = None, log_level: int | str | None = None
     ):
         logger.debug("Running unmodified `alembic` command.")
         # run Alembic
-        return alembic_command_line.main(argv)
+        return alembic_main(argv)
 
     logger.debug("Running `alembic` with modified command.")
     with (
@@ -52,8 +47,11 @@ def bl_alembic(argv: list[str] | None = None, log_level: int | str | None = None
         # without seeking to the 0th byte
         _ = f2.seek(0)
 
-        argv.insert(0, "-c")
-        argv.insert(1, f2.name)
+        argv = ["-c", f2.name] + argv
 
         # run Alembic
-        return alembic_command_line.main(argv)
+        return alembic_main(argv)
+
+
+if __name__ == "__main__":
+    bl_alembic()
