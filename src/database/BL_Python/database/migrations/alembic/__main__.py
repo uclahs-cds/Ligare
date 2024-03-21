@@ -1,17 +1,284 @@
 import logging
 import sys
 import tempfile
+from contextlib import contextmanager
+from logging import Logger
 from os import environ
 from pathlib import Path
+from types import TracebackType
+from typing import Any, Callable, Generator
 
 import alembic.util.messaging
 
 # this is Alembic's main entry point
 from alembic.config import CommandLine, Config
 from alembic.config import main as alembic_main
+from attr import dataclass
+from typing_extensions import final
 
 
-def bl_alembic(argv: list[str] | None = None, log_level: int | str | None = None):
+@final
+class BLAlembic:
+    _run: Callable[[], None]
+    _log: Logger
+
+    def __init__(self, argv: list[str] | None, logger: Logger) -> None:
+        """
+        _summary_
+
+        :param list[str] | None argv: The command line arguments to be parsed by ArgumentParser.
+            If None, this will use `sys.argv[1:]` to use CLI arguments.
+        :param Logger logger: A logger for writing messages.
+        """
+        self._log = logger
+
+        if not argv:
+            argv = sys.argv[1:]
+
+        args = set(argv)
+
+        if not args or "-h" in args or "--help" in args:
+            self._log.debug(f"Empty or 'help' args passed from Alembic: {args}")
+            self._run = lambda: self._run_with_alembic_defaults(argv)
+        elif "-c" in args or "--config" in args:
+            self._log.debug(f"'config' args passed from Alembic: {args}")
+            self._run = lambda: self._run_with_specified_config(argv)
+        else:
+            self._log.debug(f"Execution-only args passed from Alembic: {args}")
+            self._run = lambda: self._run_with_bl_alembic_config(argv)
+
+    def _get_config(self, argv: list[str]) -> Config:
+        """
+        Get a parsed Alembic INI file as a `Config` object.
+
+        :param list[str] argv: The command line arguments to be parsed by ArgumentParser.
+        :return Config: The `Config` object with options set from an INI file.
+        """
+        # needs to open the config and return it
+        # so we can get the alembic migration directory
+        alembic_cli = CommandLine()
+        parsed_args = alembic_cli.parser.parse_args(argv)
+        self._log.debug(f"Parsed arguments: {parsed_args}")
+        config = Config(parsed_args.config)
+        self._log.debug(f"Instantiated config: {repr(config)}")
+        return config
+
+    def _run_with_alembic_defaults(self, argv: list[str]) -> None:
+        """
+        Calls `alembic` programmatically.
+
+        Used when no command line arguments, or `-h` or `--help`, are specified.
+
+        :param list[str] argv: The command line arguments to be parsed by ArgumentParser.
+        :return None:
+        """
+        self._log.debug("Running unmodified `alembic` command.")
+        return alembic_main(argv)
+
+    def _run_with_specified_config(self, argv: list[str]) -> None:
+        """
+        Calls `alembic` programmatically.
+
+        Used when `-c` or `--config` are specified.
+
+        :param list[str] argv: The command line arguments to be parsed by ArgumentParser.
+        :return None:
+        """
+        self._log.debug("Running unmodified `alembic` command.")
+        self._execute_alembic(argv)
+
+    def _run_with_bl_alembic_config(self, argv: list[str]) -> None:
+        """
+        Calls `alembic` programmatically after creating a temporary
+        config file from the BL_Python default Alembic config, and
+        forcing the temporary config file to be used by `alembic`.
+
+        :param list[str] argv: The command line arguments to be parsed by ArgumentParser.
+        :return None:
+        """
+        self._log.debug("Running `alembic` with modified command.")
+        with self._write_bl_alembic_config() as config_file:
+            argv = ["-c", config_file.name] + argv
+
+            self._execute_alembic(argv)
+
+    def _execute_alembic(self, argv: list[str]) -> None:
+        """
+        Programmatically run `alembic`.
+
+        :param list[str] argv: The command line arguments to be parsed by ArgumentParser.
+        :return None:
+        """
+        config = self._get_config(argv)
+
+        with self._initialize_alembic(config) as msg_capture:
+            try:
+                return alembic_main(argv)
+            except SystemExit:
+                # If SystemExit is from anything other than
+                # needing to create the init dir, then crash.
+                # This is doable/reliable because Alembic first writes
+                # a message that the directory needs to be created,
+                # then calls `sys.exit(-1)`.
+                if not msg_capture.seen:
+                    raise
+
+                self._log.debug(
+                    f"The Alembic initialization error was seen. Ignoring `{SystemExit.__name__}` exception."
+                )
+
+    def _initialize_alembic(self, config: Config):
+        """
+        Set up Alembic to run `alembic init` programmatically if it is needed.
+
+        :param Config config: The config, parsed from an Alembic INI configuration file.
+        :return MsgCaptureCtxManager: A type indicating whether an expected message was
+            written by Alembic. In the case of this method, if the "use the 'init'"
+            message is seen, then `alembic init` is executed. This type can be used to
+            determine whether `alembic init` was executed.
+        """
+        script_location = config.get_main_option("script_location") or "alembic"
+
+        def _msg_new(msg: Callable[[str, bool, bool, bool], None]):
+            nonlocal script_location
+            self._log.debug("Executing `alembic init`.")
+            msg(
+                "'alembic' migration directory does not exist. Creating it.",
+                # these bool values are defaults for Alembic msg function
+                True,
+                False,
+                False,
+            )
+            alembic_main(["init", script_location])
+
+        return self._alembic_msg_capture(
+            "use the 'init' command to create a new scripts folder", _msg_new
+        )
+
+    @contextmanager
+    def _write_bl_alembic_config(
+        self,
+    ) -> "Generator[tempfile._TemporaryFileWrapper[bytes], Any, None]":  # pyright: ignore[reportPrivateUsage]
+        """
+        Write the BL_Python Alembic tool's default configuration file to a temp file.
+
+        :yield Generator[tempfile._TemporaryFileWrapper[bytes], Any, None]: The temp file.
+        """
+        with tempfile.NamedTemporaryFile("w+b") as temp_config_file:
+            self._log.debug(f"Temp file created at '{temp_config_file.name}'.")
+            with open(
+                Path(Path(__file__).resolve().parent, "alembic.ini"), "r"
+            ) as default_config_file:
+                self._log.debug(
+                    f"Writing config file 'alembic.ini' to temp file '{temp_config_file.name}'."
+                )
+                temp_config_file.writelines(default_config_file.buffer)
+
+            # the file will not be read correctly
+            # without seeking to the 0th byte
+            _ = temp_config_file.seek(0)
+
+            # yield so the temp file isn't deleted
+            yield temp_config_file
+
+    def _alembic_msg_capture(
+        self,
+        msg_to_capture: str,
+        callback: Callable[[Callable[[str, bool, bool, bool], None]], None],
+    ):
+        """
+        Capture a specific message written by Alembic, and call `callback` if it matches.
+
+        This method override's Alembic's `msg` function and restores it when the
+        context is closed.
+
+        :param str msg_to_capture: The specific message to monitor in Alembic's writes.
+        :param Callable[[Callable[[str, bool, bool, bool], None]], None] callback:
+            A callable that receives Alembic's `msg` function as a parameter.
+        """
+
+        OVERRIDDEN_ORIGINAL_ATTR_NAME = "_overridden_original"
+        if hasattr(alembic.util.messaging.msg, OVERRIDDEN_ORIGINAL_ATTR_NAME):
+            # if the attr exists that means we have already overriden it,
+            # so we set `_msg_original` to the real original.
+            self._log.debug(
+                f"`alembic.util.messaging.msg` has already been overwritten. Using `{OVERRIDDEN_ORIGINAL_ATTR_NAME}` attribute to get the original method."
+            )
+            _msg_original = getattr(
+                alembic.util.messaging.msg, OVERRIDDEN_ORIGINAL_ATTR_NAME
+            )
+        else:
+            self._log.debug(
+                f"`alembic.util.messaging.msg` has not been overridden. Using it as the original method."
+            )
+            # if the attr does not exist, then we assume `msg` is
+            # the original Alembic `msg` function.
+            _msg_original: Callable[[str, bool, bool, bool], None] = (
+                alembic.util.messaging.msg
+            )
+
+        @dataclass
+        class MessageSeen:
+            seen: bool = False
+
+        @final
+        class MsgCaptureCtxManager:
+            _msg_seen: MessageSeen = MessageSeen()
+            _log: Logger
+
+            def __init__(self, logger: Logger) -> None:
+                self._log = logger
+
+            def __enter__(self):
+                # this function replaces Alembic's `msg` function
+                self._log.debug(f"Entering `{MsgCaptureCtxManager.__name__}` context.")
+
+                def _msg_new(
+                    msg: str,
+                    newline: bool = True,
+                    flush: bool = False,
+                    quiet: bool = False,
+                ):
+                    if msg_to_capture in msg:
+                        self._log.debug(
+                            f"The msg '{msg_to_capture}' was written by Alembic."
+                        )
+                        callback(_msg_original)
+                        self._msg_seen.seen = True
+                    else:
+                        _msg_original(msg, newline, flush, quiet)
+
+                setattr(
+                    _msg_new, OVERRIDDEN_ORIGINAL_ATTR_NAME, alembic.util.messaging.msg
+                )
+
+                self._log.debug(
+                    f"Overwritting `alembic.util.messaging.msg` with `{repr(_msg_new)}`."
+                )
+                alembic.util.messaging.msg = _msg_new
+
+                return self._msg_seen
+
+            def __exit__(
+                self,
+                exc_type: type[BaseException] | None,
+                exc_val: BaseException | None,
+                exc_tb: TracebackType | None,
+            ) -> bool:
+                self._log.debug(f"Exiting `{MsgCaptureCtxManager.__name__}` context.")
+                alembic.util.messaging.msg = _msg_original
+                return True
+
+        return MsgCaptureCtxManager(self._log)
+
+    def run(self):
+        self._log.debug("Bootstrapping and executing `alembic` process.")
+        return self._run()
+
+
+def bl_alembic(
+    argv: list[str] | None = None, log_level: int | str | None = None
+) -> None:
     logging.basicConfig(level=logging.INFO)
     if not log_level:
         log_level = environ.get("LOG_LEVEL")
@@ -20,74 +287,8 @@ def bl_alembic(argv: list[str] | None = None, log_level: int | str | None = None
     logger = logging.getLogger()
     logger.setLevel(log_level)
 
-    if not argv:
-        argv = sys.argv[1:]
-
-    args = set(argv)
-
-    if not args or "-h" in args or "--help" in args:
-        logger.debug("Running unmodified `alembic` command.")
-        # run Alembic
-        return alembic_main(argv)
-
-    # needs to open the config and return it
-    # so we can get the alembic migration directory
-    def get_config_obj(argv):
-        alembic_cli = CommandLine()
-        parsed_args = alembic_cli.parser.parse_args(argv)
-        return Config(parsed_args.config)
-
-    # if a config file has been specified on the
-    # command line, use it and don't create
-    # a temporary one
-    if "-c" in args or "--config" in args:
-        logger.debug("Running unmodified `alembic` command.")
-        conf = get_config_obj(argv)
-        print(conf.get_main_option("script_location"))
-        return alembic_main(argv)
-
-    logger.debug("Running `alembic` with modified command.")
-    with (
-        open(Path(Path(__file__).resolve().parent, "alembic.ini"), "r") as f1,
-        tempfile.NamedTemporaryFile("w+b") as f2,
-    ):
-        f2.writelines(f1.buffer)
-        # the file will not be read correctly
-        # without seeking to the 0th byte
-        _ = f2.seek(0)
-
-        conf = Config(f2.name)
-
-        argv = ["-c", f2.name] + argv
-        conf = get_config_obj(argv)
-        script_location = conf.get_main_option("script_location") or "alembic"
-
-        _created_alembic_dir_marker = False
-        _msg_original = alembic.util.messaging.msg
-
-        def _msg_new(
-            msg: str, newline: bool = True, flush: bool = False, quiet: bool = False
-        ):
-            nonlocal _created_alembic_dir_marker
-            nonlocal script_location
-            if "use the 'init' command to create a new scripts folder" in msg:
-                _msg_original(
-                    "'alembic' migration directory does not exist. Creating it."
-                )
-                alembic_main(["init", script_location])
-                _created_alembic_dir_marker = True
-            else:
-                _msg_original(msg, newline, flush, quiet)
-
-        alembic.util.messaging.msg = _msg_new
-        # run Alembic
-        try:
-            return alembic_main(argv)
-        except SystemExit:
-            if not _created_alembic_dir_marker:
-                raise
-        finally:
-            alembic.util.messaging.msg = _msg_original
+    bla = BLAlembic(argv, logger)
+    bla.run()
 
 
 if __name__ == "__main__":
