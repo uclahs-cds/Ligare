@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from functools import lru_cache
 from logging.config import fileConfig
-from typing import Any, List, Protocol, cast, final
+from typing import Any, List, Literal, Protocol, cast, final
 
 from alembic import context
 from BL_Python.database.config import DatabaseConfig
@@ -19,13 +19,27 @@ from psycopg2.errors import UndefinedTable
 from sqlalchemy import MetaData, Table, engine_from_config, pool
 from sqlalchemy.engine import Connectable, Connection, Engine
 from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.schema import SchemaItem
 
 # from AWS import load_ssm_application_parameters
 
 
 class type_include_object(Protocol):
+    # self, object: Table, name: str, type_: str, reflected: Any, compare_to: Any
     def __call__(
-        self, object: Table, name: str, type_: str, reflected: Any, compare_to: Any
+        self,
+        object: SchemaItem,
+        name: str | None,
+        type_: Literal[
+            "schema",
+            "table",
+            "column",
+            "index",
+            "unique_constraint",
+            "foreign_key_constraint",
+        ],
+        reflected: bool,
+        compare_to: SchemaItem | None,
     ) -> bool: ...
 
 
@@ -85,9 +99,20 @@ class AlembicEnvSetup:
 
         def include_schemas(names: List[str]):
             def include_object(
-                object: Table, name: str, type_: str, reflected: Any, compare_to: Any
-            ):
-                if type_ == "table":
+                object: SchemaItem | Table,
+                name: str | None,
+                type_: Literal[
+                    "schema",
+                    "table",
+                    "column",
+                    "index",
+                    "unique_constraint",
+                    "foreign_key_constraint",
+                ],
+                reflected: bool,
+                compare_to: SchemaItem | None,
+            ) -> bool:
+                if type_ == "table" and isinstance(object, Table):
                     return object.schema in names
                 return True
 
@@ -183,7 +208,6 @@ class AlembicEnvSetup:
         script output.
 
         """
-
         config = self.get_config()
         metadata = self.get_metadata(bases)
         target_metadata = metadata.target_metadata
@@ -213,7 +237,7 @@ class AlembicEnvSetup:
         """
         config = self.get_config()
 
-        connectable: Connectable | None = cast(dict[str, Any], config.attributes).get(  # pyright: ignore[reportUnknownMemberType]
+        connectable: Connectable | None = cast(dict[str, Any], config.attributes).get(
             "connection", None
         )
 

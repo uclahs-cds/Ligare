@@ -114,7 +114,8 @@ class BLAlembic:
         with self._initialize_alembic(config) as msg_capture:
             try:
                 return alembic_main(argv)
-            except SystemExit:
+            except SystemExit as e:
+                self._log.error(e)
                 # If SystemExit is from anything other than
                 # needing to create the init dir, then crash.
                 # This is doable/reliable because Alembic first writes
@@ -136,6 +137,7 @@ class BLAlembic:
             written by Alembic. In the case of this method, if the "use the 'init'"
             message is seen, then `alembic init` is executed. This type can be used to
             determine whether `alembic init` was executed.
+        :return MsgCaptureCtxManager:
         """
         script_location = config.get_main_option("script_location") or "alembic"
 
@@ -151,9 +153,40 @@ class BLAlembic:
             )
             alembic_main(["init", script_location])
 
+            self._overwrite_alembic_env_files(config)
+
         return self._alembic_msg_capture(
             "use the 'init' command to create a new scripts folder", _msg_new
         )
+
+    def _overwrite_alembic_env_files(self, config: Config) -> None:
+        """
+        Overwrite env.py and env_setup.py in an Alembic migrations directory.
+        Currently this only runs if `alembic init` is executed, and care must
+        be taken if we intend to change this to overwrite the files if they exist.
+        The files will exist if `alembic init` was executed prior to this tool.
+
+        :param Config config: The config, parsed from an Alembic INI configuration file.
+        :return None:
+        """
+        script_location = config.get_main_option("script_location") or "alembic"
+        bl_python_alembic_file_dir = Path(__file__).resolve().parent
+
+        files = [
+            (
+                Path(bl_python_alembic_file_dir, f"_replacement_{basename}.py"),
+                Path(script_location, f"{basename}.py"),
+            )
+            for basename in ["env", "env_setup"]
+        ]
+
+        for file in files:
+            self._log.debug(f"Rewriting base Alembic files: {file}")
+            with (
+                open(file[0], "r") as replacement,
+                open(file[1], "w+b") as original,
+            ):
+                original.writelines(replacement.buffer)
 
     @contextmanager
     def _write_bl_alembic_config(
@@ -195,6 +228,7 @@ class BLAlembic:
         :param str msg_to_capture: The specific message to monitor in Alembic's writes.
         :param Callable[[Callable[[str, bool, bool, bool], None]], None] callback:
             A callable that receives Alembic's `msg` function as a parameter.
+        :return MsgCaptureCtxManager:
         """
 
         OVERRIDDEN_ORIGINAL_ATTR_NAME = "_overridden_original"
@@ -229,8 +263,13 @@ class BLAlembic:
             def __init__(self, logger: Logger) -> None:
                 self._log = logger
 
-            def __enter__(self):
-                # this function replaces Alembic's `msg` function
+            def __enter__(self) -> MessageSeen:
+                """
+                Replace Alembic's `msg` function in order to execute
+                a callback when certain messages are seen.
+
+                :return _type_: _description_
+                """
                 self._log.debug(f"Entering `{MsgCaptureCtxManager.__name__}` context.")
 
                 def _msg_new(
@@ -265,13 +304,26 @@ class BLAlembic:
                 exc_val: BaseException | None,
                 exc_tb: TracebackType | None,
             ) -> bool:
+                """
+                Revert replacing Alembic's `msg` function by restoring the original.
+
+                :param type[BaseException] | None exc_type:
+                :param BaseException | None exc_val:
+                :param TracebackType | None exc_tb:
+                :return bool:
+                """
                 self._log.debug(f"Exiting `{MsgCaptureCtxManager.__name__}` context.")
                 alembic.util.messaging.msg = _msg_original
                 return True
 
         return MsgCaptureCtxManager(self._log)
 
-    def run(self):
+    def run(self) -> None:
+        """
+        Run Alembic migrations, initializing Alembic if necessary.
+
+        :return None:
+        """
         self._log.debug("Bootstrapping and executing `alembic` process.")
         return self._run()
 
@@ -279,6 +331,12 @@ class BLAlembic:
 def bl_alembic(
     argv: list[str] | None = None, log_level: int | str | None = None
 ) -> None:
+    """
+    A method to support the `bl-alembic` command, which replaces `alembic.
+
+    :param list[str] | None argv: CLI arguments, defaults to None
+    :param int | str | None log_level: An integer log level to configure logging verbosity, defaults to None
+    """
     logging.basicConfig(level=logging.INFO)
     if not log_level:
         log_level = environ.get("LOG_LEVEL")
