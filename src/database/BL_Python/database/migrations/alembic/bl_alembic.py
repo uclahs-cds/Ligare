@@ -109,12 +109,9 @@ class BLAlembic:
         :param list[str] argv: The command line arguments to be parsed by ArgumentParser.
         :return None:
         """
-        # if not Path(BLAlembic.DEFAULT_CONFIG_NAME).exists():
         self._log.debug("Running `alembic` with modified command.")
         self._write_bl_alembic_config()
         argv = ["-c", BLAlembic.DEFAULT_CONFIG_NAME] + argv
-        # else:
-        #    self._log.debug("Running `alembic` with discovered configuration file.")
 
         self._execute_alembic(argv)
 
