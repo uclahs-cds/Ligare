@@ -19,6 +19,8 @@ from typing_extensions import final
 
 @final
 class BLAlembic:
+    DEFAULT_CONFIG_NAME: str = "alembic.ini"
+
     _run: Callable[[], None]
     _log: Logger
 
@@ -45,7 +47,7 @@ class BLAlembic:
             self._run = lambda: self._run_with_specified_config(argv)
         else:
             self._log.debug(f"Execution-only args passed from Alembic: {args}")
-            self._run = lambda: self._run_with_bl_alembic_config(argv)
+            self._run = lambda: self._run_with_config(argv)
 
     def _get_config(self, argv: list[str]) -> Config:
         """
@@ -87,20 +89,27 @@ class BLAlembic:
         self._log.debug("Running unmodified `alembic` command.")
         self._execute_alembic(argv)
 
-    def _run_with_bl_alembic_config(self, argv: list[str]) -> None:
+    def _run_with_config(self, argv: list[str]) -> None:
         """
-        Calls `alembic` programmatically after creating a temporary
-        config file from the BL_Python default Alembic config, and
-        forcing the temporary config file to be used by `alembic`.
+        Calls `alembic` programmatically either:
+            - if the file 'alembic.ini' exists in the same working
+                directory in which the command is run.
+            - if the file 'alembic.ini' does not exist and after creating
+                a temporary configuration file from the BL_Python default Alembic
+                config, and forcing the temporary configuration file to be used
+                by `alembic`.
 
         :param list[str] argv: The command line arguments to be parsed by ArgumentParser.
         :return None:
         """
-        self._log.debug("Running `alembic` with modified command.")
-        with self._write_bl_alembic_config() as config_file:
-            argv = ["-c", config_file.name] + argv
+        if not Path(BLAlembic.DEFAULT_CONFIG_NAME).exists():
+            self._log.debug("Running `alembic` with modified command.")
+            with self._write_bl_alembic_config() as config_file:
+                argv = ["-c", config_file.name] + argv
+        else:
+            self._log.debug("Running `alembic` with discovered configuration file.")
 
-            self._execute_alembic(argv)
+        self._execute_alembic(argv)
 
     def _execute_alembic(self, argv: list[str]) -> None:
         """
@@ -172,21 +181,28 @@ class BLAlembic:
         script_location = config.get_main_option("script_location") or "alembic"
         bl_python_alembic_file_dir = Path(__file__).resolve().parent
 
-        files = [
+        files = (
             (
                 Path(bl_python_alembic_file_dir, f"_replacement_{basename}.py"),
                 Path(script_location, f"{basename}.py"),
             )
             for basename in ["env", "env_setup"]
-        ]
+        )
 
         for file in files:
+            source_path, destination_path = file
+            if Path(destination_path).exists():
+                self._log.warn(
+                    f"The file '{destination_path}' already exists, but this is unexpected. Refusing to overwrite. Please report this problem."
+                )
+                continue
+
             self._log.debug(f"Rewriting base Alembic files: {file}")
             with (
-                open(file[0], "r") as replacement,
-                open(file[1], "w+b") as original,
+                open(source_path, "r") as source,
+                open(destination_path, "w+b") as destination,
             ):
-                original.writelines(replacement.buffer)
+                destination.writelines(source.buffer)
 
     @contextmanager
     def _write_bl_alembic_config(
@@ -200,10 +216,11 @@ class BLAlembic:
         with tempfile.NamedTemporaryFile("w+b") as temp_config_file:
             self._log.debug(f"Temp file created at '{temp_config_file.name}'.")
             with open(
-                Path(Path(__file__).resolve().parent, "alembic.ini"), "r"
+                Path(Path(__file__).resolve().parent, BLAlembic.DEFAULT_CONFIG_NAME),
+                "r",
             ) as default_config_file:
                 self._log.debug(
-                    f"Writing config file 'alembic.ini' to temp file '{temp_config_file.name}'."
+                    f"Writing configuration file '{BLAlembic.DEFAULT_CONFIG_NAME}' to temp file '{temp_config_file.name}'."
                 )
                 temp_config_file.writelines(default_config_file.buffer)
 
