@@ -1,12 +1,10 @@
 import logging
 import sys
-import tempfile
-from contextlib import contextmanager
 from logging import Logger
 from os import environ
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Callable, Generator
+from typing import Callable
 
 import alembic.util.messaging
 
@@ -20,11 +18,21 @@ from typing_extensions import final
 @final
 class BLAlembic:
     DEFAULT_CONFIG_NAME: str = "alembic.ini"
+    LOG_LEVEL_NAME: str = "LOG_LEVEL"
+    ALLOW_OVERWRITE_NAME: str = "ALLOW_OVERWRITE"
 
     _run: Callable[[], None]
     _log: Logger
+    _allow_overwrite: bool = False
 
-    def __init__(self, argv: list[str] | None, logger: Logger) -> None:
+    @dataclass
+    class FileCopy:
+        source: Path
+        destination: Path
+
+    def __init__(
+        self, argv: list[str] | None, logger: Logger, allow_overwrite: bool = False
+    ) -> None:
         """
         _summary_
 
@@ -33,6 +41,7 @@ class BLAlembic:
         :param Logger logger: A logger for writing messages.
         """
         self._log = logger
+        self._allow_overwrite = allow_overwrite
 
         if not argv:
             argv = sys.argv[1:]
@@ -102,12 +111,12 @@ class BLAlembic:
         :param list[str] argv: The command line arguments to be parsed by ArgumentParser.
         :return None:
         """
-        if not Path(BLAlembic.DEFAULT_CONFIG_NAME).exists():
-            self._log.debug("Running `alembic` with modified command.")
-            with self._write_bl_alembic_config() as config_file:
-                argv = ["-c", config_file.name] + argv
-        else:
-            self._log.debug("Running `alembic` with discovered configuration file.")
+        # if not Path(BLAlembic.DEFAULT_CONFIG_NAME).exists():
+        self._log.debug("Running `alembic` with modified command.")
+        self._write_bl_alembic_config()
+        argv = ["-c", BLAlembic.DEFAULT_CONFIG_NAME] + argv
+        # else:
+        #    self._log.debug("Running `alembic` with discovered configuration file.")
 
         self._execute_alembic(argv)
 
@@ -181,55 +190,61 @@ class BLAlembic:
         script_location = config.get_main_option("script_location") or "alembic"
         bl_python_alembic_file_dir = Path(__file__).resolve().parent
 
-        files = (
-            (
+        files = [
+            BLAlembic.FileCopy(
                 Path(bl_python_alembic_file_dir, f"_replacement_{basename}.py"),
-                Path(script_location, f"{basename}.py"),
+                Path(Path.cwd(), Path(script_location, f"{basename}.py")),
             )
             for basename in ["env", "env_setup"]
-        )
+        ]
 
-        for file in files:
-            source_path, destination_path = file
-            if Path(destination_path).exists():
-                self._log.warn(
-                    f"The file '{destination_path}' already exists, but this is unexpected. Refusing to overwrite. Please report this problem."
-                )
-                continue
+        self._log.debug(f"Rewriting base Alembic files: '{files}'")
+        # force the overwrite because Alembic creates the
+        # files that we want to replace.
+        self._copy_files(files, force_overwrite=True)
 
-            self._log.debug(f"Rewriting base Alembic files: {file}")
-            with (
-                open(source_path, "r") as source,
-                open(destination_path, "w+b") as destination,
-            ):
-                destination.writelines(source.buffer)
-
-    @contextmanager
     def _write_bl_alembic_config(
         self,
-    ) -> "Generator[tempfile._TemporaryFileWrapper[bytes], Any, None]":  # pyright: ignore[reportPrivateUsage]
+    ) -> None:
         """
         Write the BL_Python Alembic tool's default configuration file to a temp file.
 
         :yield Generator[tempfile._TemporaryFileWrapper[bytes], Any, None]: The temp file.
         """
-        with tempfile.NamedTemporaryFile("w+b") as temp_config_file:
-            self._log.debug(f"Temp file created at '{temp_config_file.name}'.")
-            with open(
-                Path(Path(__file__).resolve().parent, BLAlembic.DEFAULT_CONFIG_NAME),
-                "r",
-            ) as default_config_file:
-                self._log.debug(
-                    f"Writing configuration file '{BLAlembic.DEFAULT_CONFIG_NAME}' to temp file '{temp_config_file.name}'."
+        # need to _not_ use a temp file, and copy the default alembic.ini
+        # to the directory in which bl-alembic is executed.
+        self._log.debug(
+            f"Writing configuration file '{BLAlembic.DEFAULT_CONFIG_NAME}'."
+        )
+        self._copy_files(
+            [
+                BLAlembic.FileCopy(
+                    Path(
+                        Path(__file__).resolve().parent, BLAlembic.DEFAULT_CONFIG_NAME
+                    ),
+                    Path(Path.cwd(), BLAlembic.DEFAULT_CONFIG_NAME),
                 )
-                temp_config_file.writelines(default_config_file.buffer)
+            ]
+        )
 
-            # the file will not be read correctly
-            # without seeking to the 0th byte
-            _ = temp_config_file.seek(0)
+    def _copy_files(self, files: list[FileCopy], force_overwrite: bool = False):
+        for file in files:
+            write_mode = "w+b" if self._allow_overwrite or force_overwrite else "x+b"
+            try:
+                with (
+                    open(file.source, "r") as source,
+                    open(file.destination, write_mode) as destination,
+                ):
+                    destination.writelines(source.buffer)
+            except FileExistsError as e:
+                if e.filename != str(file.destination):
+                    raise
 
-            # yield so the temp file isn't deleted
-            yield temp_config_file
+                self._log.warn(
+                    f"""The file '{file.destination}' already exists, but this is unexpected. Refusing to overwrite.
+    To use the default configuration, delete the existing file,
+    or set the envvar `{BLAlembic.ALLOW_OVERWRITE_NAME}=True`."""
+                )
 
     def _alembic_msg_capture(
         self,
@@ -346,7 +361,9 @@ class BLAlembic:
 
 
 def bl_alembic(
-    argv: list[str] | None = None, log_level: int | str | None = None
+    argv: list[str] | None = None,
+    log_level: int | str | None = None,
+    allow_overwrite: bool | None = None,
 ) -> None:
     """
     A method to support the `bl-alembic` command, which replaces `alembic.
@@ -356,13 +373,20 @@ def bl_alembic(
     """
     logging.basicConfig(level=logging.INFO)
     if not log_level:
-        log_level = environ.get("LOG_LEVEL")
+        log_level = environ.get(BLAlembic.LOG_LEVEL_NAME)
         log_level = int(log_level) if log_level else logging.INFO
 
     logger = logging.getLogger()
     logger.setLevel(log_level)
 
-    bla = BLAlembic(argv, logger)
+    if allow_overwrite is None:
+        _allow_overwrite = environ.get(BLAlembic.ALLOW_OVERWRITE_NAME)
+        allow_overwrite = (_allow_overwrite.lower() if _allow_overwrite else None) in [
+            "true",
+            "1",
+        ]
+
+    bla = BLAlembic(argv, logger, allow_overwrite)
     bla.run()
 
 
