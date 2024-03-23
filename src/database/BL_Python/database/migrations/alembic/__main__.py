@@ -31,8 +31,7 @@ def bl_alembic(
             "1",
         ]
 
-    bla = BLAlembic(argv, logger, allow_overwrite)
-    bla.run()
+    BLAlembic(argv, logger, allow_overwrite).run()
 
 
 if __name__ == "__main__":
