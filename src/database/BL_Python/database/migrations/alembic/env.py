@@ -15,9 +15,10 @@ def run_migrations(bases: list[MetaBase], config_filename: Path | None = None):
 
     config_type = ConfigBuilder[Config]().with_root_config(Config).build()
     config = load_config(config_type, config_filename)
-    config_module = ConfigModule(config, DatabaseConfig)
+    config_module = ConfigModule(config, Config)
+    database_config_module = ConfigModule(config.database, DatabaseConfig)
 
-    ioc_container = Injector(config_module)
+    ioc_container = Injector([config_module, database_config_module])
 
     alembic_env = ioc_container.create_object(AlembicEnvSetup)
 

@@ -86,7 +86,7 @@ class AlembicEnvSetup:
         # FIXME why is this here?
         config.set_main_option(
             "sqlalchemy.url",
-            "sqlite:///.app.db",
+            self._config.connection_string
         )
 
         return config
