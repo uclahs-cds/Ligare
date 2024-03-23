@@ -1,5 +1,5 @@
 from typing import Any, Generator, Protocol
-from unittest.mock import AsyncMock, MagicMock, NonCallableMagicMock
+from unittest.mock import MagicMock
 
 import alembic
 import alembic.util
