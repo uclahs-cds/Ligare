@@ -64,6 +64,7 @@ class AlembicEnvSetup:
 
     @lru_cache(maxsize=1)
     def get_config(self):
+        # TODO re-integrate AWS SSM at a later time
         # aws_ssm_config = ConfigParser()
         # loaded_config_files = aws_ssm_config.read("aws-ssm.ini")
         # if loaded_config_files:
