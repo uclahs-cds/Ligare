@@ -84,10 +84,7 @@ class AlembicEnvSetup:
             fileConfig(config.config_file_name)
 
         # FIXME why is this here?
-        config.set_main_option(
-            "sqlalchemy.url",
-            self._config.connection_string
-        )
+        config.set_main_option("sqlalchemy.url", self._config.connection_string)
 
         return config
 

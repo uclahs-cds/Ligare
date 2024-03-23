@@ -211,16 +211,12 @@ class BLAlembic:
         self._log.debug(
             f"Writing configuration file '{BLAlembic.DEFAULT_CONFIG_NAME}'."
         )
-        self._copy_files(
-            [
-                BLAlembic.FileCopy(
-                    Path(
-                        Path(__file__).resolve().parent, BLAlembic.DEFAULT_CONFIG_NAME
-                    ),
-                    Path(Path.cwd(), BLAlembic.DEFAULT_CONFIG_NAME),
-                )
-            ]
-        )
+        self._copy_files([
+            BLAlembic.FileCopy(
+                Path(Path(__file__).resolve().parent, BLAlembic.DEFAULT_CONFIG_NAME),
+                Path(Path.cwd(), BLAlembic.DEFAULT_CONFIG_NAME),
+            )
+        ])
 
     def _copy_files(self, files: list[FileCopy], force_overwrite: bool = False):
         for file in files:
