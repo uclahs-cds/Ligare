@@ -14,7 +14,7 @@ class SQLiteDialect(DialectBase):
     def __init__(self, dialect: Dialect) -> None:
         if dialect.name != SQLiteDialect.DIALECT_NAME:
             raise ValueError(
-                f"Invalid Dialect with name `{dialect.name}` provided for `{SQLiteDialect.__name__}`. Expected `sqlite`."
+                f"Invalid Dialect with name `{dialect.name}` provided for `{SQLiteDialect.__name__}`. Expected `{self.DIALECT_NAME}`."
             )
 
         self._dialect = dialect
