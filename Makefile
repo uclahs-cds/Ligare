@@ -27,10 +27,14 @@ GITHUB_WORKSPACE ?= $(CURDIR)
 # `testpypi` and `pypi` are valid values.
 PYPI_REPO ?= testpypi
 
+<<<<<<< HEAD
 # The directory to write ephermal reports to,
 # such as pytest coverage reports.
 REPORTS_DIR ?= reports
 
+=======
+BANDIT_REPORT := bandit.sarif
+>>>>>>> 0f3e052 (Add SAST scanner Bandit.)
 
 # Can be overridden. This is used to change the prereqs
 # of some supporting targets, like `format-ruff`.
@@ -204,6 +208,17 @@ test-pyright : $(VENV) $(DEFAULT_TARGET)
   endif
   endif
 
+test-bandit : $(VENV) $(DEFAULT_TARGET)
+	$(ACTIVATE_VENV)
+
+	bandit -c pyproject.toml \
+		--format sarif \
+		--output $(BANDIT_REPORT) \
+		-r . || BANDIT_EXIT_CODE=$$?
+	# don't exit with an error
+	# while testing bandit.
+	echo "Bandit exit code: $$BANDIT_EXIT_CODE"
+
 test-pytest : $(VENV) $(DEFAULT_TARGET)
 	$(ACTIVATE_VENV)
 
@@ -217,7 +232,7 @@ test-pytest : $(VENV) $(DEFAULT_TARGET)
 	exit $$PYTEST_EXIT_CODE
 
 .PHONY: test test-pytest test-pyright test-ruff test-isort
-_test : $(VENV) $(DEFAULT_TARGET) test-isort test-ruff test-pyright test-pytest
+_test : $(VENV) $(DEFAULT_TARGET) test-isort test-ruff test-pyright test-bandit test-pytest
 test : CMD_PREFIX=@
 test : clean-test
 	$(MAKE) -j --keep-going _test
@@ -247,8 +262,17 @@ clean-build :
 	\) -prune -exec rm -rf {} \;
 
 clean-test :
+<<<<<<< HEAD
 	$(CMD_PREFIX)rm -rf \
 		$(REPORTS_DIR)/pytest
+=======
+	$(CMD_PREFIX)rm -rf cov.xml \
+		pytest.xml \
+		coverage \
+		.coverage \
+		$(BANDIT_REPORT)
+
+>>>>>>> 0f3e052 (Add SAST scanner Bandit.)
 
 .PHONY: clean clean-test clean-build
 clean : clean-build clean-test

@@ -87,7 +87,8 @@ dev-dependencies = [
     "junit2html ~= 30.1",
     "pyright ~= 1.1",
     "isort ~= 5.13",
-    "ruff ~= 0.3"
+    "ruff ~= 0.3",
+    "bandit[sarif,toml] ~= 1.7"
 ]
 
 [tool.pyright]
@@ -214,6 +215,21 @@ omit = [
     "*/__pycache__/*"
 ]
 branch = true
+
+[tool.bandit]
+exclude_dirs = [
+    "./build/*",
+    "./.github-venv/*",
+    "./.pytest_cache/*",
+    "./typings/*",
+    "./node_modules/*",
+    "./__pycache__/*",
+    "./.github/*",
+    "./.venv/*",
+    "./.git/*",
+    "./test/*/test*.py",
+    "./src/*/test/*/test*.py"
+]
 
 [tool.ruff]
 include = [
