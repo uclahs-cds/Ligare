@@ -226,7 +226,7 @@ jobs:
           DEFAULT_TARGET=cicd \
             make test-bandit
 
-      - name: Output bandit report
+      - name: Output bandit report artifact
         uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
@@ -235,6 +235,11 @@ jobs:
             bandit.sarif
           retention-days: 1
           if-no-files-found: error
+
+      - name: Upload bandit report to CodeQL
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: bandit.sarif
 
   Style:
     name: Style and formatting
