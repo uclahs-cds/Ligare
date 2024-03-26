@@ -25,6 +25,8 @@ GITHUB_WORKSPACE ?= $(CURDIR)
 
 PYPI_REPO ?= testpypi
 
+BANDIT_REPORT := bandit.sarif
+
 # Can be overridden. This is used to change the prereqs
 # of some supporting targets, like `format-ruff`.
 # This variable is reassigned to whichever of the dev/cicd
@@ -194,6 +196,17 @@ test-pyright : $(VENV) $(DEFAULT_TARGET)
   endif
   endif
 
+test-bandit : $(VENV) $(DEFAULT_TARGET)
+	$(ACTIVATE_VENV)
+
+	bandit -c pyproject.toml \
+		--format sarif \
+		--output $(BANDIT_REPORT) \
+		-r . || BANDIT_EXIT_CODE=$$?
+	# don't exit with an error
+	# while testing bandit.
+	echo "Bandit exit code: $$BANDIT_EXIT_CODE"
+
 test-pytest : $(VENV) $(DEFAULT_TARGET)
 	$(ACTIVATE_VENV)
 
@@ -201,7 +214,7 @@ test-pytest : $(VENV) $(DEFAULT_TARGET)
 	coverage html -d coverage
 
 test : CMD_PREFIX=@
-test : $(VENV) $(DEFAULT_TARGET) clean-test test-isort test-ruff test-pyright test-pytest
+test : $(VENV) $(DEFAULT_TARGET) clean-test test-isort test-ruff test-pyright test-bandit test-pytest
 
 
 # Publishing should use a real install, which `cicd` fulfills
@@ -224,7 +237,9 @@ clean-test :
 	$(CMD_PREFIX)rm -rf cov.xml \
 		pytest.xml \
 		coverage \
-		.coverage 
+		.coverage \
+		$(BANDIT_REPORT)
+
 
 clean : clean-build clean-test
 	rm -rf $(VENV)
