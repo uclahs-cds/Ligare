@@ -222,7 +222,6 @@ jobs:
           echo Running bandit
 
           VENV=.github-venv \
-          PYTEST_FLAGS="-k 'not acceptance'" \
           DEFAULT_TARGET=cicd \
             make test-bandit
 

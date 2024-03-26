@@ -39,9 +39,6 @@ REPORTS_DIR ?= reports
 DEFAULT_TARGET ?= dev
 .DEFAULT_GOAL = $(DEFAULT_TARGET)
 
-#define assign_default_target
-#    DEFAULT_TARGET := $(1)
-#endef
 
 ifeq ($(DEFAULT_TARGET),dev)
     CONFIGURE_TARGET := _dev_configure
@@ -55,6 +52,7 @@ endif
 
 
 ACTIVATE_VENV := . $(VENV)/bin/activate
+PREFIX_VENV := PATH=$(CURDIR)/$(VENV)/bin:$$PATH
 REPORT_VENV_USAGE := echo '\nActivate your venv with `. $(VENV)/bin/activate`'
 
 PACKAGE_INSTALL_DIR := $(VENV)/lib/python*/site-packages/BL_Python
@@ -76,7 +74,6 @@ endef
 
 PYPROJECT_FILES=./pyproject.toml $(wildcard src/*/pyproject.toml)
 PACKAGE_PATHS=$(subst /pyproject.toml,,$(PYPROJECT_FILES))
-#PACKAGES=BL_Python.all $(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
 PACKAGES=$(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
 
 .PHONY: dev
@@ -84,16 +81,18 @@ PACKAGES=$(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pypro
 # just prereq it.
 dev : $(VENV) $(SETUP_DEPENDENCIES)
 	$(MAKE) _dev_build DEFAULT_TARGET=dev
-_dev_configure: $(VENV) $(PYPROJECT_FILES) #BL_Python.all
+_dev_configure : $(VENV) $(PYPROJECT_FILES)
 _dev_build : _dev_configure
 	@if [ -d $(call package_to_dist,all) ]; then
 		echo "Package $@ is already built, skipping..."
 	else
 		$(ACTIVATE_VENV)
 
+		$(PREFIX_VENV) \
 		pip install -e .[dev-dependencies]
 #		By default, psycopg2 is not installed
 #		but it should be for development
+		$(PREFIX_VENV) \
 		pip install -e src/database[postgres-binary]
 
 		rm -rf $(PACKAGE_INSTALL_DIR)
@@ -103,56 +102,34 @@ _dev_build : _dev_configure
 
 cicd : $(VENV) $(SETUP_DEPENDENCIES)
 	$(MAKE) _cicd_build DEFAULT_TARGET=cicd
-_cicd_configure: $(VENV) $(PYPROJECT_FILES)
+_cicd_configure : $(VENV) $(PYPROJECT_FILES)
 _cicd_build : _cicd_configure
 	@if [ -f $(call package_to_inst,) ]; then
 		echo "Package is already built, skipping..."
 	else
 		$(ACTIVATE_VENV)
 
+		$(PREFIX_VENV) \
 		pip install .[dev-dependencies]
 #		By default, psycopg2 is not installed
 #		but it should be for CI/CD
+		$(PREFIX_VENV) \
 		pip install src/database[postgres-binary]
 	fi
 
 	@$(REPORT_VENV_USAGE)
 
-#MODES=dev_mode cicd_mode
-## Used to force DEFAULT_TARGET to whatever
-## the actual .DEFAULT_GOAL is.
-#$(MODES):
-#	@echo $(call assign_default_target,$(subst _mode,,$@))
-
-
-# BL_Python.all does not have a src/%/pyproject.toml
-# prereq because its pyproject.toml is at /
-#BL_Python.all: $(VENV) $(PYPROJECT_FILES)
-#	@if [ -d $(call package_to_dist,all) ]; then
-#		echo "Package $@ is already built, skipping..."
-#	else
-#		$(ACTIVATE_VENV)
-#
-#		pip install -e .[dev-dependencies]
-##		By default, psycopg2 is not installed
-##		but it should be for development
-#		pip install -e src/database[postgres-binary]
-#
-#		rm -rf $(PACKAGE_INSTALL_DIR)
-#	fi
-#
-#	@$(REPORT_VENV_USAGE)
-
-#$(filter-out BL_Python.all, $(PACKAGES)): BL_Python.%: src/%/pyproject.toml $(VENV)
-$(PACKAGES): BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PYPROJECT_FILES)
+$(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PYPROJECT_FILES)
 	@if [ -d $(call package_to_dist,$*) ]; then
 		@echo "Package $@ is already built, skipping..."
 	else
 		$(ACTIVATE_VENV)
 
 		if [ "$@" = "BL_Python.database" ]; then
+			$(PREFIX_VENV) \
 			pip install -e $(dir $<)[postgres-binary]
 		else
+			$(PREFIX_VENV) \
 			pip install -e $(dir $<)
 		fi
 
@@ -165,16 +142,20 @@ $(PACKAGES): BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PYP
 SETUP_DEPENDENCIES=$(call dep_to_venv_path,toml/__init__.py) $(call dep_to_venv_path,typing_extensions.py)
  $(call dep_to_venv_path,toml/__init__.py): $(VENV)
 	$(ACTIVATE_VENV)
-	pip install toml
+
+	$(PREFIX_VENV) pip install toml
 
  $(call dep_to_venv_path,typing_extensions.py): $(VENV)
 	$(ACTIVATE_VENV)
+
+	$(PREFIX_VENV) \
 	pip install typing_extensions
 
 $(PACKAGE_PATHS) : $(VENV) $(SETUP_DEPENDENCIES)
 $(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES)
 	$(ACTIVATE_VENV)
 
+	$(PREFIX_VENV) \
 	REWRITE_DEPENDENCIES=$(REWRITE_DEPENDENCIES) \
 	GITHUB_REF=$(GITHUB_REF) \
 	GITHUB_WORKSPACE=$(GITHUB_WORKSPACE) \
@@ -184,19 +165,25 @@ $(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES)
 $(VENV) :
 	test -d $(VENV) || env python$(PYTHON_VERSION) -m venv $(VENV)
 
+#	fix Python symlink that is wrong on GitHub Actions for some reason
+	ln -sf $(which python$(PYTHON_VERSION)) $(VENV)/bin/python$(PYTHON_VERSION)
+
 	$(ACTIVATE_VENV)
 
+	$(PREFIX_VENV) \
 	pip install -U pip
 
 
 format-isort : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
-	isort src 
+	$(PREFIX_VENV) \
+	isort src
 
 format-ruff : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
+	$(PREFIX_VENV) \
 	ruff format --preview --respect-gitignore
 
 format : $(VENV) $(BUILD_TARGET) format-isort format-ruff
@@ -205,17 +192,20 @@ format : $(VENV) $(BUILD_TARGET) format-isort format-ruff
 test-isort : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
-	isort --check-only src 
+	$(PREFIX_VENV) \
+	isort --check-only src
 
 test-ruff : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
+	$(PREFIX_VENV) \
 	ruff format --preview --respect-gitignore --check
 
 test-pyright : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
   ifeq "$(PYRIGHT_MODE)" "pip"
+	$(PREFIX_VENV) \
 	pyright
   else
   ifeq "$(PYRIGHT_MODE)" "npm"
@@ -231,12 +221,14 @@ test-pyright : $(VENV) $(BUILD_TARGET)
 test-bandit : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
+	$(PREFIX_VENV) \
 	bandit -c pyproject.toml \
 		--format sarif \
 		--output $(BANDIT_REPORT) \
 		-r . || BANDIT_EXIT_CODE=$$?
-	# don't exit with an error
-	# while testing bandit.
+
+#	don't exit with an error
+#	while testing bandit.
 	@echo "Bandit exit code: $$BANDIT_EXIT_CODE"
 
 test-pytest : $(VENV) $(BUILD_TARGET)
@@ -264,6 +256,7 @@ publish-all : REWRITE_DEPENDENCIES=false
 publish-all : reset $(VENV)
 	$(ACTIVATE_VENV)
 
+	$(PREFIX_VENV) \
 	./publish_all.sh $(PYPI_REPO)
 
 
