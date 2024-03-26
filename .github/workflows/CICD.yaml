@@ -230,7 +230,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
-          name: pytest-and-coverage-report
+          name: bandit-sast-report
           path: |
             bandit.sarif
           retention-days: 1
