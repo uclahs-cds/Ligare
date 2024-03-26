@@ -27,14 +27,10 @@ GITHUB_WORKSPACE ?= $(CURDIR)
 # `testpypi` and `pypi` are valid values.
 PYPI_REPO ?= testpypi
 
-<<<<<<< HEAD
 # The directory to write ephermal reports to,
 # such as pytest coverage reports.
 REPORTS_DIR ?= reports
 
-=======
-BANDIT_REPORT := bandit.sarif
->>>>>>> 0f3e052 (Add SAST scanner Bandit.)
 
 # Can be overridden. This is used to change the prereqs
 # of some supporting targets, like `format-ruff`.
@@ -43,12 +39,16 @@ BANDIT_REPORT := bandit.sarif
 DEFAULT_TARGET ?= dev
 .DEFAULT_GOAL = $(DEFAULT_TARGET)
 
-define assign_default_target
-    DEFAULT_TARGET := $(1)
-endef
+#define assign_default_target
+#    DEFAULT_TARGET := $(1)
+#endef
 
 ifeq ($(DEFAULT_TARGET),dev)
+    CONFIGURE_TARGET := _dev_configure
+    BUILD_TARGET := _dev_build
 else ifeq ($(DEFAULT_TARGET),cicd)
+    CONFIGURE_TARGET := _cicd_configure
+    BUILD_TARGET := _cicd_build
 else
     $(error DEFAULT_TARGET must be one of "dev" or "cicd")
 endif
@@ -76,38 +76,16 @@ endef
 
 PYPROJECT_FILES=./pyproject.toml $(wildcard src/*/pyproject.toml)
 PACKAGE_PATHS=$(subst /pyproject.toml,,$(PYPROJECT_FILES))
-PACKAGES=BL_Python.all $(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
+#PACKAGES=BL_Python.all $(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
+PACKAGES=$(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
 
 .PHONY: dev
 # Rather than duplicating BL_Python.all,
 # just prereq it.
-dev : dev_mode BL_Python.all
-
-.PHONY: cicd
-cicd : cicd_mode $(VENV) $(PYPROJECT_FILES)
-	@if [ -f $(call package_to_inst,) ]; then
-		echo "Package is already built, skipping..."
-	else
-		$(ACTIVATE_VENV)
-
-		pip install .[dev-dependencies]
-#		By default, psycopg2 is not installed
-#		but it should be for CI/CD
-		pip install src/database[postgres-binary]
-	fi
-
-	@$(REPORT_VENV_USAGE)
-
-MODES=dev_mode cicd_mode
-# Used to force DEFAULT_TARGET to whatever
-# the actual .DEFAULT_GOAL is.
-$(MODES):
-	@echo $(call assign_default_target,$(subst _mode,,$@))
-
-
-# BL_Python.all does not have a src/%/pyproject.toml
-# prereq because its pyproject.toml is at /
-BL_Python.all: $(VENV) $(PYPROJECT_FILES)
+dev : $(VENV) $(SETUP_DEPENDENCIES)
+	$(MAKE) _dev_build DEFAULT_TARGET=dev
+_dev_configure: $(VENV) $(PYPROJECT_FILES) #BL_Python.all
+_dev_build : _dev_configure
 	@if [ -d $(call package_to_dist,all) ]; then
 		echo "Package $@ is already built, skipping..."
 	else
@@ -123,7 +101,50 @@ BL_Python.all: $(VENV) $(PYPROJECT_FILES)
 
 	@$(REPORT_VENV_USAGE)
 
-$(filter-out BL_Python.all, $(PACKAGES)): BL_Python.%: src/%/pyproject.toml $(VENV)
+cicd : $(VENV) $(SETUP_DEPENDENCIES)
+	$(MAKE) _cicd_build DEFAULT_TARGET=cicd
+_cicd_configure: $(VENV) $(PYPROJECT_FILES)
+_cicd_build : _cicd_configure
+	@if [ -f $(call package_to_inst,) ]; then
+		echo "Package is already built, skipping..."
+	else
+		$(ACTIVATE_VENV)
+
+		pip install .[dev-dependencies]
+#		By default, psycopg2 is not installed
+#		but it should be for CI/CD
+		pip install src/database[postgres-binary]
+	fi
+
+	@$(REPORT_VENV_USAGE)
+
+#MODES=dev_mode cicd_mode
+## Used to force DEFAULT_TARGET to whatever
+## the actual .DEFAULT_GOAL is.
+#$(MODES):
+#	@echo $(call assign_default_target,$(subst _mode,,$@))
+
+
+# BL_Python.all does not have a src/%/pyproject.toml
+# prereq because its pyproject.toml is at /
+#BL_Python.all: $(VENV) $(PYPROJECT_FILES)
+#	@if [ -d $(call package_to_dist,all) ]; then
+#		echo "Package $@ is already built, skipping..."
+#	else
+#		$(ACTIVATE_VENV)
+#
+#		pip install -e .[dev-dependencies]
+##		By default, psycopg2 is not installed
+##		but it should be for development
+#		pip install -e src/database[postgres-binary]
+#
+#		rm -rf $(PACKAGE_INSTALL_DIR)
+#	fi
+#
+#	@$(REPORT_VENV_USAGE)
+
+#$(filter-out BL_Python.all, $(PACKAGES)): BL_Python.%: src/%/pyproject.toml $(VENV)
+$(PACKAGES): BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PYPROJECT_FILES)
 	@if [ -d $(call package_to_dist,$*) ]; then
 		@echo "Package $@ is already built, skipping..."
 	else
@@ -168,31 +189,30 @@ $(VENV) :
 	pip install -U pip
 
 
-format-isort : $(VENV) $(DEFAULT_TARGET)
+format-isort : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
 	isort src 
 
-format-ruff : $(VENV) $(DEFAULT_TARGET)
+format-ruff : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
 	ruff format --preview --respect-gitignore
 
-.PHONY: format format-ruff format-isort
-format : $(VENV) $(DEFAULT_TARGET) format-isort format-ruff
+format : $(VENV) $(BUILD_TARGET) format-isort format-ruff
 
 
-test-isort : $(VENV) $(DEFAULT_TARGET)
+test-isort : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
 	isort --check-only src 
 
-test-ruff : $(VENV) $(DEFAULT_TARGET)
+test-ruff : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
 	ruff format --preview --respect-gitignore --check
 
-test-pyright : $(VENV) $(DEFAULT_TARGET)
+test-pyright : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
   ifeq "$(PYRIGHT_MODE)" "pip"
@@ -208,7 +228,7 @@ test-pyright : $(VENV) $(DEFAULT_TARGET)
   endif
   endif
 
-test-bandit : $(VENV) $(DEFAULT_TARGET)
+test-bandit : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
 	bandit -c pyproject.toml \
@@ -217,9 +237,9 @@ test-bandit : $(VENV) $(DEFAULT_TARGET)
 		-r . || BANDIT_EXIT_CODE=$$?
 	# don't exit with an error
 	# while testing bandit.
-	echo "Bandit exit code: $$BANDIT_EXIT_CODE"
+	@echo "Bandit exit code: $$BANDIT_EXIT_CODE"
 
-test-pytest : $(VENV) $(DEFAULT_TARGET)
+test-pytest : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
 	pytest $(PYTEST_FLAGS) \
@@ -232,7 +252,7 @@ test-pytest : $(VENV) $(DEFAULT_TARGET)
 	exit $$PYTEST_EXIT_CODE
 
 .PHONY: test test-pytest test-pyright test-ruff test-isort
-_test : $(VENV) $(DEFAULT_TARGET) test-isort test-ruff test-pyright test-bandit test-pytest
+_test : $(VENV) $(BUILD_TARGET) test-isort test-ruff test-pyright test-bandit test-pytest
 test : CMD_PREFIX=@
 test : clean-test
 	$(MAKE) -j --keep-going _test
@@ -262,17 +282,8 @@ clean-build :
 	\) -prune -exec rm -rf {} \;
 
 clean-test :
-<<<<<<< HEAD
 	$(CMD_PREFIX)rm -rf \
 		$(REPORTS_DIR)/pytest
-=======
-	$(CMD_PREFIX)rm -rf cov.xml \
-		pytest.xml \
-		coverage \
-		.coverage \
-		$(BANDIT_REPORT)
-
->>>>>>> 0f3e052 (Add SAST scanner Bandit.)
 
 .PHONY: clean clean-test clean-build
 clean : clean-build clean-test
