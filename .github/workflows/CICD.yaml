@@ -140,6 +140,7 @@ jobs:
 
           VENV=.github-venv \
           PYRIGHT_MODE=npm \
+          DEFAULT_TARGET=cicd \
             make test-pyright
 
   Pytest:
@@ -174,6 +175,7 @@ jobs:
 
           VENV=.github-venv \
           PYTEST_FLAGS="-k 'not acceptance'" \
+          DEFAULT_TARGET=cicd \
             make test-pytest
 
       - name: Output pytest report
@@ -224,6 +226,7 @@ jobs:
 
           VENV=.github-venv \
           PYTEST_FLAGS="-k 'not acceptance'" \
+          DEFAULT_TARGET=cicd \
             make test-bandit
 
       - name: Output bandit report
@@ -265,11 +268,13 @@ jobs:
       - name: Check code style
         run: |
           VENV=.github-venv \
+          DEFAULT_TARGET=cicd \
             make test-ruff
 
       - name: Check import order
         run: |
           VENV=.github-venv \
+          DEFAULT_TARGET=cicd \
             make test-isort
 
   Final-status-check:
