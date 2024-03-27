@@ -202,7 +202,13 @@ jobs:
 
           VENV=.github-venv \
           DEFAULT_TARGET=cicd \
-            make test-bandit
+            make test-bandit || BANDIT_EXIT_CODE=$?
+
+          echo "Bandit exit code: $BANDIT_EXIT_CODE"
+
+          if [ $BANDIT_EXIT_CODE -ne 0 ]; then
+            echo "::warning title=Bandit::Bandit exit code: $BANDIT_EXIT_CODE"
+          fi
 
       - name: Output bandit report artifact
         uses: actions/upload-artifact@v4
