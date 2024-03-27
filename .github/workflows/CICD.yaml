@@ -61,17 +61,6 @@ jobs:
           echo "cache_key_dependencies=$cache_key_dependencies" >> $GITHUB_OUTPUT
           echo "cache_key_run=$cache_key_run" >> $GITHUB_OUTPUT
 
-      #- name: Restore dependency cache
-      #  if: ${{ success() && (github.event_name != 'workflow_dispatch' || inputs.use_dependency_cache == 'true') }}
-      # TODO figure out a way to get 3rd party dependencies cached without caching BL_Python ... maybe.
-      #  uses: actions/cache/restore@v4
-      #  id: restore-dependency-cache
-      #  with:
-      #    path: |
-      #      .github-venv
-      #      node_modules
-      #    key: ${{ steps.generate-cache-keys.outputs.cache_key_dependencies }}
-
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         #if: ${{ success() && (inputs.use_dependency_cache == 'false' || !steps.restore-dependency-cache.outputs.cache-hit) }}
         uses: actions/setup-python@v5
@@ -89,17 +78,6 @@ jobs:
 
           echo 'prefix=${{ github.workspace }}/node_modules' >> ~/.npmrc
           npm install -g pyright@`pyright --version | awk '{print $2}'`
-
-      # TODO see note above about 3rd party dependencies.
-      #- name: Save dependency cache
-      #  if: ${{ success() && !steps.restore-dependency-cache.outputs.cache-hit }}
-      #  uses: actions/cache/save@v4
-      #  id: save-dependency-cache
-      #  with:
-      #    path: |
-      #      .github-venv
-      #      node_modules
-      #    key: ${{ steps.generate-cache-keys.outputs.cache_key_dependencies }}
 
       - name: Save run cache
         uses: actions/cache/save@v4
