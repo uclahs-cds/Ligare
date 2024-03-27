@@ -150,9 +150,6 @@ $(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES)
 $(VENV) :
 	test -d $(VENV) || env python$(PYTHON_VERSION) -m venv $(VENV)
 
-#	fix Python symlink that is wrong on GitHub Actions for some reason
-	ln -sf $(which python$(PYTHON_VERSION)) $(VENV)/bin/python$(PYTHON_VERSION)
-
 	$(ACTIVATE_VENV)
 
 	pip install -U pip
