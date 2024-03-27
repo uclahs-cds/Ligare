@@ -68,7 +68,6 @@ jobs:
         id: install-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-        #run: echo "python-version=${{ steps.install-python.outputs.python-version }}" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
         #if: ${{ success() && (inputs.use_dependency_cache == 'false' || !steps.restore-dependency-cache.outputs.cache-hit) }}
