@@ -41,6 +41,7 @@ jobs:
     outputs:
       cache-key-dependencies: ${{ steps.generate-cache-keys.outputs.cache_key }}
       cache-key-run: ${{ steps.generate-cache-keys.outputs.cache_key_run }}
+      python-version: ${{ steps.install-python.outputs.python-version }}
 
     env:
       PYTHON_VERSION: "3.10"
@@ -61,12 +62,13 @@ jobs:
           echo "cache_key_dependencies=$cache_key_dependencies" >> $GITHUB_OUTPUT
           echo "cache_key_run=$cache_key_run" >> $GITHUB_OUTPUT
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
+      - name: Set up Python ${{ steps.generate-cache-keys.outputs.python-version }}
         #if: ${{ success() && (inputs.use_dependency_cache == 'false' || !steps.restore-dependency-cache.outputs.cache-hit) }}
         uses: actions/setup-python@v5
-        id: install_python
+        id: install-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+        #run: echo "python-version=${{ steps.install-python.outputs.python-version }}" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
         #if: ${{ success() && (inputs.use_dependency_cache == 'false' || !steps.restore-dependency-cache.outputs.cache-hit) }}
@@ -93,14 +95,14 @@ jobs:
       - Checkout
 
     env:
-      PYTHON_VERSION: "3.10"
+      PYTHON_VERSION: ${{ needs.Checkout.outputs.python-version }}
 
     if: ${{( success() && !cancelled() ) }}
 
     steps:
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
-        id: install_python
+        id: install-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -128,14 +130,14 @@ jobs:
       - Checkout
 
     env:
-      PYTHON_VERSION: "3.10"
+      PYTHON_VERSION: ${{ needs.Checkout.outputs.python-version }}
 
     if: ${{( success() && !cancelled() ) }}
 
     steps:
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
-        id: install_python
+        id: install-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -176,7 +178,7 @@ jobs:
       - Checkout
 
     env:
-      PYTHON_VERSION: "3.10"
+      PYTHON_VERSION: ${{ needs.Checkout.outputs.python-version }}
 
     if: ${{( success() && !cancelled() ) }}
 
@@ -186,7 +188,7 @@ jobs:
     steps:
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
-        id: install_python
+        id: install-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -228,14 +230,14 @@ jobs:
       - Checkout
 
     env:
-      PYTHON_VERSION: "3.10"
+      PYTHON_VERSION: ${{ needs.Checkout.outputs.python-version }}
 
     if: ${{( success() && !cancelled() ) }}
 
     steps:
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
-        id: install_python
+        id: install-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
