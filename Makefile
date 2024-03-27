@@ -197,14 +197,12 @@ test-pyright : $(VENV) $(BUILD_TARGET)
 test-bandit : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
-	bandit -c pyproject.toml \
-		--format sarif \
-		--output $(BANDIT_REPORT) \
-		-r . || BANDIT_EXIT_CODE=$$?
-
 #	don't exit with an error
 #	while testing bandit.
-	@echo "Bandit exit code: $$BANDIT_EXIT_CODE"
+	-bandit -c pyproject.toml \
+		--format sarif \
+		--output $(BANDIT_REPORT) \
+		-r .
 
 test-pytest : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
