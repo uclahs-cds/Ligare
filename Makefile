@@ -52,7 +52,6 @@ endif
 
 
 ACTIVATE_VENV := . $(VENV)/bin/activate
-PREFIX_VENV := PATH=$(CURDIR)/$(VENV)/bin:$$PATH
 REPORT_VENV_USAGE := echo '\nActivate your venv with `. $(VENV)/bin/activate`'
 
 PACKAGE_INSTALL_DIR := $(VENV)/lib/python*/site-packages/BL_Python
@@ -88,11 +87,9 @@ _dev_build : _dev_configure
 	else
 		$(ACTIVATE_VENV)
 
-		$(PREFIX_VENV) \
 		pip install -e .[dev-dependencies]
 #		By default, psycopg2 is not installed
 #		but it should be for development
-		$(PREFIX_VENV) \
 		pip install -e src/database[postgres-binary]
 
 		rm -rf $(PACKAGE_INSTALL_DIR)
@@ -109,11 +106,9 @@ _cicd_build : _cicd_configure
 	else
 		$(ACTIVATE_VENV)
 
-		$(PREFIX_VENV) \
 		pip install .[dev-dependencies]
 #		By default, psycopg2 is not installed
 #		but it should be for CI/CD
-		$(PREFIX_VENV) \
 		pip install src/database[postgres-binary]
 	fi
 
@@ -126,10 +121,8 @@ $(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PY
 		$(ACTIVATE_VENV)
 
 		if [ "$@" = "BL_Python.database" ]; then
-			$(PREFIX_VENV) \
 			pip install -e $(dir $<)[postgres-binary]
 		else
-			$(PREFIX_VENV) \
 			pip install -e $(dir $<)
 		fi
 
@@ -143,19 +136,17 @@ SETUP_DEPENDENCIES=$(call dep_to_venv_path,toml/__init__.py) $(call dep_to_venv_
  $(call dep_to_venv_path,toml/__init__.py): $(VENV)
 	$(ACTIVATE_VENV)
 
-	$(PREFIX_VENV) pip install toml
+	pip install toml
 
  $(call dep_to_venv_path,typing_extensions.py): $(VENV)
 	$(ACTIVATE_VENV)
 
-	$(PREFIX_VENV) \
 	pip install typing_extensions
 
 $(PACKAGE_PATHS) : $(VENV) $(SETUP_DEPENDENCIES)
 $(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES)
 	$(ACTIVATE_VENV)
 
-	$(PREFIX_VENV) \
 	REWRITE_DEPENDENCIES=$(REWRITE_DEPENDENCIES) \
 	GITHUB_REF=$(GITHUB_REF) \
 	GITHUB_WORKSPACE=$(GITHUB_WORKSPACE) \
@@ -170,20 +161,17 @@ $(VENV) :
 
 	$(ACTIVATE_VENV)
 
-	$(PREFIX_VENV) \
 	pip install -U pip
 
 
 format-isort : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
-	$(PREFIX_VENV) \
 	isort src
 
 format-ruff : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
-	$(PREFIX_VENV) \
 	ruff format --preview --respect-gitignore
 
 format : $(VENV) $(BUILD_TARGET) format-isort format-ruff
@@ -192,20 +180,17 @@ format : $(VENV) $(BUILD_TARGET) format-isort format-ruff
 test-isort : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
-	$(PREFIX_VENV) \
 	isort --check-only src
 
 test-ruff : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
-	$(PREFIX_VENV) \
 	ruff format --preview --respect-gitignore --check
 
 test-pyright : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
   ifeq "$(PYRIGHT_MODE)" "pip"
-	$(PREFIX_VENV) \
 	pyright
   else
   ifeq "$(PYRIGHT_MODE)" "npm"
@@ -221,7 +206,6 @@ test-pyright : $(VENV) $(BUILD_TARGET)
 test-bandit : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
-	$(PREFIX_VENV) \
 	bandit -c pyproject.toml \
 		--format sarif \
 		--output $(BANDIT_REPORT) \
@@ -256,7 +240,6 @@ publish-all : REWRITE_DEPENDENCIES=false
 publish-all : reset $(VENV)
 	$(ACTIVATE_VENV)
 
-	$(PREFIX_VENV) \
 	./publish_all.sh $(PYPI_REPO)
 
 
