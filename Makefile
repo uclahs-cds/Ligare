@@ -208,7 +208,7 @@ test-bandit : $(VENV) $(BUILD_TARGET)
 #	while testing bandit.
 	-bandit -c pyproject.toml \
 		--format sarif \
-		--output $(BANDIT_REPORT) \
+		--output $(REPORTS_DIR)/$(BANDIT_REPORT) \
 		-r .
 
 test-pytest : $(VENV) $(BUILD_TARGET)
