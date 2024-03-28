@@ -114,6 +114,7 @@ _cicd_build : _cicd_configure
 
 	@$(REPORT_VENV_USAGE)
 
+BL_Python.all: $(DEFAULT_TARGET)
 $(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PYPROJECT_FILES)
 	@if [ -d $(call package_to_dist,$*) ]; then
 		@echo "Package $@ is already built, skipping..."

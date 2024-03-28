@@ -89,7 +89,7 @@ def test__BLAlembic__creates_default_config(mock_argv: MockArgv, mocker: MockerF
         # set the call args for the Path mocks that are passed
         # into the FileCopy mock so we can examine them when FileCopy
         # is called
-        return MagicMock(args=args)
+        return MagicMock(args=args, exists=MagicMock(return_value=False))
 
     def file_copy_se(*args: Any, **kwargs: Any):
         # set a mocked FileCopy whose src/dest are strings (filenames)
@@ -119,7 +119,39 @@ def test__BLAlembic__does_not_overwrite_existing_config(
     _ = mock_alembic(mocker)
     _ = mock_argv(["upgrade", "head"])
 
-    _ = mocker.patch("BL_Python.database.migrations.alembic.bl_alembic.Path")
+    _ = mocker.patch(
+        "BL_Python.database.migrations.alembic.bl_alembic.Path",
+        return_value=MagicMock(exists=MagicMock(return_value=True)),
+    )
+    _ = mocker.patch("builtins.open", mocker.mock_open())
+    log_mock = mocker.patch("BL_Python.database.migrations.alembic.bl_alembic.Logger")
+
+    bl_alembic = BLAlembic(None, log_mock)
+
+    try:
+        bl_alembic.run()
+    except:
+        pass
+
+    assert [
+        True
+        for call in log_mock.mock_calls
+        if call.args[0].startswith(
+            f"Configuration file '{BLAlembic.DEFAULT_CONFIG_NAME}' exists."
+        )
+    ]
+
+
+def test__BLAlembic__crashes_when_overwriting_unexpected_file(
+    mock_argv: MockArgv, mocker: MockerFixture
+):
+    _ = mock_alembic(mocker)
+    _ = mock_argv(["upgrade", "head"])
+
+    _ = mocker.patch(
+        "BL_Python.database.migrations.alembic.bl_alembic.Path",
+        return_value=MagicMock(exists=MagicMock(return_value=False)),
+    )
     open_mock = mocker.patch("builtins.open", mocker.mock_open())
 
     def raise_file_exists_error(*args: Any, **kwargs: Any):

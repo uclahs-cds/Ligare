@@ -24,14 +24,7 @@ def bl_alembic(
     logger = logging.getLogger()
     logger.setLevel(log_level)
 
-    if allow_overwrite is None:
-        _allow_overwrite = environ.get(BLAlembic.ALLOW_OVERWRITE_NAME)
-        allow_overwrite = (_allow_overwrite.lower() if _allow_overwrite else None) in [
-            "true",
-            "1",
-        ]
-
-    BLAlembic(argv, logger, allow_overwrite).run()
+    BLAlembic(argv, logger).run()
 
 
 if __name__ == "__main__":

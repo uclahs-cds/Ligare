@@ -17,20 +17,16 @@ from typing_extensions import final
 class BLAlembic:
     DEFAULT_CONFIG_NAME: str = "alembic.ini"
     LOG_LEVEL_NAME: str = "LOG_LEVEL"
-    ALLOW_OVERWRITE_NAME: str = "ALLOW_OVERWRITE"
 
     _run: Callable[[], None]
     _log: Logger
-    _allow_overwrite: bool = False
 
     @dataclass
     class FileCopy:
         source: Path
         destination: Path
 
-    def __init__(
-        self, argv: list[str] | None, logger: Logger, allow_overwrite: bool = False
-    ) -> None:
+    def __init__(self, argv: list[str] | None, logger: Logger) -> None:
         """
         _summary_
 
@@ -39,7 +35,6 @@ class BLAlembic:
         :param Logger logger: A logger for writing messages.
         """
         self._log = logger
-        self._allow_overwrite = allow_overwrite
 
         if not argv:
             argv = sys.argv[1:]
@@ -206,7 +201,14 @@ class BLAlembic:
 
         :yield Generator[tempfile._TemporaryFileWrapper[bytes], Any, None]: The temp file.
         """
-        # need to _not_ use a temp file, and copy the default alembic.ini
+        config_file_destination = Path(Path.cwd(), BLAlembic.DEFAULT_CONFIG_NAME)
+        if config_file_destination.exists():
+            self._log.debug(
+                f"Configuration file '{BLAlembic.DEFAULT_CONFIG_NAME}' exists. Will not attempt to create it."
+            )
+            return
+
+        # copy the default alembic.ini
         # to the directory in which bl-alembic is executed.
         self._log.debug(
             f"Writing configuration file '{BLAlembic.DEFAULT_CONFIG_NAME}'."
@@ -214,13 +216,13 @@ class BLAlembic:
         self._copy_files([
             BLAlembic.FileCopy(
                 Path(Path(__file__).resolve().parent, BLAlembic.DEFAULT_CONFIG_NAME),
-                Path(Path.cwd(), BLAlembic.DEFAULT_CONFIG_NAME),
+                config_file_destination,
             )
         ])
 
     def _copy_files(self, files: list[FileCopy], force_overwrite: bool = False):
         for file in files:
-            write_mode = "w+b" if self._allow_overwrite or force_overwrite else "x+b"
+            write_mode = "w+b" if force_overwrite else "x+b"
             try:
                 with (
                     open(file.source, "r") as source,
@@ -231,10 +233,8 @@ class BLAlembic:
                 if e.filename != str(file.destination):
                     raise
 
-                self._log.warn(
-                    f"""The file '{file.destination}' already exists, but this is unexpected. Refusing to overwrite.
-    To use the default configuration, delete the existing file,
-    or set the envvar `{BLAlembic.ALLOW_OVERWRITE_NAME}=True`."""
+                self._log.debug(
+                    f"The file '{file.destination}' already exists. Refusing to overwrite, but ignoring exception."
                 )
 
     def _alembic_msg_capture(
