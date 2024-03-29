@@ -48,3 +48,6 @@ exclude = ["build*"]
 
 [tool.setuptools.package-data]
 "BL_Python.testing" = ["py.typed"]
+
+[project.entry-points.pytest11]
+"BL_Python.testing.markers" = "BL_Python.testing.markers"
