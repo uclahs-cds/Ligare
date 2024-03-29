@@ -169,6 +169,7 @@ testpaths = [
 
 addopts = [
     "--import-mode=importlib",
+    "-p pytester",
     # to debug tests without altering these options see
     # https://pytest-cov.readthedocs.io/en/latest/debuggers.html
     # For more information regarding doing this with VSCode see
