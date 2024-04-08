@@ -163,10 +163,7 @@ jobs:
         with:
           name: pytest-and-coverage-report
           path: |
-            pytest.xml
-            cov.xml
-            .coverage
-            coverage/
+            reports/pytest/
           retention-days: 1
           if-no-files-found: error
 
@@ -219,14 +216,14 @@ jobs:
         with:
           name: bandit-sast-report
           path: |
-            bandit.sarif
+            reports/bandit.sarif
           retention-days: 1
           if-no-files-found: error
 
       - name: Upload bandit report to CodeQL
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: bandit.sarif
+          sarif_file: reports/bandit.sarif
 
   Style:
     name: Style and formatting

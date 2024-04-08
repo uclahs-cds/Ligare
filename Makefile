@@ -23,9 +23,16 @@ GITHUB_REF ?= 00000000-0000-0000-0000-000000000000
 # Can be overridden.
 GITHUB_WORKSPACE ?= $(CURDIR)
 
+# What repository to publish packages to.
+# `testpypi` and `pypi` are valid values.
 PYPI_REPO ?= testpypi
 
+# The directory to write ephermal reports to,
+# such as pytest coverage reports.
+REPORTS_DIR ?= reports
 BANDIT_REPORT := bandit.sarif
+PYTEST_REPORT := pytest
+
 
 # Can be overridden. This is used to change the prereqs
 # of some supporting targets, like `format-ruff`.
@@ -70,8 +77,7 @@ PYPROJECT_FILES=./pyproject.toml $(wildcard src/*/pyproject.toml)
 PACKAGE_PATHS=$(subst /pyproject.toml,,$(PYPROJECT_FILES))
 PACKAGES=$(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
 
-# Rather than duplicating BL_Python.all,
-# just prereq it.
+.PHONY: dev
 dev : $(VENV) $(SETUP_DEPENDENCIES)
 	$(MAKE) _dev_build DEFAULT_TARGET=dev
 _dev_configure : $(VENV) $(PYPROJECT_FILES)
@@ -108,6 +114,7 @@ _cicd_build : _cicd_configure
 
 	@$(REPORT_VENV_USAGE)
 
+BL_Python.all: $(DEFAULT_TARGET)
 $(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PYPROJECT_FILES)
 	@if [ -d $(call package_to_dist,$*) ]; then
 		@echo "Package $@ is already built, skipping..."
@@ -165,6 +172,7 @@ format-ruff : $(VENV) $(BUILD_TARGET)
 
 	ruff format --preview --respect-gitignore
 
+.PHONY: format format-ruff format-isort
 format : $(VENV) $(BUILD_TARGET) format-isort format-ruff
 
 
@@ -201,22 +209,32 @@ test-bandit : $(VENV) $(BUILD_TARGET)
 #	while testing bandit.
 	-bandit -c pyproject.toml \
 		--format sarif \
-		--output $(BANDIT_REPORT) \
+		--output $(REPORTS_DIR)/$(BANDIT_REPORT) \
 		-r .
 
 test-pytest : $(VENV) $(BUILD_TARGET)
 	$(ACTIVATE_VENV)
 
-	pytest $(PYTEST_FLAGS)
+	pytest $(PYTEST_FLAGS) \
+		&& PYTEST_EXIT_CODE=0 \
+		|| PYTEST_EXIT_CODE=$$?
 
-	coverage html -d coverage
+	-coverage html --data-file=$(REPORTS_DIR)/$(PYTEST_REPORT)/.coverage
+	-junit2html $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.xml $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.html
 
+	exit $$PYTEST_EXIT_CODE
+
+.PHONY: test test-pytest test-bandit test-pyright test-ruff test-isort
+_test : $(VENV) $(BUILD_TARGET) test-isort test-ruff test-pyright test-bandit test-pytest
 test : CMD_PREFIX=@
-test : $(VENV) $(BUILD_TARGET) clean-test test-isort test-ruff test-pyright test-bandit test-pytest
+test : clean-test
+	$(MAKE) -j --keep-going _test
 
 
+.PHONY: publish-all
 # Publishing should use a real install, which `cicd` fulfills
 publish-all : REWRITE_DEPENDENCIES=false
+# Publishing should use a real install. Reset the build env.
 publish-all : reset $(VENV)
 	$(ACTIVATE_VENV)
 
@@ -224,26 +242,31 @@ publish-all : reset $(VENV)
 
 
 clean-build :
-	find . -type d \( \
+	find . -type d \
+	\( \
+		-path ./$(VENV) \
+		-o -path ./.git \
+	\) -prune -false \
+	-o \( \
 		-name build \
+		-o -name dist \
 		-o -name __pycache__ \
 		-o -name \*.egg-info \
 		-o -name .pytest-cache \
 	\) -prune -exec rm -rf {} \;
 
 clean-test :
-	$(CMD_PREFIX)rm -rf cov.xml \
-		pytest.xml \
-		coverage \
-		.coverage \
-		$(BANDIT_REPORT)
+	$(CMD_PREFIX)rm -rf \
+		$(REPORTS_DIR)/$(PYTEST_REPORT) \
+		$(REPORTS_DIR)/$(BANDIT_REPORT)
 
-
+.PHONY: clean clean-test clean-build
 clean : clean-build clean-test
 	rm -rf $(VENV)
 
 	@echo '\nDeactivate your venv with `deactivate`'
 
+.PHONY: remake
 remake :
 	$(MAKE) clean
 	$(MAKE)
@@ -253,5 +276,6 @@ reset-check:
 	@echo -n "This will make destructive changes! Considering stashing changes first.\n"
 	@( read -p "Are you sure? [y/N]: " response && case "$$response" in [yY]) true;; *) false;; esac )
 
+.PHONY: reset reset-check
 reset : reset-check clean
 	git checkout -- $(PYPROJECT_FILES)

@@ -1,4 +1,5 @@
 import abc
+from pathlib import Path
 from typing import Any, Generic, TypeVar, cast
 
 import toml
@@ -59,7 +60,7 @@ class ConfigBuilder(Generic[TConfig]):
 
 def load_config(
     config_type: type[TConfig],
-    toml_file_path: str,
+    toml_file_path: str | Path,
     config_overrides: AnyDict | None = None,
 ) -> TConfig:
     config_dict: dict[str, Any] = toml.load(toml_file_path)
