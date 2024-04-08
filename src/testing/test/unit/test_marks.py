@@ -2,6 +2,11 @@ from pytest import Pytester
 
 
 def test__mark_category(pytester: Pytester):
+    _ = pytester.makepyfile(
+        conftest="""
+        from BL_Python.testing.markers import pytest_addoption, pytest_collection_modifyitems, pytest_configure
+    """
+    )
     _ = pytester.makepyfile("""
         import pytest
 
@@ -26,6 +31,7 @@ def test__mark_category(pytester: Pytester):
         "--mark-issue='GH123'",
     )
     # result.assert_outcomes(passed=1)
+    pass
 
 
 # @pytest.mark.category("bar")
