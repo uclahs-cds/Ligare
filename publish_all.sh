@@ -83,6 +83,7 @@ declare -a packages=( \
     src/database \
     src/development \
     src/GitHub\
+    src/identity \
     src/platform \
     src/programming \
     src/testing \
