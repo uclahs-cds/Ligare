@@ -13,10 +13,7 @@ from BL_Python.programming.collections.dict import merge
 from jinja2 import BaseLoader, Environment, PackageLoader, Template
 
 # fmt: off
-from pkg_resources import (
-    ResourceManager,  # pyright: ignore[reportUnknownVariableType,reportAttributeAccessIssue]
-)
-from pkg_resources import IResourceProvider, get_provider
+from pkg_resources import IResourceProvider, ResourceManager, get_provider
 from typing_extensions import override
 
 # fmt: on
