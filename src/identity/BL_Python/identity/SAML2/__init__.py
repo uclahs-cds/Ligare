@@ -46,11 +46,11 @@ class SAML2Client:
 
         config = self._get_config(self._metadata, override_settings)
 
-        spConfig = PySaml2Config()
-        _ = spConfig.load(config)
-        spConfig.allow_unknown_attributes = True
+        sp_config = PySaml2Config()
+        _ = sp_config.load(config)
+        sp_config.allow_unknown_attributes = True
 
-        saml_client = PySaml2Client(config=spConfig)
+        saml_client = PySaml2Client(config=sp_config)
         return saml_client
 
     def get_saml_client(self, override_settings: AnyDict | None = None):
