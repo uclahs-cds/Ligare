@@ -1,12 +1,15 @@
 from dataclasses import dataclass
+from enum import Enum
 from logging import Logger
 from typing import Callable, Generic, Type, TypeVar
 
 from injector import inject
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.scoping import ScopedSession
+from typing_extensions import override
 
-from . import Role, User
+from . import Role as DbRole
+from . import User as DbUser
 
 
 @dataclass
@@ -15,7 +18,11 @@ class UserId:
     username: str
 
 
-from enum import Enum
+class Role(Enum):
+    @override
+    def __str__(self):
+        return self.name
+
 
 T = TypeVar("T")
 
@@ -30,8 +37,8 @@ class UserLoader(Generic[T]):
         self,
         loader: Callable[[UserId, list[Enum]], T],
         roles: Type[Enum],
-        user_table: Type[User],
-        role_table: Type[Role],
+        user_table: Type[DbUser],
+        role_table: Type[DbRole],
         scoped_session: ScopedSession,
         log: Logger,
     ) -> None:
@@ -40,8 +47,8 @@ class UserLoader(Generic[T]):
 
         :param Callable[[UserId, list[Enum]], None] loader: A callback that receives the create user information including its roles.
         :param Type[Enum] roles: An enum representing possible roles for a user.
-        :param Type[User] user_table: The SQLAlchemy table type for a user.
-        :param Type[Role] role_table: The SQLAlchemy table type for a role.
+        :param Type[DbUser] user_table: The SQLAlchemy table type for a user.
+        :param Type[DbRole] role_table: The SQLAlchemy table type for a role.
         :param ScopedSession scoped_session: The SQLAlchemy connection scope.
         :param Logger log: A Logger instance.
         """
