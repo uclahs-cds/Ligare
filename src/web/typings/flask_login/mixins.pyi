@@ -9,27 +9,27 @@ class UserMixin:
     """
     __hash__ = ...
     @property
-    def is_active(self): # -> Literal[True]:
+    def is_active(self) -> bool:
         ...
     
     @property
-    def is_authenticated(self): # -> Literal[True]:
+    def is_authenticated(self) -> bool:
         ...
     
     @property
-    def is_anonymous(self): # -> Literal[False]:
+    def is_anonymous(self) -> bool:
         ...
     
-    def get_id(self): # -> str:
+    def get_id(self) -> str:
         ...
     
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         Checks the equality of two `UserMixin` objects using `get_id`.
         """
         ...
     
-    def __ne__(self, other) -> bool:
+    def __ne__(self, other: object) -> bool:
         """
         Checks the inequality of two `UserMixin` objects using `get_id`.
         """
@@ -42,18 +42,18 @@ class AnonymousUserMixin:
     This is the default object for representing an anonymous user.
     """
     @property
-    def is_authenticated(self): # -> Literal[False]:
+    def is_authenticated(self) -> bool:
         ...
     
     @property
-    def is_active(self): # -> Literal[False]:
+    def is_active(self) -> bool:
         ...
     
     @property
-    def is_anonymous(self): # -> Literal[True]:
+    def is_anonymous(self) -> bool:
         ...
     
-    def get_id(self): # -> None:
+    def get_id(self) -> None:
         ...
     
 
