@@ -4,7 +4,9 @@ from functools import wraps
 from typing import Any, Callable, Protocol, TypeVar, cast
 
 from BL_Python.platform.identity.user_loader import Role, UserId
-from flask_login import LoginManager, UserMixin, current_user
+from flask_login import LoginManager
+from flask_login import UserMixin as FlaskLoginUserMixin
+from flask_login import current_user
 from flask_login import (
     login_required as flask_login_required,  # pyright: ignore[reportUnknownVariableType]
 )
@@ -14,10 +16,12 @@ T = TypeVar("T", contravariant=True)
 
 
 class AuthCheckOverrideCallable(Protocol):
-    def __call__(self, user: UserMixin, *args: Any, **kwargs: Any) -> bool: ...
+    def __call__(
+        self, user: FlaskLoginUserMixin, *args: Any, **kwargs: Any
+    ) -> bool: ...
 
 
-class User(UserMixin, ABC):
+class UserMixin(FlaskLoginUserMixin, ABC):
     id: UserId
     roles: list[Role]
 
@@ -81,7 +85,7 @@ def login_required(
         def decorated_view(*args: Any, **kwargs: Any):
             unauthorized = True
             try:
-                user = cast(User, LocalProxy._get_current_object(current_user))  # pyright: ignore[reportPrivateUsage,reportCallIssue]
+                user = cast(UserMixin, LocalProxy._get_current_object(current_user))  # pyright: ignore[reportPrivateUsage,reportCallIssue]
                 if not user.is_authenticated:
                     # this should end up raising a 401 exception
                     return login_manager.unauthorized()
