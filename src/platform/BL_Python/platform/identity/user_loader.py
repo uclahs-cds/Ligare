@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from logging import Logger
-from typing import Callable, Type
+from typing import Callable, Generic, Type, TypeVar
 
 from injector import inject
 from sqlalchemy.orm import contains_eager
@@ -17,8 +17,10 @@ class UserId:
 
 from enum import Enum
 
+T = TypeVar("T")
 
-class UserLoader:
+
+class UserLoader(Generic[T]):
     """
     Class intended for user with FlaskLogin. FlaskLogin is not required.
     """
@@ -26,7 +28,7 @@ class UserLoader:
     @inject
     def __init__(
         self,
-        loader: Callable[[UserId, list[Enum]], None],
+        loader: Callable[[UserId, list[Enum]], T],
         roles: Type[Enum],
         user_table: Type[User],
         role_table: Type[Role],
@@ -53,7 +55,7 @@ class UserLoader:
 
     def user_loader(
         self, username: str, default_role: Enum, create_if_new_user: bool = False
-    ):
+    ) -> None | T:
         """
         Load a user and its roles from the database.
 
@@ -116,7 +118,7 @@ class UserLoader:
             user_roles = dict(self._roles.__members__.items())
             roles = [user_roles[user_role.role_name] for user_role in user.roles]
 
-            self._loader(
+            return self._loader(
                 UserId(
                     user_id=user.user_id,
                     username=user.username,
