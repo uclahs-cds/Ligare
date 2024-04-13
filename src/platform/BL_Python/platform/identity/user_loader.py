@@ -27,20 +27,13 @@ class Role(Enum):
 T = TypeVar("T")
 
 
-class UserLoader(Generic[T]):
-    """
-    Class intended for user with FlaskLogin. FlaskLogin is not required.
-    """
-
-    @inject
+class Loader(Generic[T]):
     def __init__(
         self,
         loader: Callable[[UserId, list[Enum]], T],
         roles: Type[Enum],
         user_table: Type[DbUser],
         role_table: Type[DbRole],
-        scoped_session: ScopedSession,
-        log: Logger,
     ) -> None:
         """
         Load and optionally create a user.
@@ -56,6 +49,35 @@ class UserLoader(Generic[T]):
         self._roles = roles
         self._user_table = user_table
         self._role_table = role_table
+        super().__init__()
+
+
+class UserLoader(Generic[T]):
+    """
+    Class intended for user with FlaskLogin. FlaskLogin is not required.
+    """
+
+    @inject
+    def __init__(
+        self,
+        loader: Loader,
+        scoped_session: ScopedSession,
+        log: Logger,
+    ) -> None:
+        """
+        Load and optionally create a user.
+
+        :param Callable[[UserId, list[Enum]], None] loader: A callback that receives the create user information including its roles.
+        :param Type[Enum] roles: An enum representing possible roles for a user.
+        :param Type[DbUser] user_table: The SQLAlchemy table type for a user.
+        :param Type[DbRole] role_table: The SQLAlchemy table type for a role.
+        :param ScopedSession scoped_session: The SQLAlchemy connection scope.
+        :param Logger log: A Logger instance.
+        """
+        self._loader = loader._loader
+        self._roles = loader._roles
+        self._user_table = loader._user_table
+        self._role_table = loader._role_table
         self._scoped_session = scoped_session
         self._log = log
         super().__init__()

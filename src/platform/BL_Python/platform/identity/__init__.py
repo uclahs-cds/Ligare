@@ -44,7 +44,7 @@ class RoleTable:
             role_id = Column("role_id", Integer, primary_key=True)
             role_name = Column("role_name", Unicode, nullable=False, unique=True)
 
-            users: RelationshipProperty[DeclarativeMeta] = relationship(
+            users: "RelationshipProperty[DeclarativeMeta]" = relationship(
                 "User",
                 secondary=get_table_str("user_role", base),
                 back_populates="roles",

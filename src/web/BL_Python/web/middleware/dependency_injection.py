@@ -1,6 +1,8 @@
+from enum import Enum
 from functools import partial
-from typing import Any, Protocol, Tuple, cast
+from typing import Any, Callable, Protocol, Tuple, cast
 
+from BL_Python.platform.identity.user_loader import Loader, UserId, UserLoader
 from BL_Python.programming.patterns.dependency_injection import LoggerModule
 from connexion import ConnexionMiddleware, FlaskApp
 from connexion.apps.flask import FlaskASGIApp, FlaskOperation
@@ -19,6 +21,19 @@ class MiddlewareRoutine(Protocol):
     def __call__(
         self, scope: Scope, receive: Receive, send: Send, *args: Any
     ) -> None: ...
+
+
+class IdentityModule(Module):
+    def __init__(
+        self,
+        loader: Loader,
+    ) -> None:
+        super().__init__()
+        self._loader = loader
+
+    @override
+    def configure(self, binder: Binder) -> None:
+        binder.bind(Loader, to=self._loader)
 
 
 class AppModule(Module):
