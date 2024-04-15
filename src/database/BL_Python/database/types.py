@@ -1,7 +1,9 @@
+from abc import ABC
 from typing import Protocol, TypedDict, TypeVar
 
 from sqlalchemy import Constraint, MetaData
 from sqlalchemy.engine import Dialect
+from sqlalchemy.ext.declarative import DeclarativeMeta
 
 TBase = TypeVar("TBase")
 
@@ -9,7 +11,7 @@ TBase = TypeVar("TBase")
 TableArgsDict = TypedDict("TableArgsDict", {"schema": str | None})
 
 
-class MetaBase(Protocol):
+class MetaBase(DeclarativeMeta, ABC):
     metadata: MetaData
     __tablename__: str
     __table_args__: tuple[Constraint | TableArgsDict, ...] | TableArgsDict
@@ -25,7 +27,7 @@ class TableNameCallback(Protocol):
     ) -> None: ...
 
 
-class Connection(Protocol):
+class Connection(ABC):
     dialect: Dialect
 
 

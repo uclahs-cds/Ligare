@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from logging import Logger
-from typing import Callable, Generic, Type, TypeVar
+from typing import Any, Generic, Protocol, Sequence, Type, TypeVar, cast
 
 from injector import inject
 from sqlalchemy.orm import contains_eager
@@ -24,13 +24,20 @@ class Role(Enum):
         return self.name
 
 
-T = TypeVar("T")
+R = TypeVar("R", bound=Role, covariant=True)
+
+
+class UserMixin(Protocol):
+    def __init__(self, user_id: UserId, roles: Sequence[R] | None = None) -> None: ...
+
+
+T = TypeVar("T", bound=UserMixin)
 
 
 class Loader(Generic[T]):
     def __init__(
         self,
-        loader: Callable[[UserId, list[Enum]], T],
+        loader: type[T],
         roles: Type[Enum],
         user_table: Type[DbUser],
         role_table: Type[DbRole],
@@ -45,10 +52,10 @@ class Loader(Generic[T]):
         :param ScopedSession scoped_session: The SQLAlchemy connection scope.
         :param Logger log: A Logger instance.
         """
-        self._loader = loader
-        self._roles = roles
-        self._user_table = user_table
-        self._role_table = role_table
+        self.loader = loader
+        self.roles = roles
+        self.user_table = user_table
+        self.role_table = role_table
         super().__init__()
 
 
@@ -57,10 +64,15 @@ class UserLoader(Generic[T]):
     Class intended for user with FlaskLogin. FlaskLogin is not required.
     """
 
+    _loader: type[T]
+
     @inject
     def __init__(
         self,
-        loader: Loader,
+        # Injector does not support generics, so we use this type alias.
+        # This also means that applications cannot register more than
+        # one UserLoader, but there are currently no use cases for that
+        loader: Loader,  # pyright: ignore[reportMissingTypeArgument,reportUnknownParameterType]
         scoped_session: ScopedSession,
         log: Logger,
     ) -> None:
@@ -74,10 +86,10 @@ class UserLoader(Generic[T]):
         :param ScopedSession scoped_session: The SQLAlchemy connection scope.
         :param Logger log: A Logger instance.
         """
-        self._loader = loader._loader
-        self._roles = loader._roles
-        self._user_table = loader._user_table
-        self._role_table = loader._role_table
+        self._loader = loader.loader  # pyright: ignore[reportUnknownMemberType]
+        self._roles = loader.roles
+        self._user_table = loader.user_table
+        self._role_table = loader.role_table
         self._scoped_session = scoped_session
         self._log = log
         super().__init__()
@@ -145,7 +157,10 @@ class UserLoader(Generic[T]):
                 )
 
             user_roles = dict(self._roles.__members__.items())
-            roles = [user_roles[user_role.role_name] for user_role in user.roles]
+            roles = cast(
+                Sequence[Role],
+                [user_roles[user_role.role_name] for user_role in user.roles],
+            )
 
             return self._loader(
                 UserId(

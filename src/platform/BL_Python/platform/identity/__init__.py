@@ -1,4 +1,5 @@
-from typing import List, Protocol, Type
+from abc import ABC
+from typing import List, Type, cast
 
 from BL_Python.database.schema.metabase import get_schema_from_metabase
 from sqlalchemy import Column, ForeignKey, Integer, Unicode
@@ -7,21 +8,21 @@ from sqlalchemy.orm import RelationshipProperty, relationship
 from typing_extensions import override
 
 
-class Role(Protocol):
+class Role(ABC):
     __tablename__: str
     role_id: int
     role_name: str
     users: "list[User]"
 
 
-class User(Protocol):
+class User(ABC):
     __tablename__: str
     user_id: int
     username: str
     roles: "list[Role]"
 
 
-class UserRole(Protocol):
+class UserRole(ABC):
     user_id: int
     role_id: int
 
@@ -33,8 +34,8 @@ def get_table_str(tablename: str, base: Type[DeclarativeMeta]):
 
 
 class RoleTable:
-    def __new__(cls, base: Type[DeclarativeMeta]):
-        class Role(base):
+    def __new__(cls, base: Type[DeclarativeMeta]) -> type[Role]:
+        class _Role(base):
             """
             Roles that may be used for access validation.
             """
@@ -57,12 +58,12 @@ class RoleTable:
                     self.role_name,
                 )
 
-        return Role
+        return cast(type[Role], _Role)
 
 
 class UserTable:
-    def __new__(cls, base: Type[DeclarativeMeta]):
-        class User(base):
+    def __new__(cls, base: Type[DeclarativeMeta]) -> type[User]:
+        class _User(base):
             __tablename__ = "user"
 
             user_id = Column("user_id", Integer, primary_key=True)
@@ -81,12 +82,12 @@ class UserTable:
                     self.username,
                 )
 
-        return User
+        return cast(type[User], _User)
 
 
 class UserRoleTable:
-    def __new__(cls, base: Type[DeclarativeMeta]):
-        class UserRole(base):
+    def __new__(cls, base: Type[DeclarativeMeta]) -> type[UserRole]:
+        class _UserRole(base):
             __tablename__ = "user_role"
 
             user_id = Column(
@@ -109,4 +110,4 @@ class UserRoleTable:
                     self.role_id,
                 )
 
-        return UserRole
+        return cast(type[UserRole], _UserRole)
