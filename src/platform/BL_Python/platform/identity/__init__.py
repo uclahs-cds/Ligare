@@ -98,7 +98,7 @@ class UserRoleTable:
             role_id = Column(
                 "role_id",
                 Integer,
-                ForeignKey(get_table_str("user.role_id", base)),
+                ForeignKey(get_table_str("role.role_id", base)),
                 primary_key=True,
             )
 
