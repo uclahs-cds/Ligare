@@ -142,6 +142,12 @@ class OpenAPIEndpointDependencyInjectionMiddleware:
                         if not hasattr(endpoint, "__bindings__"):
                             continue
 
+                        # If a blueprint is added through anything other than
+                        # by Connexion, `_fn` is not set. This happens with, e.g.,
+                        # the SSO blueprint.
+                        if not hasattr(endpoint, "_fn"):
+                            continue
+
                         # _fn is the original function that ends up being called.
                         # we wrap it with Injector, then replace it
                         endpoints[endpoint_name]._fn = wrap_function(

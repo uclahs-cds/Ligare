@@ -45,10 +45,6 @@ class UserLoader(Generic[TUserMixin]):
     @inject
     def __init__(
         self,
-        # Injector does not support generics, so we use this type alias.
-        # This also means that applications cannot register more than
-        # one UserLoader, but there are currently no use cases for that
-        #        loader: Loader,  # pyright: ignore[reportMissingTypeArgument,reportUnknownParameterType]
         loader: type[TUserMixin],
         roles: Type[Enum],
         user_table: Type[DbUser],
