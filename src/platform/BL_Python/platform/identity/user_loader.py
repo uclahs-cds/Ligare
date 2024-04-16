@@ -1,7 +1,8 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from logging import Logger
-from typing import Any, Generic, Protocol, Sequence, Type, TypeVar, cast
+from typing import Generic, Sequence, Type, TypeVar, cast
 
 from injector import inject
 from sqlalchemy.orm import contains_eager
@@ -24,47 +25,22 @@ class Role(Enum):
         return self.name
 
 
-R = TypeVar("R", bound=Role, covariant=True)
+TRole = TypeVar("TRole", bound=Role, covariant=True)
 
 
-class UserMixin(Protocol):
-    def __init__(self, user_id: UserId, roles: Sequence[R] | None = None) -> None: ...
-
-
-T = TypeVar("T", bound=UserMixin)
-
-
-class Loader(Generic[T]):
-    def __init__(
-        self,
-        loader: type[T],
-        roles: Type[Enum],
-        user_table: Type[DbUser],
-        role_table: Type[DbRole],
-    ) -> None:
-        """
-        Load and optionally create a user.
-
-        :param Callable[[UserId, list[Enum]], None] loader: A callback that receives the create user information including its roles.
-        :param Type[Enum] roles: An enum representing possible roles for a user.
-        :param Type[DbUser] user_table: The SQLAlchemy table type for a user.
-        :param Type[DbRole] role_table: The SQLAlchemy table type for a role.
-        :param ScopedSession scoped_session: The SQLAlchemy connection scope.
-        :param Logger log: A Logger instance.
-        """
-        self.loader = loader
-        self.roles = roles
-        self.user_table = user_table
-        self.role_table = role_table
+class UserMixin(ABC):
+    @abstractmethod
+    def __init__(self, user_id: UserId, roles: Sequence[TRole] | None = None) -> None:
         super().__init__()
 
 
-class UserLoader(Generic[T]):
+TUserMixin = TypeVar("TUserMixin", bound=UserMixin)
+
+
+class UserLoader(Generic[TUserMixin]):
     """
     Class intended for user with FlaskLogin. FlaskLogin is not required.
     """
-
-    _loader: type[T]
 
     @inject
     def __init__(
@@ -72,7 +48,11 @@ class UserLoader(Generic[T]):
         # Injector does not support generics, so we use this type alias.
         # This also means that applications cannot register more than
         # one UserLoader, but there are currently no use cases for that
-        loader: Loader,  # pyright: ignore[reportMissingTypeArgument,reportUnknownParameterType]
+        #        loader: Loader,  # pyright: ignore[reportMissingTypeArgument,reportUnknownParameterType]
+        loader: type[TUserMixin],
+        roles: Type[Enum],
+        user_table: Type[DbUser],
+        role_table: Type[DbRole],
         scoped_session: ScopedSession,
         log: Logger,
     ) -> None:
@@ -86,17 +66,17 @@ class UserLoader(Generic[T]):
         :param ScopedSession scoped_session: The SQLAlchemy connection scope.
         :param Logger log: A Logger instance.
         """
-        self._loader = loader.loader  # pyright: ignore[reportUnknownMemberType]
-        self._roles = loader.roles
-        self._user_table = loader.user_table
-        self._role_table = loader.role_table
+        self._loader = loader
+        self._roles = roles
+        self._user_table = user_table
+        self._role_table = role_table
         self._scoped_session = scoped_session
         self._log = log
         super().__init__()
 
     def user_loader(
         self, username: str, default_role: Enum, create_if_new_user: bool = False
-    ) -> None | T:
+    ) -> None | TUserMixin:
         """
         Load a user and its roles from the database.
 

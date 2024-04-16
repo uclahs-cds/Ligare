@@ -1,7 +1,7 @@
 import logging as log
 from abc import ABC
 from functools import wraps
-from typing import Any, Callable, Protocol, TypeVar, cast
+from typing import Any, Callable, Protocol, Sequence, TypeVar, cast
 
 from BL_Python.platform.identity.user_loader import Role, UserId
 from flask_login import LoginManager
@@ -21,13 +21,13 @@ class AuthCheckOverrideCallable(Protocol):
     ) -> bool: ...
 
 
-class UserMixin(FlaskLoginUserMixin, ABC):
+class LoginUserMixin(FlaskLoginUserMixin, ABC):
     id: UserId
-    roles: list[Role]
+    roles: Sequence[Role]
 
 
 def login_required(
-    roles: list[Role] | Callable[..., Any] | None = None,
+    roles: Sequence[Role] | Callable[..., Any] | None = None,
     auth_check_override: AuthCheckOverrideCallable | None = None,
 ):
     """
@@ -85,7 +85,9 @@ def login_required(
         def decorated_view(*args: Any, **kwargs: Any):
             unauthorized = True
             try:
-                user = cast(UserMixin, LocalProxy._get_current_object(current_user))  # pyright: ignore[reportPrivateUsage,reportCallIssue]
+                user = cast(
+                    LoginUserMixin, LocalProxy._get_current_object(current_user)
+                )  # pyright: ignore[reportPrivateUsage,reportCallIssue]
                 if not user.is_authenticated:
                     # this should end up raising a 401 exception
                     return login_manager.unauthorized()
