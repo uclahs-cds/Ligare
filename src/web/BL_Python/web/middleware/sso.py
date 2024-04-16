@@ -86,8 +86,9 @@ def login_required(
             unauthorized = True
             try:
                 user = cast(
-                    LoginUserMixin, LocalProxy._get_current_object(current_user)
-                )  # pyright: ignore[reportPrivateUsage,reportCallIssue]
+                    LoginUserMixin,
+                    LocalProxy._get_current_object(current_user),  # pyright: ignore[reportPrivateUsage,reportCallIssue]
+                )
                 if not user.is_authenticated:
                     # this should end up raising a 401 exception
                     return login_manager.unauthorized()
