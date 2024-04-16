@@ -74,7 +74,7 @@ class SQLiteScopedSession(ScopedSession):
         # This renames all tables to include the schema name in their name.
         for metadata_base in bases:
             metadata_base.metadata.reflect(bind=engine)
-            for table_subclass in metadata_base.__subclasses__():
+            for table_subclass in type(metadata_base).__subclasses__(metadata_base):
                 schema: str | None = None
                 if hasattr(metadata_base, "__table_args__") and isinstance(
                     metadata_base.__table_args__, dict
