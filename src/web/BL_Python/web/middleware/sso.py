@@ -1,9 +1,10 @@
 import logging as log
 from abc import ABC
-from functools import _Wrapped, wraps  # pyright: ignore[reportPrivateUsage]
+from functools import wraps
 from typing import Any, Callable, ParamSpec, Protocol, Sequence, TypeVar, cast
 
 from BL_Python.platform.identity.user_loader import Role, UserId
+from flask import Response
 from flask_login import LoginManager
 from flask_login import UserMixin as FlaskLoginUserMixin
 from flask_login import current_user
@@ -25,12 +26,13 @@ class LoginUserMixin(FlaskLoginUserMixin, ABC):
 
 
 P = ParamSpec("P")
+R = TypeVar("R", bound=Response)
 
 
 def login_required(
-    roles: Sequence[Role] | Callable[P, Any] | None = None,
+    roles: Sequence[Role] | Callable[P, R] | None = None,
     auth_check_override: AuthCheckOverrideCallable | None = None,
-) -> _Wrapped[P, Any, P, Any] | Callable[[Callable[P, Any]], _Wrapped[P, Any, P, Any]]:
+):
     """
     Require a valid Flask session before calling the decorated function.
 
@@ -66,7 +68,7 @@ def login_required(
 
     if auth_check_override is None:
         if roles is None:
-            return cast(_Wrapped[P, Any, P, Any], flask_login_required)
+            return flask_login_required
 
         # In this case, `roles` is actually a function.
         # It is probably a decorated function.
@@ -81,7 +83,7 @@ def login_required(
 
     login_manager = LoginManager()
 
-    def wrapper(fn: Callable[P, Any]):
+    def wrapper(fn: Callable[P, R]):
         @wraps(fn)
         def decorated_view(*args: P.args, **kwargs: P.kwargs):
             unauthorized = True
