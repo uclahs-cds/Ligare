@@ -1,15 +1,13 @@
 import logging as log
 from abc import ABC
-from functools import wraps
-from typing import Any, Callable, Protocol, Sequence, TypeVar, cast
+from functools import _Wrapped, wraps  # pyright: ignore[reportPrivateUsage]
+from typing import Any, Callable, ParamSpec, Protocol, Sequence, TypeVar, cast
 
 from BL_Python.platform.identity.user_loader import Role, UserId
 from flask_login import LoginManager
 from flask_login import UserMixin as FlaskLoginUserMixin
 from flask_login import current_user
-from flask_login import (
-    login_required as flask_login_required,  # pyright: ignore[reportUnknownVariableType]
-)
+from flask_login import login_required as flask_login_required
 from werkzeug.local import LocalProxy
 
 T = TypeVar("T", contravariant=True)
@@ -26,10 +24,13 @@ class LoginUserMixin(FlaskLoginUserMixin, ABC):
     roles: Sequence[Role]
 
 
+P = ParamSpec("P")
+
+
 def login_required(
-    roles: Sequence[Role] | Callable[..., Any] | None = None,
+    roles: Sequence[Role] | Callable[P, Any] | None = None,
     auth_check_override: AuthCheckOverrideCallable | None = None,
-):
+) -> _Wrapped[P, Any, P, Any] | Callable[[Callable[P, Any]], _Wrapped[P, Any, P, Any]]:
     """
     Require a valid Flask session before calling the decorated function.
 
@@ -65,12 +66,12 @@ def login_required(
 
     if auth_check_override is None:
         if roles is None:
-            return cast(Callable[[Callable[..., Any]], Any], flask_login_required)
+            return cast(_Wrapped[P, Any, P, Any], flask_login_required)
 
         # In this case, `roles` is actually a function.
         # It is probably a decorated function.
         if callable(roles):
-            return cast(Any, flask_login_required(roles))
+            return flask_login_required(roles)
     else:
         if not callable(auth_check_override):
             raise TypeError("Override must be a callable.")
@@ -80,9 +81,9 @@ def login_required(
 
     login_manager = LoginManager()
 
-    def wrapper(fn: Callable[..., Any]):
+    def wrapper(fn: Callable[P, Any]):
         @wraps(fn)
-        def decorated_view(*args: Any, **kwargs: Any):
+        def decorated_view(*args: P.args, **kwargs: P.kwargs):
             unauthorized = True
             try:
                 user = cast(
