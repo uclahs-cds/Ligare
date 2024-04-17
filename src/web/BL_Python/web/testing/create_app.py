@@ -17,10 +17,12 @@ from typing import (
     TypeVar,
     cast,
 )
+from unittest.mock import AsyncMock, MagicMock, NonCallableMagicMock
 
 import json_logging
 import pytest
 import yaml
+from BL_Python.platform.identity.user_loader import UserId
 from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import (
     App,
@@ -44,11 +46,13 @@ from flask.ctx import RequestContext
 from flask.sessions import SecureCookieSession
 from flask.testing import FlaskClient
 from flask_injector import FlaskInjector
+from flask_login import UserMixin
 from mock import MagicMock
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 from pytest_mock.plugin import MockType
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from werkzeug.local import LocalProxy
 
 TFlaskClient = FlaskClient | TestClient
 T_flask_client = TypeVar("T_flask_client", bound=TFlaskClient)
@@ -298,8 +302,38 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
 
             yield ClientInjector(client, result.app_injector.flask_injector)
 
+    # TODO this needs to support plain old Flask at some point
     def get_app(self, flask_app_getter: AppGetter[FlaskApp]):
         return next(self._openapi_client(flask_app_getter))
+
+    _MOCK_USER_USERNAME = "test user"
+
+    def get_authenticated_request_context(
+        self,
+        app: ClientInjector[T_flask_client],
+        user: type[UserMixin],
+        mocker: MockerFixture,
+    ):
+        _ = self.mock_user(user, mocker)
+
+        with app.injector.app.test_request_context() as request_context:
+            session = cast(SecureCookieSession, request_context.session)
+            session["_id"] = get_random_str()
+            session["authenticated"] = True
+            session["username"] = CreateApp._MOCK_USER_USERNAME
+
+            return request_context
+
+    def mock_user(
+        self, user: type[UserMixin], mocker: MockerFixture
+    ) -> MagicMock | AsyncMock | NonCallableMagicMock:
+        def get_mock_user(proxy: LocalProxy[UserMixin] | None = None):
+            if proxy is not None:
+                return proxy
+            user_id = UserId(1, CreateApp._MOCK_USER_USERNAME)
+            return user(user_id, [])
+
+        return mocker.patch("flask_login.utils._get_user", side_effect=get_mock_user)
 
     def _openapi_client(
         self, flask_app_getter: AppGetter[FlaskApp]
