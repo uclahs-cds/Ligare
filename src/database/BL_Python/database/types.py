@@ -29,8 +29,3 @@ class TableNameCallback(Protocol):
 
 class Connection(ABC):
     dialect: Dialect
-
-
-class Op(Protocol):  # pragma: nocover
-    @staticmethod
-    def get_bind() -> Connection: ...

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from logging import Logger
-from typing import Generic, Sequence, Type, TypeVar, cast
+from typing import Generic, Protocol, Sequence, Type, TypeVar, cast
 
 from injector import inject
 from sqlalchemy.orm import contains_eager
@@ -28,7 +28,7 @@ class Role(Enum):
 TRole = TypeVar("TRole", bound=Role, covariant=True)
 
 
-class UserMixin(ABC):
+class UserMixin(Protocol):
     @abstractmethod
     def __init__(self, user_id: UserId, roles: Sequence[TRole] | None = None) -> None:
         super().__init__()
