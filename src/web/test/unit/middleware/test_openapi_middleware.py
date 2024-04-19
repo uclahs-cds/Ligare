@@ -11,7 +11,7 @@ from BL_Python.web.middleware.flask import (
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
 from BL_Python.web.testing.create_app import (
-    CreateApp,
+    CreateOpenAPIApp,
     OpenAPIClientInjectorConfigurable,
     OpenAPIMockController,
     RequestConfigurable,
@@ -23,7 +23,7 @@ from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
 
-class TestOpenAPIMiddleware(CreateApp):
+class TestOpenAPIMiddleware(CreateOpenAPIApp):
     @pytest.mark.parametrize("format", ["plaintext", "JSON"])
     def test___register_api_response_handlers__sets_correlation_id_response_header_when_not_set_in_request_header(
         self,

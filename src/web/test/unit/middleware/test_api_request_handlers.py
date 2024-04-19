@@ -4,12 +4,12 @@ from typing import Any, cast
 import pytest
 from BL_Python.web.middleware import register_api_request_handlers
 from BL_Python.web.middleware.consts import INCOMING_REQUEST_MESSAGE
-from BL_Python.web.testing.create_app import CreateApp, FlaskClientInjector
+from BL_Python.web.testing.create_app import CreateFlaskApp, FlaskClientInjector
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 
-class TestApiRequestHandlers(CreateApp):
+class TestApiRequestHandlers(CreateFlaskApp):
     def test__register_api_request_handlers__binds_flask_before_request(
         self, flask_client: FlaskClientInjector, mocker: MockerFixture
     ):

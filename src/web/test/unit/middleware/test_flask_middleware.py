@@ -11,7 +11,7 @@ from BL_Python.web.middleware.flask import (
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
 from BL_Python.web.testing.create_app import (
-    CreateApp,
+    CreateFlaskApp,
     FlaskClientInjector,
     FlaskClientInjectorConfigurable,
     RequestConfigurable,
@@ -22,7 +22,7 @@ from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
 
-class TestFlaskMiddleware(CreateApp):
+class TestFlaskMiddleware(CreateFlaskApp):
     @pytest.mark.parametrize("format", ["plaintext", "JSON"])
     def test___register_api_response_handlers__sets_correlation_id_response_header_when_not_set_in_request_header(
         self,
@@ -162,7 +162,7 @@ class TestFlaskMiddleware(CreateApp):
             _ = bind_errorhandler(test_client.application, code_or_exception_type)(
                 application_errorhandler_mock
             )
-            # this probably doesn't need to be done w/ connexion
+
             _ = test_client.application.route("/")(failure_lambda)
 
             _ = test_client.get("/")

@@ -13,7 +13,7 @@ from BL_Python.web.middleware.consts import (
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
 from BL_Python.web.testing.create_app import (
-    CreateApp,
+    CreateFlaskApp,
     FlaskClientInjector,
     FlaskClientInjectorConfigurable,
 )
@@ -22,7 +22,7 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 
-class TestApiResponseHandlers(CreateApp):
+class TestApiResponseHandlers(CreateFlaskApp):
     def test__register_api_response_handlers__binds_flask_before_request(
         self, flask_client: FlaskClientInjector, mocker: MockerFixture
     ):
