@@ -24,12 +24,16 @@ class Role(Enum):
         return self.name
 
 
-TRole = TypeVar("TRole", bound=Role)
+TRole = TypeVar("TRole", bound=Role, covariant=True)
 
 
 class UserMixin(Protocol[TRole]):
     id: UserId
-    roles: Sequence[TRole]
+
+    # property resolves invariance error by telling
+    # pyright this is an immutable "field"
+    @property
+    def roles(self) -> Sequence[TRole]: ...
 
     def __init__(self, id: UserId, roles: Sequence[TRole] | None = None) -> None:
         super().__init__()
