@@ -30,7 +30,7 @@ _get_program_dir = lambda: path.dirname(get_path_executed_script())
 _get_exec_dir = lambda: path.abspath(".")
 
 TApp = Flask | FlaskApp
-T_app = TypeVar("T_app", bound=TApp, covariant=True)
+T_app = TypeVar("T_app", bound=TApp)
 
 
 @dataclass

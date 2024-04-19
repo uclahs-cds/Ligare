@@ -24,7 +24,7 @@ class Role(Enum):
         return self.name
 
 
-TRole = TypeVar("TRole", bound=Role)  # , covariant=True)
+TRole = TypeVar("TRole", bound=Role)
 
 
 class UserMixin(Protocol[TRole]):

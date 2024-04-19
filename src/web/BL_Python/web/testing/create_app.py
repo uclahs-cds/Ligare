@@ -14,6 +14,7 @@ from typing import (
     Generic,
     NamedTuple,
     Protocol,
+    Sequence,
     TypeVar,
     cast,
 )
@@ -22,6 +23,7 @@ from unittest.mock import AsyncMock, MagicMock, NonCallableMagicMock
 import json_logging
 import pytest
 import yaml
+from _pytest.fixtures import SubRequest
 from BL_Python.platform.identity.user_loader import TRole, UserId, UserMixin
 from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import (
@@ -51,6 +53,7 @@ from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 from pytest_mock.plugin import MockType
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from typing_extensions import Self
 from werkzeug.local import LocalProxy
 
 TFlaskClient = FlaskClient | TestClient
@@ -182,9 +185,10 @@ class OpenAPIMockController(MockController):
     """
 
 
-class CreateApp:
+class CreateApp(Generic[T_app]):
     app_name: str = "test_app"
     auto_mock_dependencies: bool = True
+    default_app_getter: AppGetter[T_app] | None = None
 
     _automatic_mocks: dict[str, MagicMock] = defaultdict()
 
@@ -312,8 +316,9 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
         app: ClientInjector[T_flask_client],
         user: type[UserMixin[TRole]],
         mocker: MockerFixture,
+        roles: Sequence[TRole] | None = None,
     ):
-        _ = self.mock_user(user, mocker)
+        _ = self.mock_user(user, mocker, roles)
 
         with app.injector.app.test_request_context() as request_context:
             session = cast(SecureCookieSession, request_context.session)
@@ -324,14 +329,20 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
             return request_context
 
     def mock_user(
-        self, user: type[UserMixin[TRole]], mocker: MockerFixture
+        self,
+        user: type[UserMixin[TRole]],
+        mocker: MockerFixture,
+        roles: Sequence[TRole] | None = None,
     ) -> MagicMock | AsyncMock | NonCallableMagicMock:
+        if roles is None:
+            roles = cast(Sequence[TRole], ())
+
         def get_mock_user(proxy: LocalProxy[UserMixin[TRole]] | None = None):
             if proxy is not None:
                 return proxy
             user_id = UserId(1, CreateApp._MOCK_USER_USERNAME)
             # FIXME this needs to handle user roles
-            return user(user_id, [])
+            return user(user_id, roles)
 
         return mocker.patch("flask_login.utils._get_user", side_effect=get_mock_user)
 
@@ -377,9 +388,33 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
 
     @pytest.fixture()
     def openapi_client(
-        self, _get_openapi_app: CreateAppResult[FlaskApp]
+        self,
+        request: SubRequest,
     ) -> OpenAPIClientInjector:
-        return next(self._openapi_client(lambda: _get_openapi_app))
+        # Call `default_app_getter` as a class method because:
+        # 1. A method assigned as a value to a class member becomes a class
+        #    member itself which means `self` is implicitly passed to the method
+        # 2. `AppGetter[T_app]` does not take parameters, and the implicit `self`
+        #    causes a runtime call error.
+        # 3. The only way to avoid the class member behavior is to avoid
+        #    assigning the class member value (during declaration), instead
+        #    assigning it as an object value (during instantiation or later).
+        # 4. Pytest does not load tests in a class that has an __init__ method
+        #    so we cannot use a ctor to assign the value
+        #
+        # also:
+        # assertions in self._openapi_client check the actual type,
+        # so this cast is just to appease pyright.
+        # TODO support this for Flask as well
+        default_app_getter = cast(Self, self.__class__).default_app_getter
+
+        get_openapi_app: CreateAppResult[FlaskApp]
+        if default_app_getter is None:
+            get_openapi_app = request.getfixturevalue("_get_openapi_app")
+        else:
+            get_openapi_app = cast(CreateAppResult[FlaskApp], default_app_getter())
+
+        return next(self._openapi_client(lambda: get_openapi_app))
 
     def _client_configurable(
         self,
