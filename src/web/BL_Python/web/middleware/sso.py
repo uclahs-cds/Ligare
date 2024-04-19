@@ -9,7 +9,6 @@ from flask_login import LoginManager
 from flask_login import UserMixin as FlaskLoginUserMixin
 from flask_login import current_user
 from flask_login import login_required as flask_login_required
-from werkzeug.local import LocalProxy
 
 T = TypeVar("T", contravariant=True)
 
@@ -90,10 +89,7 @@ def login_required(
         def decorated_view(*args: P.args, **kwargs: P.kwargs):
             unauthorized = True
             try:
-                user = cast(
-                    _LoginUserMixin,
-                    LocalProxy._get_current_object(current_user),  # pyright: ignore[reportPrivateUsage,reportCallIssue]
-                )
+                user = cast(_LoginUserMixin, current_user)
                 if not user.is_authenticated:
                     # this should end up raising a 401 exception
                     return login_manager.unauthorized()
