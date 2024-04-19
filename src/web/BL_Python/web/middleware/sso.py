@@ -20,7 +20,9 @@ class AuthCheckOverrideCallable(Protocol):
     ) -> bool: ...
 
 
-class LoginUserMixin(FlaskLoginUserMixin, ABC):
+class _LoginUserMixin(FlaskLoginUserMixin, ABC):
+    """Used strictly for typecasting. This matches the Protocol UserMixin in user_loader."""
+
     id: UserId
     roles: Sequence[Role]
 
@@ -89,7 +91,7 @@ def login_required(
             unauthorized = True
             try:
                 user = cast(
-                    LoginUserMixin,
+                    _LoginUserMixin,
                     LocalProxy._get_current_object(current_user),  # pyright: ignore[reportPrivateUsage,reportCallIssue]
                 )
                 if not user.is_authenticated:

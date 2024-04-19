@@ -22,7 +22,7 @@ from unittest.mock import AsyncMock, MagicMock, NonCallableMagicMock
 import json_logging
 import pytest
 import yaml
-from BL_Python.platform.identity.user_loader import UserId
+from BL_Python.platform.identity.user_loader import TRole, UserId, UserMixin
 from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import (
     App,
@@ -46,7 +46,6 @@ from flask.ctx import RequestContext
 from flask.sessions import SecureCookieSession
 from flask.testing import FlaskClient
 from flask_injector import FlaskInjector
-from flask_login import UserMixin
 from mock import MagicMock
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture
@@ -311,7 +310,7 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
     def get_authenticated_request_context(
         self,
         app: ClientInjector[T_flask_client],
-        user: type[UserMixin],
+        user: type[UserMixin[TRole]],
         mocker: MockerFixture,
     ):
         _ = self.mock_user(user, mocker)
@@ -325,12 +324,13 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
             return request_context
 
     def mock_user(
-        self, user: type[UserMixin], mocker: MockerFixture
+        self, user: type[UserMixin[TRole]], mocker: MockerFixture
     ) -> MagicMock | AsyncMock | NonCallableMagicMock:
-        def get_mock_user(proxy: LocalProxy[UserMixin] | None = None):
+        def get_mock_user(proxy: LocalProxy[UserMixin[TRole]] | None = None):
             if proxy is not None:
                 return proxy
             user_id = UserId(1, CreateApp._MOCK_USER_USERNAME)
+            # FIXME this needs to handle user roles
             return user(user_id, [])
 
         return mocker.patch("flask_login.utils._get_user", side_effect=get_mock_user)

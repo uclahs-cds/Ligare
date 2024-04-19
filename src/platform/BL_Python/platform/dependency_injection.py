@@ -14,7 +14,7 @@ from typing_extensions import override
 class UserLoaderModule(Module):
     def __init__(
         self,
-        loader: type[UserMixin],
+        loader: type[UserMixin[Role]],
         roles: type[Role],
         user_table: type[DbUser],
         role_table: type[DbRole],
@@ -31,9 +31,27 @@ class UserLoaderModule(Module):
         binder.install(LoggerModule)
 
     @provider
-    def provide_loader(
+    def _provide_user_mixin_loader(  # pyright: ignore[reportUnknownParameterType]
+        self, user_loader: UserLoader[UserMixin[Role]]
+    ) -> UserLoader[UserMixin]:  # pyright: ignore[reportMissingTypeArgument]
+        """
+        The weirdness with this method's return type supports usage of the `UserLoader`
+        class, which uses `TUserMixin`, which is a TypeVar bound to an
+        invariant type (`UserMixin[Role]`).
+        That, in turn, supports `LoginManager` using `UserLoader[UserMixin]` as a dependency.
+        This is all done because we cannot use a TypeVar for a type registered with Injector,
+        but we can use concrete types for generics.
+        """
+        return user_loader
+
+    @provider
+    def _provide_user_mixin_role_loader(
         self, scoped_session: ScopedSession, log: Logger
-    ) -> UserLoader[UserMixin]:
+    ) -> UserLoader[UserMixin[Role]]:
+        """
+        `UserLoader[UserMixin[Role]]` is the concrete type that is returned to
+        dependents of `UserLoader[UserMixin]`.
+        """
         return UserLoader(
             loader=self._loader,
             roles=self._roles,

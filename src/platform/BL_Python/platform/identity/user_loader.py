@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from logging import Logger
@@ -25,16 +24,18 @@ class Role(Enum):
         return self.name
 
 
-TRole = TypeVar("TRole", bound=Role, covariant=True)
+TRole = TypeVar("TRole", bound=Role)  # , covariant=True)
 
 
-class UserMixin(Protocol):
-    @abstractmethod
-    def __init__(self, user_id: UserId, roles: Sequence[TRole] | None = None) -> None:
+class UserMixin(Protocol[TRole]):
+    id: UserId
+    roles: Sequence[TRole]
+
+    def __init__(self, id: UserId, roles: Sequence[TRole] | None = None) -> None:
         super().__init__()
 
 
-TUserMixin = TypeVar("TUserMixin", bound=UserMixin)
+TUserMixin = TypeVar("TUserMixin", bound=UserMixin[Role])
 
 
 class UserLoader(Generic[TUserMixin]):
