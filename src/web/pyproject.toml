@@ -29,6 +29,7 @@ classifiers = [
 
 dependencies = [
     "BL_Python.programming",
+    "BL_Python.platform",
 
     "Flask == 3.0.2",
     "flask-injector",
