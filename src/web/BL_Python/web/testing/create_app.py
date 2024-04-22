@@ -42,7 +42,6 @@ from BL_Python.web.config import (
 )
 from BL_Python.web.encryption import encrypt_flask_cookie
 from connexion import FlaskApp
-from connexion.apps.abstract import TestClient
 from flask import Flask, Request, Response
 from flask.ctx import RequestContext
 from flask.sessions import SecureCookieSession
@@ -53,6 +52,7 @@ from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 from pytest_mock.plugin import MockType
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.testclient import TestClient
 from typing_extensions import Self
 from werkzeug.local import LocalProxy
 
@@ -189,6 +189,7 @@ class CreateApp(Generic[T_app]):
     app_name: str = "test_app"
     auto_mock_dependencies: bool = True
     default_app_getter: AppGetter[T_app] | None = None
+    use_inmemory_database: bool = True
 
     _automatic_mocks: dict[str, MagicMock] = defaultdict()
 
@@ -507,6 +508,9 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
         self,
         request: SubRequest,
     ) -> OpenAPIClientInjector:
+        if self.use_inmemory_database:
+            _ = request.getfixturevalue("use_inmemory_database")
+
         # Call `default_app_getter` as a class method because:
         # 1. A method assigned as a value to a class member becomes a class
         #    member itself which means `self` is implicitly passed to the method
