@@ -33,4 +33,11 @@ def use_inmemory_database(mocker: MockerFixture) -> UseInmemoryDatabaseResult[TC
             ),
         )
 
-    yield mocker.patch("BL_Python.web.application.load_config", load_config_override)
+    # FIXME temporary?
+    yield (
+        mocker.patch("BL_Python.web.application.load_config", load_config_override),
+        mocker.patch(
+            "BL_Python.database.migrations.alembic.env.load_config",
+            load_config_override,
+        ),
+    )
