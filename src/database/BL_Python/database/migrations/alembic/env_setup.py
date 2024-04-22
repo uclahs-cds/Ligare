@@ -15,7 +15,14 @@ from injector import inject
 # TODO only do this when using PostgreSQL,
 # and detect if the module is installed
 # so we can show a helpful error message
-from psycopg2.errors import UndefinedTable
+try:
+    from psycopg2.errors import UndefinedTable  # pyright: ignore[reportAssignmentType]
+except ImportError:
+
+    class UndefinedTable:
+        pass
+
+
 from sqlalchemy import MetaData, Table, engine_from_config, pool
 from sqlalchemy.engine import Connectable, Connection, Engine
 from sqlalchemy.exc import ProgrammingError
