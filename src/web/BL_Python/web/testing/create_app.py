@@ -112,6 +112,7 @@ FlaskClientInjectorConfigurable = ClientInjectorConfigurable[Flask, FlaskClient]
 OpenAPIClientInjectorConfigurable = ClientInjectorConfigurable[FlaskApp, TestClient]
 FlaskClientInjector = ClientInjector[FlaskClient]
 OpenAPIClientInjector = ClientInjector[TestClient]
+OpenAPIClientInjectorWithDatabase = tuple[OpenAPIClientInjector, Connection]
 OpenAPIAppInitHook = TAppInitHook[FlaskApp]
 
 
