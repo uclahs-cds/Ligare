@@ -10,12 +10,35 @@ from typing_extensions import override
 
 class Role(ABC):
     __tablename__: str
+
+    def __init__(  # pyright: ignore[reportMissingSuperCall]
+        self,
+        /,
+        role_id: int = 0,
+        role_name: str = "",
+        users: "list[User]" = [],  # pyright: ignore[reportCallInDefaultInitializer]
+    ) -> None:
+        raise NotImplementedError(
+            f"`{Role.__class__.__name__}` should only be used for type checking."
+        )
+
     role_id: int
     role_name: str
     users: "list[User]"
 
 
 class User(ABC):
+    def __init__(  # pyright: ignore[reportMissingSuperCall]
+        self,
+        /,
+        user_id: int = 0,
+        username: str = "",
+        roles: "list[Role]" = [],  # pyright: ignore[reportCallInDefaultInitializer]
+    ) -> None:
+        raise NotImplementedError(
+            f"`{User.__class__.__name__}` should only be used for type checking."
+        )
+
     __tablename__: str
     user_id: int
     username: str
@@ -23,6 +46,13 @@ class User(ABC):
 
 
 class UserRole(ABC):
+    def __init__(  # pyright: ignore[reportMissingSuperCall]
+        self, /, user_id: int = 0, role_id: int = 0
+    ) -> None:
+        raise NotImplementedError(
+            f"`{UserRole.__class__.__name__}` should only be used for type checking."
+        )
+
     user_id: int
     role_id: int
 

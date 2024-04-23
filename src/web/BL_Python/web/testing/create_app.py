@@ -54,7 +54,7 @@ from mock import MagicMock
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 from pytest_mock.plugin import MockType
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.testclient import TestClient
@@ -224,7 +224,6 @@ class CreateApp(Generic[T_app]):
     def openapi_config(self):
         return self._openapi_config()
 
-    # database fixtures
     def _set_up_database(
         self,
         engine: Engine,
@@ -234,15 +233,13 @@ class CreateApp(Generic[T_app]):
     ):
         alembic_config = AlembicConfig()
         alembic_config.set_main_option("config_file_name", config_filename)
-        cast(ConfigParser, alembic_config.file_config).read(config_filename)
+        _ = cast(ConfigParser, alembic_config.file_config).read(config_filename)
 
         # Maintain the connection so Alembic does not wipe out the in-memory database
         # when using SQLite in-memory connections
         # https://alembic.sqlalchemy.org/en/latest/cookbook.html#sharing-a-connection-across-one-or-more-programmatic-migration-commands
         connection: Engine._trans_ctx = engine.begin()
-        # alembic_config.attributes["connection"] = connection.conn
-        # FIXME is this a dictionary, or not?
-        alembic_config.attributes["connection"] = connection.conn
+        alembic_config.attributes["connection"] = connection.conn  # pyright: ignore[reportIndexIssue]
 
         if down_revision is not None:
             downgrade(alembic_config, down_revision, False)
@@ -251,61 +248,6 @@ class CreateApp(Generic[T_app]):
             upgrade(alembic_config, up_revision, False)
 
         return connection
-
-    @pytest.fixture
-    def set_up_database(self, openapi_client: OpenAPIClientInjector):
-        with openapi_client.injector.injector.get(Session) as session:
-            # Get a connection to share so Alembic does not wipe out the in-memory database
-            # when using SQLite in-memory connections
-            if session.bind is None:
-                raise Exception(
-                    "SQLAlchemy Session is not bound to an engine. This is not supported."
-                )
-
-            with self._set_up_database(session.bind.engine):
-                yield
-
-    @pytest.fixture
-    def set_up_database_factory(self, openapi_client: OpenAPIClientInjector):
-        session = openapi_client.injector.injector.get(Session)
-
-        def _set_up_database_factory(
-            down_revision: str = "base",
-            up_revision: str = "head",
-            config_filename: str = "alembic.ini",
-        ):
-            if session.bind is None:
-                raise Exception(
-                    "SQLAlchemy Session is not bound to an engine. This is not supported."
-                )
-
-            with self._set_up_database(
-                session.bind.engine, down_revision, up_revision, config_filename
-            ):
-                yield
-
-        return _set_up_database_factory
-
-    class SetUpDatabaseFactory(Protocol):
-        def __call__(
-            self,
-            down_revision: str = "base",
-            up_revision: str = "head",
-            config_filename: str = "alembic.ini",
-        ) -> Generator[None, None, None]:
-            """
-            Runs Alembic migrations.
-            This will first attempt to downgrade revisions if `down_revision` is specified,
-            and it will downgrade to that revision. By default, it will downgrade completely
-            to "base."
-            Next it will attempt to upgrade revisions if `up_revision` is specified,
-            and it will upgrade to that revision. By default it will upgrade completely
-            to "head."
-            The default `config_filename` is "alembic.ini" and lives in the CWD of the process.
-            """
-            ...
-
-    # end database fixtures
 
     _MOCK_USER_USERNAME = "test user"
 
@@ -592,13 +534,30 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
         return next(self._openapi_client(flask_app_getter))
 
     @pytest.fixture()
+    def openapi_client_with_database(
+        self, request: SubRequest
+    ) -> Generator[tuple[OpenAPIClientInjector, Connection], Any, None]:
+        if self.use_inmemory_database:
+            _ = request.getfixturevalue("use_inmemory_database")
+
+        openapi_client = request.getfixturevalue("openapi_client")
+
+        with openapi_client.injector.injector.get(Session) as session:
+            # Get a connection to share so Alembic does not wipe out the in-memory database
+            # when using SQLite in-memory connections
+            if session.bind is None:
+                raise Exception(
+                    "SQLAlchemy Session is not bound to an engine. This is not supported."
+                )
+
+            with self._set_up_database(session.bind.engine) as connection:
+                yield (openapi_client, connection)
+
+    @pytest.fixture()
     def openapi_client(
         self,
         request: SubRequest,
     ) -> OpenAPIClientInjector:
-        if self.use_inmemory_database:
-            _ = request.getfixturevalue("use_inmemory_database")
-
         # Call `default_app_getter` as a class method because:
         # 1. A method assigned as a value to a class member becomes a class
         #    member itself which means `self` is implicitly passed to the method
@@ -620,7 +579,6 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
         if default_app_getter is None:
             get_openapi_app = request.getfixturevalue("_get_openapi_app")
         else:
-            # FIXME is the wrong type being returned here? should this be called here?
             get_openapi_app = default_app_getter()
 
         return next(self._openapi_client(lambda: get_openapi_app))

@@ -1,6 +1,7 @@
 from logging import Logger
 
 from BL_Python.database.dependency_injection import ScopedSessionModule
+from BL_Python.database.types import MetaBase
 from BL_Python.platform.identity import Role as DbRole
 from BL_Python.platform.identity import User as DbUser
 from BL_Python.platform.identity.user_loader import Role, UserLoader, UserMixin
@@ -12,22 +13,26 @@ from typing_extensions import override
 
 
 class UserLoaderModule(Module):
+    _bases: list[type[MetaBase]] | None = None
+
     def __init__(
         self,
         loader: type[UserMixin[Role]],
         roles: type[Role],
         user_table: type[DbUser],
         role_table: type[DbRole],
+        bases: list[type[MetaBase]] | None = None,
     ) -> None:
         self._loader = loader
         self._roles = roles
+        self._bases = bases
         self._user_table = user_table
         self._role_table = role_table
         super().__init__()
 
     @override
     def configure(self, binder: Binder) -> None:
-        binder.install(ScopedSessionModule)
+        binder.install(ScopedSessionModule(self._bases))
         binder.install(LoggerModule)
 
     @provider

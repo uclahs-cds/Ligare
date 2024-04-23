@@ -5,14 +5,17 @@ from BL_Python.programming.collections.dict import AnyDict, merge
 from BL_Python.programming.config import TConfig, load_config
 from pytest_mock import MockerFixture
 
+TConfigCallable = Callable[[type[TConfig], str, AnyDict | None], TConfig]
 UseInmemoryDatabaseResult = Generator[
-    Callable[[type[TConfig], str, AnyDict | None], TConfig], Any, None
+    tuple[TConfigCallable[TConfig], TConfigCallable[TConfig]], Any, None
 ]
 UseInmemoryDatabase = Callable[[MockerFixture], UseInmemoryDatabaseResult[TConfig]]
 
 
 @pytest.fixture
-def use_inmemory_database(mocker: MockerFixture) -> UseInmemoryDatabaseResult[TConfig]:
+def use_inmemory_database(
+    mocker: MockerFixture,
+) -> UseInmemoryDatabaseResult[TConfig]:
     def load_config_override(
         config_type: type[TConfig],
         toml_file_path: str,
