@@ -47,7 +47,7 @@ from BL_Python.web.encryption import encrypt_flask_cookie
 from connexion import FlaskApp
 from flask import Flask, Request, Response
 from flask.ctx import RequestContext
-from flask.sessions import SecureCookieSession
+from flask.sessions import SecureCookieSession, SecureCookieSessionInterface
 from flask.testing import FlaskClient
 from flask_injector import FlaskInjector
 from mock import MagicMock
@@ -262,10 +262,33 @@ class CreateApp(Generic[T_app]):
         _ = self.mock_user(user, mocker, roles)
 
         with app.injector.app.test_request_context() as request_context:
-            session = cast(SecureCookieSession, request_context.session)
+            from flask import session
+
             session["_id"] = get_random_str()
             session["authenticated"] = True
             session["username"] = CreateApp._MOCK_USER_USERNAME
+
+            if isinstance(app.client, TestClient):
+                session_cookie = encrypt_flask_cookie(
+                    app.client.app.app.config["SECRET_KEY"],
+                    {
+                        "_id": session["_id"],
+                        "authenticated": True,
+                        "username": CreateApp._MOCK_USER_USERNAME,
+                    },
+                )
+
+                app.client.cookies.set(
+                    app.client.app.app.config["SESSION_COOKIE_NAME"],
+                    session_cookie,
+                )
+
+                app.client.headers.setdefault("Host", "localhost:5000")
+            elif isinstance(app.client, FlaskClient):
+                # TODO move the session_transaction stuff from the Flask test client stuff here.
+                raise NotImplementedError(
+                    f"Authenticated request context for `{FlaskClient.__name__}` not implemented."
+                )
 
             return request_context
 
@@ -511,7 +534,10 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
                 TrustedHostMiddleware,
                 allowed_hosts=["localhost", "localhost:5000"],
             )
-            client = stack.enter_context(result.app_injector.app.test_client())
+            # FIXME this needs to set session data
+            client: TestClient = stack.enter_context(
+                result.app_injector.app.test_client()
+            )
             # TODO OpenAPI requires more work before sessions are working. Flask can use this code, but BL_Python.web doesn't support sessions yet anyway.
             # client.cookies.set(
             #    cast(str, app.config["SESSION_COOKIE_NAME"]),
