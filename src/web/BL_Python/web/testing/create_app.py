@@ -45,14 +45,14 @@ from BL_Python.web.encryption import encrypt_flask_cookie
 from connexion import FlaskApp
 from flask import Flask, Request, Response
 from flask.ctx import RequestContext
-from flask.sessions import SecureCookieSession, SecureCookieSessionInterface
+from flask.sessions import SecureCookieSession
 from flask.testing import FlaskClient
 from flask_injector import FlaskInjector
 from mock import MagicMock
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 from pytest_mock.plugin import MockType
-from sqlalchemy.engine import Connection, Engine
+from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.testclient import TestClient
@@ -241,10 +241,12 @@ class CreateApp(Generic[T_app]):
             session["authenticated"] = True
             session["username"] = CreateApp._MOCK_USER_USERNAME
 
+            app_config = cast(dict[str, Any], app.injector.app.config)
+
             if isinstance(app.client, TestClient):
                 session_cookie = encrypt_flask_cookie(
                     # TODO use app.client.injector?
-                    app.client.app.app.config["SECRET_KEY"],
+                    app_config["SECRET_KEY"],
                     {
                         "_id": session["_id"],
                         "authenticated": True,
@@ -253,12 +255,10 @@ class CreateApp(Generic[T_app]):
                 )
 
                 app.client.cookies.set(
-                    app.client.app.app.config["SESSION_COOKIE_NAME"],
-                    session_cookie,
+                    app_config["SESSION_COOKIE_NAME"], session_cookie
                 )
 
-                # TODO replace with values from test app
-                _ = app.client.headers.setdefault("Host", "localhost:5000")
+                _ = app.client.headers.setdefault("Host", app_config["SERVER_NAME"])
             else:
                 # TODO move the session_transaction stuff from the Flask test client stuff here.
                 raise NotImplementedError(
@@ -384,7 +384,9 @@ class CreateFlaskApp(CreateApp[Flask]):
         with ExitStack() as stack:
             result = flask_app_getter()
 
-            if not isinstance(result, CreateAppResult) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
+            if not isinstance(
+                result, CreateAppResult
+            ) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
                 result.app_injector.app, Flask
             ):
                 raise Exception(
@@ -498,7 +500,9 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         with ExitStack() as stack:
             result = flask_app_getter()
 
-            if not isinstance(result, CreateAppResult) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
+            if not isinstance(
+                result, CreateAppResult
+            ) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
                 result.app_injector.app, FlaskApp
             ):
                 raise Exception(

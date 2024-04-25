@@ -10,15 +10,19 @@ from BL_Python.database.migrations.alembic.env import (
 )
 from BL_Python.database.testing.config import inmemory_database_config
 from BL_Python.database.types import MetaBase
+from injector import Injector
 from mock import MagicMock
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture
+from sqlalchemy.engine.base import Connection
 from sqlalchemy.orm import Session
 from sqlalchemy.pool.impl import QueuePool
 
 MockPostgreSQLConnection = Generator[
     MagicMock | AsyncMock | NonCallableMagicMock, MagicMock, None
 ]
+
+SetUpDatabaseFixture = tuple[Session, Connection]
 
 
 @pytest.fixture
@@ -45,14 +49,16 @@ def _get_bases_parameter(request: FixtureRequest):
 
 
 @pytest.fixture
-def set_up_database_container(request: FixtureRequest, mocker: MockerFixture):
+def set_up_database_container(request: FixtureRequest) -> Injector:
     bases = _get_bases_parameter(request)
 
     return _set_up_database_container(bases)
 
 
 @pytest.fixture
-def set_up_database(request: FixtureRequest, mocker: MockerFixture):
+def set_up_database(
+    request: FixtureRequest,
+) -> Generator[tuple[Session, Connection], Any, None]:
     bases = _get_bases_parameter(request)
 
     container = _set_up_database_container(bases)
