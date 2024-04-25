@@ -1,6 +1,8 @@
+from BL_Python.database.config import Config, DatabaseConfig
 from BL_Python.database.engine import DatabaseEngine
 from BL_Python.database.types import MetaBase
-from injector import Binder, CallableProvider, Module, inject, singleton
+from BL_Python.programming.dependency_injection import ConfigModule
+from injector import Binder, CallableProvider, Injector, Module, inject, singleton
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import Session
 from typing_extensions import override
@@ -59,3 +61,18 @@ class ScopedSessionModule(Module):
         """
         session: Session = session_factory()
         return session
+
+
+def get_database_config_container(config: Config):
+    config_module = ConfigModule(config, Config)
+    database_config_module = ConfigModule(config.database, DatabaseConfig)
+
+    return Injector([config_module, database_config_module])
+
+
+def get_database_ioc_container(
+    config: Config, bases: list[type[MetaBase]] | None = None
+):
+    container = get_database_config_container(config)
+    container.binder.install(ScopedSessionModule(bases=bases))
+    return container

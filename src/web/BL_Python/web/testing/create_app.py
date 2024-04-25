@@ -2,7 +2,6 @@ import importlib
 import logging
 import sys
 from collections import defaultdict
-from configparser import ConfigParser
 from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivateUsage]
 from contextlib import ExitStack
 from dataclasses import dataclass
@@ -25,8 +24,7 @@ import json_logging
 import pytest
 import yaml
 from _pytest.fixtures import SubRequest
-from alembic.command import downgrade, upgrade
-from alembic.config import Config as AlembicConfig
+from BL_Python.database.migrations.alembic.env import set_up_database
 from BL_Python.platform.identity.user_loader import TRole, UserId, UserMixin
 from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import (
@@ -225,31 +223,6 @@ class CreateApp(Generic[T_app]):
     def openapi_config(self):
         return self._openapi_config()
 
-    def _set_up_database(
-        self,
-        engine: Engine,
-        down_revision: str | None = "base",
-        up_revision: str | None = "head",
-        config_filename: str = "alembic.ini",
-    ):
-        alembic_config = AlembicConfig()
-        alembic_config.set_main_option("config_file_name", config_filename)
-        _ = cast(ConfigParser, alembic_config.file_config).read(config_filename)
-
-        # Maintain the connection so Alembic does not wipe out the in-memory database
-        # when using SQLite in-memory connections
-        # https://alembic.sqlalchemy.org/en/latest/cookbook.html#sharing-a-connection-across-one-or-more-programmatic-migration-commands
-        connection: Engine._trans_ctx = engine.begin()
-        alembic_config.attributes["connection"] = connection.conn  # pyright: ignore[reportIndexIssue]
-
-        if down_revision is not None:
-            downgrade(alembic_config, down_revision, False)
-
-        if up_revision is not None:
-            upgrade(alembic_config, up_revision, False)
-
-        return connection
-
     _MOCK_USER_USERNAME = "test user"
 
     def get_authenticated_request_context(
@@ -270,6 +243,7 @@ class CreateApp(Generic[T_app]):
 
             if isinstance(app.client, TestClient):
                 session_cookie = encrypt_flask_cookie(
+                    # TODO use app.client.injector?
                     app.client.app.app.config["SECRET_KEY"],
                     {
                         "_id": session["_id"],
@@ -283,8 +257,9 @@ class CreateApp(Generic[T_app]):
                     session_cookie,
                 )
 
-                app.client.headers.setdefault("Host", "localhost:5000")
-            elif isinstance(app.client, FlaskClient):
+                # TODO replace with values from test app
+                _ = app.client.headers.setdefault("Host", "localhost:5000")
+            else:
                 # TODO move the session_transaction stuff from the Flask test client stuff here.
                 raise NotImplementedError(
                     f"Authenticated request context for `{FlaskClient.__name__}` not implemented."
@@ -577,7 +552,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
                     "SQLAlchemy Session is not bound to an engine. This is not supported."
                 )
 
-            with self._set_up_database(session.bind.engine) as connection:
+            with set_up_database(session.bind.engine) as connection:
                 yield (openapi_client, connection)
 
     @pytest.fixture()

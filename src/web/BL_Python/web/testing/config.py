@@ -2,7 +2,7 @@ from typing import Any, Callable, Generator
 
 import pytest
 from BL_Python.database.testing.config import (
-    UseInmemoryDatabase,
+    UseInmemoryDatabaseLoader,
     inmemory_database_config_loader,
 )
 from BL_Python.programming.collections.dict import AnyDict
@@ -11,7 +11,7 @@ from pytest_mock import MockerFixture
 
 TConfigCallable = Callable[[type[TConfig], str, AnyDict | None], TConfig]
 UseInmemoryDatabaseResult = Generator[
-    tuple[UseInmemoryDatabase, UseInmemoryDatabase], Any, None
+    tuple[UseInmemoryDatabaseLoader, UseInmemoryDatabaseLoader], Any, None
 ]
 
 

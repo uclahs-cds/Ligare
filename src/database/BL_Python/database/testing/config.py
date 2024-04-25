@@ -10,7 +10,7 @@ UseInmemoryDatabaseResult = Generator[
 ]
 
 
-class UseInmemoryDatabase(Protocol):
+class UseInmemoryDatabaseLoader(Protocol):
     def __call__(
         self,
         config_type: type[TConfig],
@@ -25,7 +25,7 @@ def inmemory_database_config():
     )
 
 
-def inmemory_database_config_loader() -> UseInmemoryDatabase:
+def inmemory_database_config_loader() -> UseInmemoryDatabaseLoader:
     def inmemory_database_config_loader(
         config_type: type[TConfig],
         toml_file_path: str,
@@ -36,11 +36,7 @@ def inmemory_database_config_loader() -> UseInmemoryDatabase:
             config_type=config_type,
             toml_file_path=toml_file_path,
             config_overrides=merge(
-                {
-                    "database": {
-                        "connection_string": "sqlite:///:memory:?check_same_thread=False"
-                    }
-                },
+                {"database": inmemory_database_config().model_dump()},
                 config_overrides or {},
                 skip_existing=True,
             ),
