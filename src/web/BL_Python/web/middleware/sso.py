@@ -10,14 +10,6 @@ from flask_login import UserMixin as FlaskLoginUserMixin
 from flask_login import current_user
 from flask_login import login_required as flask_login_required
 
-T = TypeVar("T", contravariant=True)
-
-
-class AuthCheckOverrideCallable(Protocol):
-    def __call__(
-        self, user: FlaskLoginUserMixin, *args: Any, **kwargs: Any
-    ) -> bool: ...
-
 
 class _LoginUserMixin(FlaskLoginUserMixin, ABC):
     """Used strictly for typecasting. This matches the Protocol UserMixin in user_loader."""
@@ -26,12 +18,21 @@ class _LoginUserMixin(FlaskLoginUserMixin, ABC):
     roles: Sequence[Role]
 
 
+class AuthCheckUser(Protocol):
+    id: UserId
+    roles: Sequence[Role]
+
+
+class AuthCheckOverrideCallable(Protocol):
+    def __call__(self, user: AuthCheckUser, *args: Any, **kwargs: Any) -> bool: ...
+
+
 P = ParamSpec("P")
-R = TypeVar("R", bound=Response)
+R = TypeVar("R")
 
 
 def login_required(
-    roles: Sequence[Role] | Callable[P, R] | None = None,
+    roles: Sequence[Role] | Callable[P, R] | Callable[..., Any] | None = None,
     auth_check_override: AuthCheckOverrideCallable | None = None,
 ):
     """
@@ -84,9 +85,9 @@ def login_required(
 
     login_manager = LoginManager()
 
-    def wrapper(fn: Callable[P, R]):
+    def wrapper(fn: Callable[P, R]) -> Callable[P, R | Response]:
         @wraps(fn)
-        def decorated_view(*args: P.args, **kwargs: P.kwargs):
+        def decorated_view(*args: P.args, **kwargs: P.kwargs) -> R | Response:
             unauthorized = True
             try:
                 user = cast(_LoginUserMixin, current_user)
