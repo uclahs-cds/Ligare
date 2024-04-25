@@ -257,8 +257,6 @@ class CreateApp(Generic[T_app]):
                 app.client.cookies.set(
                     app_config["SESSION_COOKIE_NAME"], session_cookie
                 )
-
-                _ = app.client.headers.setdefault("Host", app_config["SERVER_NAME"])
             else:
                 # TODO move the session_transaction stuff from the Flask test client stuff here.
                 raise NotImplementedError(
@@ -384,9 +382,7 @@ class CreateFlaskApp(CreateApp[Flask]):
         with ExitStack() as stack:
             result = flask_app_getter()
 
-            if not isinstance(
-                result, CreateAppResult
-            ) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
+            if not isinstance(result, CreateAppResult) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
                 result.app_injector.app, Flask
             ):
                 raise Exception(
@@ -500,9 +496,7 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         with ExitStack() as stack:
             result = flask_app_getter()
 
-            if not isinstance(
-                result, CreateAppResult
-            ) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
+            if not isinstance(result, CreateAppResult) or not isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
                 result.app_injector.app, FlaskApp
             ):
                 raise Exception(
@@ -517,22 +511,11 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
             client: TestClient = stack.enter_context(
                 result.app_injector.app.test_client()
             )
-            # TODO OpenAPI requires more work before sessions are working. Flask can use this code, but BL_Python.web doesn't support sessions yet anyway.
-            # client.cookies.set(
-            #    cast(str, app.config["SESSION_COOKIE_NAME"]),
-            #    encrypt_flask_cookie(
-            #        cast(str, app.config["SECRET_KEY"]), flask_session
-            #    ),
-            #    domain="localhost",
-            #    # fmt: off
-            #    max_age=app.config['PERMANENT_SESSION_LIFETIME'] if app.config['PERMANENT_SESSION'] else None,
-            #    # fmt: on
-            # )
-            #                cast(Flask, client.app.app).wsgi_app = TestSessionMiddleware(
-            #                    cast(Flask, client.app.app).wsgi_app
-            #                )
-            # pass
-            # app = cast(Flask, client.app.app)
+
+            app_config = cast(dict[str, Any], result.app_injector.app.app.config)
+
+            _ = client.headers.setdefault("Host", app_config["SERVER_NAME"])
+
             yield ClientInjector(client, result.app_injector.flask_injector)
 
     # TODO this needs to support plain old Flask at some point
