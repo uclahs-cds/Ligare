@@ -1,9 +1,11 @@
 from functools import partial
-from typing import Any, Protocol, Tuple, cast
+from typing import Any, Callable, Protocol, Tuple, Type, cast
 
 from BL_Python.programming.patterns.dependency_injection import LoggerModule
+from BL_Python.web.middleware.sso import SAML2Middleware
 from connexion import ConnexionMiddleware, FlaskApp
 from connexion.apps.flask import FlaskASGIApp, FlaskOperation
+from connexion.middleware.main import MiddlewarePosition
 from flask import Config as Config
 from flask import Flask
 from flask_injector import wrap_function  # pyright: ignore[reportUnknownVariableType]
@@ -68,6 +70,8 @@ def configure_dependencies(
 
     if isinstance(app, FlaskApp):
         app.add_middleware(OpenAPIEndpointDependencyInjectionMiddleware(flask_injector))
+
+        # this binds all BL_Python middlewares with Injector
         _configure_openapi_middleware_dependencies(app, flask_injector)
 
     return flask_injector
@@ -166,6 +170,40 @@ class OpenAPIEndpointDependencyInjectionMiddleware:
         )
 
 
+def bind_middleware(
+    app: TFlaskApp,
+    flask_injector: FlaskInjector,
+    middleware: Type[ASGIApp],
+    position: MiddlewarePosition = MiddlewarePosition.BEFORE_CONTEXT,
+):
+    middleware_class: Callable[..., Any] = middleware
+
+    # hasn't been registered with the application yet
+    if not isinstance(middleware, partial):
+        if not isinstance(app, FlaskApp):
+            return
+
+        app.add_middleware(middleware_class, position)
+    else:
+        middleware_class = middleware.func
+
+    # Connexion/Starlette middleware are classes w/ a __call__ method
+    middleware_routine = cast(
+        MiddlewareRoutine | None, getattr(middleware_class, "__call__", None)
+    )
+    if not middleware_routine:
+        return
+
+    # Skip any __call__ methods without `@inject` applied
+    if not hasattr(middleware_routine, "__bindings__"):
+        return
+
+    # Wrap the __call__ method and replace the original with the now-wrapped method
+    middleware_class.__call__ = (  # pyright: ignore[reportFunctionMemberAccess]
+        wrap_function(middleware_routine, flask_injector.injector)
+    )
+
+
 def _configure_openapi_middleware_dependencies(
     app: TFlaskApp, flask_injector: FlaskInjector
 ):
@@ -183,22 +221,9 @@ def _configure_openapi_middleware_dependencies(
         return
 
     for middleware in cast(list[type], app_middlewares):
+        # these are all middlewares that are registered by Connexion
+        # so we can skip them
         if not isinstance(middleware, partial):
             continue
 
-        # Connexion/Starlette middleware are classes w/ a __call__ method
-        middleware_class = middleware.func
-        middleware_routine = cast(
-            MiddlewareRoutine | None, getattr(middleware_class, "__call__", None)
-        )
-        if not middleware_routine:
-            continue
-
-        # Skip any __call__ methods without `@inject` applied
-        if not hasattr(middleware_routine, "__bindings__"):
-            continue
-
-        # Wrap the __call__ method and replace the original with the now-wrapped method
-        middleware_class.__call__ = (  # pyright: ignore[reportFunctionMemberAccess]
-            wrap_function(middleware_routine, flask_injector.injector)
-        )
+        bind_middleware(app, flask_injector, middleware)
