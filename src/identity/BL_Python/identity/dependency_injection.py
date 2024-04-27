@@ -1,21 +1,22 @@
+from BL_Python.identity.config import SAML2Config, SSOConfig
 from BL_Python.identity.SAML2 import SAML2Client
-from BL_Python.identity.SAML2.config import SSOConfig
 from BL_Python.programming.collections.dict import AnyDict
-from BL_Python.web.config import SAML2Config
-from flask import url_for
+
+# from flask import url_for
 from injector import Binder, CallableProvider, Module, inject, singleton
 from saml2 import BINDING_HTTP_POST, BINDING_HTTP_REDIRECT
 from typing_extensions import override
 
 
 class SSOModule(Module):
-    def __init__(self, metadata: str, settings: AnyDict) -> None:
+    def __init__(self):  # , metadata: str, settings: AnyDict) -> None:
         """
         metadata can be XML or a URL
         """
         super().__init__()
-        self._metadata = metadata
-        self._settings = settings
+
+    #        self._metadata = metadata
+    #        self._settings = settings
 
     @override
     def configure(self, binder: Binder) -> None:
@@ -43,22 +44,24 @@ class SSOModule(Module):
         # FIXME application assumes this is not None, but it technically can be ... and then it will crash
         metadata: str = settings.metadata
 
-        acs_url = url_for("sso.idp_initiated", idp_name="okta", _external=True)
-        https_acs_url = url_for(
-            "sso.idp_initiated", idp_name="okta", _external=True, _scheme="https"
-        )
-        self._settings["entityid"] = acs_url
-        self._settings["service"] = {
-            "sp": {
-                "endpoints": {
-                    "assertion_consumer_service": [
-                        (acs_url, BINDING_HTTP_REDIRECT),
-                        (acs_url, BINDING_HTTP_POST),
-                        (https_acs_url, BINDING_HTTP_REDIRECT),
-                        (https_acs_url, BINDING_HTTP_POST),
-                    ]
+        # acs_url = url_for("sso.idp_initiated", idp_name="okta", _external=True)
+        # https_acs_url = url_for(
+        #    "sso.idp_initiated", idp_name="okta", _external=True, _scheme="https"
+        # )
+        client_settings: AnyDict = {
+            "entityid": settings.acs_url,
+            "service": {
+                "sp": {
+                    "endpoints": {
+                        "assertion_consumer_service": [
+                            (settings.acs_url, BINDING_HTTP_REDIRECT),
+                            (settings.acs_url, BINDING_HTTP_POST),
+                            (settings.https_acs_url, BINDING_HTTP_REDIRECT),
+                            (settings.https_acs_url, BINDING_HTTP_POST),
+                        ]
+                    }
                 }
-            }
+            },
         }
 
-        return SAML2Client(metadata, self._settings)
+        return SAML2Client(metadata, client_settings)

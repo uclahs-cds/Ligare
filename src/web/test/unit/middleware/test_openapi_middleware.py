@@ -2,14 +2,21 @@ import uuid
 from typing import Literal
 
 import pytest
+from BL_Python.identity.config import Config as RootSSOConfig
+from BL_Python.identity.config import SSOConfig
+from BL_Python.platform.dependency_injection import UserLoaderModule
+from BL_Python.platform.identity import Role, User
+from BL_Python.programming.config import AbstractConfig
 from BL_Python.web.application import OpenAPIAppResult
 from BL_Python.web.config import Config
 from BL_Python.web.middleware import bind_errorhandler
 from BL_Python.web.middleware.consts import CORRELATION_ID_HEADER
+from BL_Python.web.middleware.dependency_injection import bind_middleware
 from BL_Python.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
+from BL_Python.web.middleware.sso import LoginManager, SAML2Middleware, SSOBlueprint
 from BL_Python.web.testing.create_app import (
     CreateOpenAPIApp,
     OpenAPIClientInjectorConfigurable,
@@ -18,6 +25,7 @@ from BL_Python.web.testing.create_app import (
 )
 from connexion import FlaskApp
 from flask import Flask, abort
+from injector import Module
 from mock import MagicMock
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
@@ -175,11 +183,11 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
     ):
         flask_errorhandler_mock = mocker.patch("flask.Flask.errorhandler")
 
-        def app_init_hook(app: OpenAPIAppResult):
+        def client_init_hook(app: OpenAPIAppResult):
             _ = bind_errorhandler(app.app_injector.app, code_or_exception)
 
         openapi_mock_controller.begin()
-        _ = openapi_client_configurable(openapi_config, app_init_hook)
+        _ = openapi_client_configurable(openapi_config, client_init_hook)
 
         flask_errorhandler_mock.assert_called_with(code_or_exception)
 
@@ -219,3 +227,58 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
         assert isinstance(
             application_errorhandler_mock.call_args[0][0], expected_exception_type
         )
+
+    def test__SAML2Middleware__something(
+        self,
+        openapi_config: Config,
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_mock_controller: OpenAPIMockController,
+        mocker: MockerFixture,
+    ):
+        def app_init_hook(
+            application_configs: list[type[AbstractConfig]],
+            application_modules: list[Module],
+        ):
+            application_modules.append(
+                UserLoaderModule(
+                    loader=User,  # pyright: ignore[reportArgumentType]
+                    roles=Role,  # pyright: ignore[reportArgumentType]
+                    user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    bases=[],
+                )
+            )
+
+        def client_init_hook(app: OpenAPIAppResult):
+            app.app_injector.flask_injector.injector.binder.bind(
+                RootSSOConfig,
+                to=RootSSOConfig(
+                    sso=SSOConfig(
+                        protocol="SAML2",
+                        settings={
+                            "acs_url": "http://localhost:5000/sso",
+                            "https_acs_url": "https://localhost:5000/sso",
+                            "relay_state": "http://localhost:5000/sso/redir",
+                        },
+                    )
+                ),
+            )
+            bind_middleware(
+                app.app_injector.app,
+                app.app_injector.flask_injector,
+                SAML2Middleware,  # pyright: ignore[reportArgumentType]
+            )
+
+            # trigger side-effect
+            _ = app.app_injector.flask_injector.injector.get(LoginManager)
+
+        openapi_mock_controller.begin()
+        app = openapi_client_configurable(
+            openapi_config, client_init_hook, app_init_hook
+        )
+
+        response = app.client.get("/saml/logout")
+
+        # 401 for now because no real auth is configured.
+        # if SSO was broken, 500 would return
+        assert response.status_code == 401

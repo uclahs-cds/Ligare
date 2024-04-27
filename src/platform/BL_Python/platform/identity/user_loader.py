@@ -76,7 +76,7 @@ class UserLoader(Generic[TUserMixin]):
         super().__init__()
 
     def user_loader(
-        self, username: str, default_role: Enum, create_if_new_user: bool = False
+        self, username: str, default_role: Enum | None, create_if_new_user: bool = False
     ) -> None | TUserMixin:
         """
         Load a user and its roles from the database.
@@ -111,13 +111,16 @@ class UserLoader(Generic[TUserMixin]):
                     f'User "{username}" does not already exist in the database'
                 )
 
-                role = (
-                    session.query(self._role_table)
-                    .filter(self._role_table.role_name == default_role.name)
-                    .one()
-                )
+                if default_role is None:
+                    user = self._user_table(username=username)
+                else:
+                    role = (
+                        session.query(self._role_table)
+                        .filter(self._role_table.role_name == default_role.name)
+                        .one()
+                    )
 
-                user = self._user_table(username=username, roles=[role])
+                    user = self._user_table(username=username, roles=[role])
 
                 session.add(user)
                 session.commit()

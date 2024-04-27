@@ -18,6 +18,8 @@ class SAML2Config(SSOSettingsConfig):
     # the instatiation of the __init__ override of DatabaseConfig
     model_config = ConfigDict(extra="ignore")
 
+    acs_url: str
+    https_acs_url: str
     metadata_url: str = ""
     relay_state: str = ""
     metadata: str | None = None

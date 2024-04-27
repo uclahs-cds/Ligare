@@ -1,6 +1,6 @@
 from dataclasses import field
 from os import environ
-from typing import Any, Literal
+from typing import Literal
 
 from flask.config import Config as FlaskAppConfig
 from pydantic import BaseModel
@@ -138,15 +138,6 @@ class FlaskConfig(BaseModel):
             TESTING = self.env == "Testing"
 
         flask_app_config.from_object(ConfigObject)
-
-
-class SAML2Config(BaseModel):
-    metadata: str | None = None
-    metadata_url: str | None = None
-    relay_state: str | None = None
-    # TODO is there a more specific type than `Any`
-    # that fits logging configurations?
-    logging: dict[str, Any] | None = None
 
 
 from BL_Python.programming.config import AbstractConfig
