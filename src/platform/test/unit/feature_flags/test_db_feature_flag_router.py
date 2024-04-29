@@ -87,7 +87,7 @@ def test__feature_is_enabled__disallows_empty_name(feature_flag_session: Session
     )
 
     with pytest.raises(ValueError):
-        db_feature_flag_router.feature_is_enabled("")
+        _ = db_feature_flag_router.feature_is_enabled("")
 
 
 @pytest.mark.parametrize("name", [0, False, True, {}, [], (0,)])

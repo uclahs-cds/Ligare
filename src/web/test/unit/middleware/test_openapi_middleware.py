@@ -16,7 +16,7 @@ from BL_Python.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
-from BL_Python.web.middleware.sso import LoginManager, SAML2Middleware, SSOBlueprint
+from BL_Python.web.middleware.sso import LoginManager, SAML2Middleware
 from BL_Python.web.testing.create_app import (
     CreateOpenAPIApp,
     OpenAPIClientInjectorConfigurable,

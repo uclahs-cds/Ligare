@@ -2,7 +2,6 @@ from functools import partial
 from typing import Any, Callable, Protocol, Tuple, Type, cast
 
 from BL_Python.programming.patterns.dependency_injection import LoggerModule
-from BL_Python.web.middleware.sso import SAML2Middleware
 from connexion import ConnexionMiddleware, FlaskApp
 from connexion.apps.flask import FlaskASGIApp, FlaskOperation
 from connexion.middleware.main import MiddlewarePosition

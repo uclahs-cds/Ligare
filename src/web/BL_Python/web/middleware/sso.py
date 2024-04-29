@@ -15,6 +15,7 @@ from flask_login import current_user
 from flask_login import login_required as flask_login_required
 from injector import inject
 from starlette.types import ASGIApp, Receive, Scope, Send
+from typing_extensions import override
 
 
 class _LoginUserMixin(FlaskLoginUserMixin, ABC):
@@ -383,9 +384,10 @@ class LoginManager(FlaskLoginManager):
         user_loader_lambda: Callable[[str], UserMixin[Role] | None] = (
             lambda username: user_loader.user_loader(username, None)
         )
-        self.user_loader(user_loader_lambda)
+        _ = self.user_loader(user_loader_lambda)
         self.init_app(app)
 
+    @override
     def unauthorized(self):
         """
         Raises an `Unauthorized` exception.
@@ -394,21 +396,18 @@ class LoginManager(FlaskLoginManager):
         self._log.debug(
             f"Redirecting unauthenticated client to {saml_idp_url} from {request.url}"
         )
-        response: Response = cast(
-            Response,
-            self._app.make_response((
-                "Unauthorized",
-                401,
-                {
-                    "Content-Type": "text/plain; charset=utf-8",
-                    # Clients can access this IDP URL to authenticate and POST back with a valid SAML request.
-                    "Location": saml_idp_url,
-                    # "SAML" isn't in the HTTP standard, but it's the only auth method supported by CAP.
-                    "WWW-Authenticate": 'SAML realm="Authenticate with the SAML IDP at the URL provided by Location.", charset="UTF-8"',
-                    "Access-Control-Expose-Headers": "Location, WWW-Authenticate",
-                },
-            )),
-        )
+        response: Response = self._app.make_response((
+            "Unauthorized",
+            401,
+            {
+                "Content-Type": "text/plain; charset=utf-8",
+                # Clients can access this IDP URL to authenticate and POST back with a valid SAML request.
+                "Location": saml_idp_url,
+                # "SAML" isn't in the HTTP standard, but it's the only auth method supported by CAP.
+                "WWW-Authenticate": 'SAML realm="Authenticate with the SAML IDP at the URL provided by Location.", charset="UTF-8"',
+                "Access-Control-Expose-Headers": "Location, WWW-Authenticate",
+            },
+        ))
         raise Unauthorized(response.data, response)
 
 
@@ -447,6 +446,3 @@ class SAML2Middleware:
             return await send(message)
 
         await self._app(scope, receive, wrapped_send)
-
-        #############################################
-        # Some of this is borrowed from example code found here
