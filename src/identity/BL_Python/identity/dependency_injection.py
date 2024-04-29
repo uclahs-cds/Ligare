@@ -15,9 +15,8 @@ class SSOModule(Module):
         """
         super().__init__()
 
-    #        self._metadata = metadata
-    #        self._settings = settings
 
+class SAML2Module(SSOModule):
     @override
     def configure(self, binder: Binder) -> None:
         # Making this a callback allows to defer instantiation of the SAML2 client

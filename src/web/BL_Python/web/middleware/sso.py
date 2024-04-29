@@ -7,13 +7,15 @@ from typing import Any, Callable, ParamSpec, Protocol, Sequence, TypeVar, cast
 from BL_Python.identity.config import Config
 from BL_Python.identity.config import Config as RootSSOConfig
 from BL_Python.identity.config import SAML2Config, SSOConfig
+from BL_Python.identity.dependency_injection import SAML2Module, SSOModule
 from BL_Python.platform.identity.user_loader import Role, UserId, UserLoader, UserMixin
+from connexion import FlaskApp
 from flask import Flask, Response
 from flask_login import LoginManager as FlaskLoginManager
 from flask_login import UserMixin as FlaskLoginUserMixin
 from flask_login import current_user
 from flask_login import login_required as flask_login_required
-from injector import Injector, inject
+from injector import Binder, Injector, Module, inject
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import override
 
@@ -423,42 +425,52 @@ class LoginManager(FlaskLoginManager):
         raise Unauthorized(response.data, response)
 
 
-class SAML2Middleware:
-    _app: ASGIApp
+class SAML2MiddlewareModule(Module):
+    @override
+    def configure(self, binder: Binder) -> None:
+        binder.install(SAML2Module)
 
-    def __init__(self, app: ASGIApp):
-        super().__init__()
-        self._app = app
+    def register_middleware(self, app: FlaskApp):
+        app.add_middleware(SAML2MiddlewareModule.SAML2Middleware)
 
-    @inject
-    async def __call__(
-        self,
-        scope: Scope,
-        receive: Receive,
-        send: Send,
-        app: Flask,
-        injector: Injector,
-        log: Logger,
-    ) -> None:
-        async def wrapped_send(message: Any) -> None:
-            nonlocal scope
-            nonlocal receive
-            nonlocal send
-            nonlocal app
+    class SAML2Middleware:
+        _app: ASGIApp
 
-            # Only run during startup of the application
-            if (
-                scope["type"] != "lifespan"
-                or message["type"] != "lifespan.startup.complete"
-                or not scope["app"]
-            ):
+        def __init__(self, app: ASGIApp):
+            super().__init__()
+            self._app = app
+
+        @inject
+        async def __call__(
+            self,
+            scope: Scope,
+            receive: Receive,
+            send: Send,
+            app: Flask,
+            injector: Injector,
+            log: Logger,
+        ) -> None:
+            async def wrapped_send(message: Any) -> None:
+                nonlocal scope
+                nonlocal receive
+                nonlocal send
+                nonlocal app
+
+                # Only run during startup of the application
+                if (
+                    scope["type"] != "lifespan"
+                    or message["type"] != "lifespan.startup.complete"
+                    or not scope["app"]
+                ):
+                    return await send(message)
+
+                injector.binder.bind(SSOModule, to=SAML2Module())
+
+                log.debug("Registering SSO blueprint.")
+                app.register_blueprint(SSOBlueprint().sso_blueprint)
+                # trigger side-effect - adds login_manager to app
+                _ = injector.get(LoginManager)
+                log.debug("SSO blueprint registered and LoginManager installed.")
                 return await send(message)
 
-            log.debug("Registering SSO blueprint.")
-            app.register_blueprint(SSOBlueprint().sso_blueprint)
-            # trigger side-effect - adds login_manager to app
-            _ = injector.get(LoginManager)
-            log.debug("SSO blueprint registered and LoginManager installed.")
-            return await send(message)
-
-        await self._app(scope, receive, wrapped_send)
+            await self._app(scope, receive, wrapped_send)

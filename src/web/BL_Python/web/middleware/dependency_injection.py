@@ -13,7 +13,7 @@ from injector import Binder, Injector, Module
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import override
 
-from . import TFlaskApp
+from . import RegisterMiddlewareCallback, TFlaskApp
 
 
 class MiddlewareRoutine(Protocol):
@@ -68,6 +68,18 @@ def configure_dependencies(
     flask_injector.injector.binder.bind(Injector, flask_injector.injector)
 
     if isinstance(app, FlaskApp):
+        # for every module registered, check if any are "middleware" type modules.
+        # if they are, they need to be registered with the application.
+        # this needs to happen before _configure_openapi_middleware_dependencies
+        # in the event the application is a Connexion application.
+        # TODO this needs to happen in some form for plain Flask applications too.
+        for module in modules:
+            register_callback: RegisterMiddlewareCallback | None = getattr(
+                module, "register_middleware", None
+            )
+            if register_callback is not None and callable(register_callback):
+                register_callback(module, app)
+
         app.add_middleware(OpenAPIEndpointDependencyInjectionMiddleware(flask_injector))
 
         # this binds all BL_Python middlewares with Injector

@@ -17,6 +17,7 @@ from flask.typing import (
     BeforeRequestCallable,
     ResponseReturnValue,
 )
+from injector import Module
 from werkzeug.exceptions import HTTPException, Unauthorized
 
 # pyright: reportUnusedFunction=false
@@ -44,6 +45,8 @@ T_error_handler = TypeVar("T_error_handler", bound=ErrorHandlerCallable)
 
 TFlaskApp = Flask | FlaskApp
 T_flask_app = TypeVar("T_flask_app", bound=TFlaskApp)
+
+RegisterMiddlewareCallback = Callable[[Module, FlaskApp], None]
 
 
 def bind_errorhandler(
