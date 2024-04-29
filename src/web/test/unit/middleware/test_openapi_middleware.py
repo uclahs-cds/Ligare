@@ -16,7 +16,7 @@ from BL_Python.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
-from BL_Python.web.middleware.sso import LoginManager, SAML2Middleware
+from BL_Python.web.middleware.sso import SAML2Middleware
 from BL_Python.web.testing.create_app import (
     CreateOpenAPIApp,
     OpenAPIClientInjectorConfigurable,
@@ -268,9 +268,6 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
                 app.app_injector.flask_injector,
                 SAML2Middleware,  # pyright: ignore[reportArgumentType]
             )
-
-            # trigger side-effect
-            _ = app.app_injector.flask_injector.injector.get(LoginManager)
 
         openapi_mock_controller.begin()
         app = openapi_client_configurable(

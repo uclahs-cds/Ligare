@@ -13,7 +13,7 @@ from flask_login import LoginManager as FlaskLoginManager
 from flask_login import UserMixin as FlaskLoginUserMixin
 from flask_login import current_user
 from flask_login import login_required as flask_login_required
-from injector import inject
+from injector import Injector, inject
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import override
 
@@ -166,8 +166,13 @@ from werkzeug.exceptions import BadRequest, Forbidden, Unauthorized
 
 
 class SSOBlueprint:
-    # https://github.com/jpf/okta-pysaml2-example/blob/master/app.py
-    sso_blueprint = Blueprint("sso", __name__, url_prefix="/saml")
+    sso_blueprint: Blueprint
+
+    def __init__(self) -> None:
+        super().__init__()
+        # https://github.com/jpf/okta-pysaml2-example/blob/master/app.py
+        self.sso_blueprint = Blueprint("sso", __name__, url_prefix="/saml")
+        self._SSOBlueprint(self.sso_blueprint)
 
     @dataclass(frozen=True)
     class _SessionValueNames:
@@ -177,7 +182,42 @@ class SSOBlueprint:
 
     SESSION_VALUE_NAMES = _SessionValueNames()
 
-    def _delete_username_cookie(self, response: Response, log: Logger):
+    @staticmethod
+    @inject
+    def user(log: Logger):
+        user = flask_login.current_user
+        userId: UserId = user.id
+        username = userId.username
+        log.debug(f"Flask current user is {username}")
+        return {"username": username}
+
+    @staticmethod
+    def apikey_auth(token: str, required_scopes: Any):
+        """
+        This is used by Connexion to authorize requests. It is specified in API-v1.yaml.
+        `token` is the value passed either through Connexion ingesting the `session` cookie,
+        or through the manually set value in the Swagger UI. The `session` cookie is available
+        after authenticating.
+        """
+        log = logging.getLogger("connexion")
+
+        session_data: Dict[str, Any]
+        try:
+            session_data = decrypt_flask_cookie(current_app.config["SECRET_KEY"], token)  # pyright: ignore[reportUnknownArgumentType]
+            # under normal circumstances these session objects are equivalent.
+            # The values will not be equivalent if the cookie is expired and
+            # the browser did not send the `session` cookie, but Swagger UI did.
+            if session_data["_id"] == session["_id"]:
+                log.info("Connexion request has a valid session.")
+                return SSOBlueprint.user(log)
+        except Exception as e:
+            log.error(e)
+
+        log.info("Connexion request is unauthorized.")
+        raise Unauthorized()
+
+    @staticmethod
+    def _delete_username_cookie(response: Response, log: Logger):
         response.delete_cookie(SSOBlueprint.SESSION_VALUE_NAMES.USERNAME)
 
         # `delete_cookie` doesn't have parameters for "Secure" or "SameSite,"
@@ -199,171 +239,143 @@ class SSOBlueprint:
         response.headers.set("Set-Cookie", "; ".join(header_parts.keys()))
         return response
 
-    @sso_blueprint.route("/logout")
-    @flask_login_required
-    @inject
-    def logout(self, log: Logger):
-        log.info(f"Logging out user {flask_login.current_user}")
-        logout_user()
-        response = make_response('{"status_code": 200, "status": "200 OK"}', 200)
-        response.headers["Content-Type"] = "application/json"
+    def _SSOBlueprint(self, sso_blueprint: Blueprint):
+        @sso_blueprint.route("/user")
+        @flask_login_required
+        @inject
+        def user(log: Logger):
+            return SSOBlueprint.user(log)
 
-        return self._delete_username_cookie(response, log)
+        @sso_blueprint.route("/logout")
+        @flask_login_required
+        @inject
+        def logout(log: Logger):
+            log.info(f"Logging out user {flask_login.current_user}")
+            logout_user()
+            response = make_response('{"status_code": 200, "status": "200 OK"}', 200)
+            response.headers["Content-Type"] = "application/json"
 
-    @sso_blueprint.route("/user")
-    @flask_login_required
-    @inject
-    def user(self, log: Logger):
-        user = flask_login.current_user
-        userId: UserId = user.id
-        username = userId.username
-        log.debug(f"Flask current user is {username}")
-        return {"username": username}
+            return SSOBlueprint._delete_username_cookie(response, log)
 
-    @sso_blueprint.route("/login/<idp_name>")
-    @inject
-    def sp_initiated(
-        self, idp_name: str, cap_saml2: SAML2Client, config: SSOConfig, log: Logger
-    ):
-        redirect_url = cap_saml2.prepare_user_authentication(
-            relay_state=cast(SAML2Config, config.settings).relay_state
-        )
-
-        log.info(f"Redirecting client to {redirect_url} for IDP {idp_name}")
-        response = redirect(redirect_url, code=302)
-
-        response.headers["Cache-Control"] = "no-cache, no-store"
-        response.headers["Pragma"] = "no-cache"
-        return response
-
-    @sso_blueprint.route("/login/<idp_name>", methods=["POST"])
-    @inject
-    def idp_initiated(
-        self,
-        idp_name: str,
-        cap_saml2: SAML2Client,
-        user_loader: UserLoader[UserMixin[Role]],
-        config: Config,
-        log: Logger,
-    ):
-        log.info(f"Trying to log in from SAML2 response for IDP {idp_name}")
-        saml_response: str = request.form["SAMLResponse"]
-
-        user: UserMixin[Role] | None = None
-        try:
-            (username, _) = cap_saml2.handle_user_login(saml_response)
-            log.info(f"Login username is {username}")
-            # FIXME should enable a way to set the default role here?
-            user = user_loader.user_loader(username, None, True)
-            if user is None:
-                raise
-        except (
-            NotValid,
-            MustValueError,
-            OutsideCardinality,
-            ResponseLifetimeExceed,
-            ShouldValueError,
-            ToEarly,
-        ) as e:
-            log.exception(e)
-            raise BadRequest("SAML2 Response is invalid.")
-
-        session_duration = (
-            config.flask.session.lifetime
-            if config.flask and config.flask.session
-            else None
-        )
-
-        login_user(user, remember=False, duration=session_duration)
-
-        session[self.SESSION_VALUE_NAMES.AUTHENTICATED] = True
-        session[self.SESSION_VALUE_NAMES.USERNAME] = user.id.username
-        session[self.SESSION_VALUE_NAMES.USER_ID] = user.id.user_id
-        log.info(f"Login for user {user.id.user_id} succeeded")
-
-        url: str = ""
-        if "RelayState" in request.form:
-            redirect_url: str = request.form["RelayState"]
-            expected_url = cast(
-                SAML2Config, cast(RootSSOConfig, config).sso.settings
-            ).relay_state
-            parsed_redirect_url = urlparse(redirect_url)
-            parsed_expected_url = urlparse(expected_url)
-            if (
-                parsed_redirect_url.scheme != parsed_expected_url.scheme
-                or parsed_redirect_url.netloc != parsed_expected_url.netloc
-            ):
-                log.error(
-                    f'Parsed URL "{redirect_url}" does not match expected URL "{expected_url}"'
-                )
-                raise Forbidden()
-            url: str = request.form["RelayState"]
-            log.info(f'SAML2 response has RelayState="{url}"')
-
-        if url == "":
-            url = url_for("sso.user")
-            log.info(
-                f"SAML2 response does not have RelayState. Redirecting client to {url}"
+        @sso_blueprint.route("/login/<idp_name>")
+        @inject
+        def sp_initiated(
+            idp_name: str, cap_saml2: SAML2Client, config: SSOConfig, log: Logger
+        ):
+            redirect_url = cap_saml2.prepare_user_authentication(
+                relay_state=cast(SAML2Config, config.settings).relay_state
             )
 
-        response = redirect(url)
+            log.info(f"Redirecting client to {redirect_url} for IDP {idp_name}")
+            response = redirect(redirect_url, code=302)
 
-        response.set_cookie(
-            "username",
-            str(user.id.username),
-            samesite="None",
-            secure=True,
-            httponly=False,
-            max_age=session_duration,
-        )
-        return response
+            response.headers["Cache-Control"] = "no-cache, no-store"
+            response.headers["Pragma"] = "no-cache"
+            return response
 
-    # @sso_blueprint.before_app_request  # pyright: ignore[reportUntypedFunctionDecorator]
-    @inject
-    def make_session_permanent(self, config: Config):
-        session.permanent = (
-            config.flask.session.permanent
-            if config.flask and config.flask.session
-            else False
-        )
+        @sso_blueprint.route("/login/<idp_name>", methods=["POST"])
+        @inject
+        def idp_initiated(
+            idp_name: str,
+            cap_saml2: SAML2Client,
+            user_loader: UserLoader[UserMixin[Role]],
+            config: Config,
+            log: Logger,
+        ):
+            log.info(f"Trying to log in from SAML2 response for IDP {idp_name}")
+            saml_response: str = request.form["SAMLResponse"]
 
-    # FIXME these after_app_requests need to be made middleware
-    # @sso_blueprint.after_app_request  # pyright: ignore[reportUntypedFunctionDecorator]
-    @inject
-    def remove_username_cookie_without_session(self, response: Response, log: Logger):
-        # if the session has expired but the client still has the username cookie,
-        # the username cookie needs to be cleared from the client
-        if not session.get(  # pyright: ignore[reportUnknownMemberType]
-            self.SESSION_VALUE_NAMES.AUTHENTICATED
-        ) and request.cookies.get(self.SESSION_VALUE_NAMES.USERNAME):
-            log.info("Session expired; clearing username cookie.")
-            return self._delete_username_cookie(response, log)
+            user: UserMixin[Role] | None = None
+            try:
+                (username, _) = cap_saml2.handle_user_login(saml_response)
+                log.info(f"Login username is {username}")
+                # FIXME should enable a way to set the default role here?
+                user = user_loader.user_loader(username, None, True)
+                if user is None:
+                    raise
+            except (
+                NotValid,
+                MustValueError,
+                OutsideCardinality,
+                ResponseLifetimeExceed,
+                ShouldValueError,
+                ToEarly,
+            ) as e:
+                log.exception(e)
+                raise BadRequest("SAML2 Response is invalid.")
 
-        return response
+            session_duration = (
+                config.flask.session.lifetime
+                if config.flask and config.flask.session
+                else None
+            )
 
-    def apikey_auth(self, token: str, required_scopes: Any):
-        """
-        This is used by Connexion to authorize requests. It is specified in API-v1.yaml.
-        `token` is the value passed either through Connexion ingesting the `session` cookie,
-        or through the manually set value in the Swagger UI. The `session` cookie is available
-        after authenticating.
-        """
-        log = logging.getLogger("connexion")
+            login_user(user, remember=False, duration=session_duration)
 
-        session_data: Dict[str, Any]
-        try:
-            session_data = decrypt_flask_cookie(current_app.config["SECRET_KEY"], token)  # pyright: ignore[reportUnknownArgumentType]
-            # under normal circumstances these session objects are equivalent.
-            # The values will not be equivalent if the cookie is expired and
-            # the browser did not send the `session` cookie, but Swagger UI did.
-            if session_data["_id"] == session["_id"]:
-                log.info("Connexion request has a valid session.")
-                return self.user(log)
-        except Exception as e:
-            log.error(e)
+            session[SSOBlueprint.SESSION_VALUE_NAMES.AUTHENTICATED] = True
+            session[SSOBlueprint.SESSION_VALUE_NAMES.USERNAME] = user.id.username
+            session[SSOBlueprint.SESSION_VALUE_NAMES.USER_ID] = user.id.user_id
+            log.info(f"Login for user {user.id.user_id} succeeded")
 
-        log.info("Connexion request is unauthorized.")
-        raise Unauthorized()
+            url: str = ""
+            if "RelayState" in request.form:
+                redirect_url: str = request.form["RelayState"]
+                expected_url = cast(
+                    SAML2Config, cast(RootSSOConfig, config).sso.settings
+                ).relay_state
+                parsed_redirect_url = urlparse(redirect_url)
+                parsed_expected_url = urlparse(expected_url)
+                if (
+                    parsed_redirect_url.scheme != parsed_expected_url.scheme
+                    or parsed_redirect_url.netloc != parsed_expected_url.netloc
+                ):
+                    log.error(
+                        f'Parsed URL "{redirect_url}" does not match expected URL "{expected_url}"'
+                    )
+                    raise Forbidden()
+                url: str = request.form["RelayState"]
+                log.info(f'SAML2 response has RelayState="{url}"')
+
+            if url == "":
+                url = url_for("sso.user")
+                log.info(
+                    f"SAML2 response does not have RelayState. Redirecting client to {url}"
+                )
+
+            response = redirect(url)
+
+            response.set_cookie(
+                "username",
+                str(user.id.username),
+                samesite="None",
+                secure=True,
+                httponly=False,
+                max_age=session_duration,
+            )
+            return response
+
+        # @sso_blueprint.before_app_request  # pyright: ignore[reportUntypedFunctionDecorator]
+        @inject
+        def make_session_permanent(config: Config):
+            session.permanent = (
+                config.flask.session.permanent
+                if config.flask and config.flask.session
+                else False
+            )
+
+        # FIXME these after_app_requests need to be made middleware
+        # @sso_blueprint.after_app_request  # pyright: ignore[reportUntypedFunctionDecorator]
+        @inject
+        def remove_username_cookie_without_session(response: Response, log: Logger):
+            # if the session has expired but the client still has the username cookie,
+            # the username cookie needs to be cleared from the client
+            if not session.get(  # pyright: ignore[reportUnknownMemberType]
+                SSOBlueprint.SESSION_VALUE_NAMES.AUTHENTICATED
+            ) and request.cookies.get(SSOBlueprint.SESSION_VALUE_NAMES.USERNAME):
+                log.info("Session expired; clearing username cookie.")
+                return SSOBlueprint._delete_username_cookie(response, log)
+
+            return response
 
 
 # TODO this should probably be moved into the tests
@@ -425,7 +437,7 @@ class SAML2Middleware:
         receive: Receive,
         send: Send,
         app: Flask,
-        config: Config,
+        injector: Injector,
         log: Logger,
     ) -> None:
         async def wrapped_send(message: Any) -> None:
@@ -437,12 +449,16 @@ class SAML2Middleware:
             # Only run during startup of the application
             if (
                 scope["type"] != "lifespan"
-                and message["type"] != "lifespan.startup.complete"
-            ) or not scope["app"]:
+                or message["type"] != "lifespan.startup.complete"
+                or not scope["app"]
+            ):
                 return await send(message)
 
+            log.debug("Registering SSO blueprint.")
             app.register_blueprint(SSOBlueprint().sso_blueprint)
-
+            # trigger side-effect - adds login_manager to app
+            _ = injector.get(LoginManager)
+            log.debug("SSO blueprint registered and LoginManager installed.")
             return await send(message)
 
         await self._app(scope, receive, wrapped_send)
