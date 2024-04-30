@@ -41,7 +41,6 @@ class SAML2Module(SSOModule):
                 "Wrong config type for SAML2 settings. This is a program error, not a configuration error."
             )
 
-        # FIXME application assumes this is not None, but it technically can be ... and then it will crash
         metadata: str = settings.metadata
 
         acs_url = (
