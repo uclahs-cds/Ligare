@@ -278,6 +278,7 @@ class SSOBlueprint:
             cap_saml2: SAML2Client,
             user_loader: UserLoader[UserMixin[Role]],
             config: Config,
+            sso_config: SSOConfig,
             log: Logger,
         ):
             log.info(f"Trying to log in from SAML2 response for IDP {idp_name}")
@@ -318,9 +319,7 @@ class SSOBlueprint:
             url: str = ""
             if "RelayState" in request.form:
                 redirect_url: str = request.form["RelayState"]
-                expected_url = cast(
-                    SAML2Config, cast(RootSSOConfig, config).sso.settings
-                ).relay_state
+                expected_url = cast(SAML2Config, sso_config.settings).relay_state
                 parsed_redirect_url = urlparse(redirect_url)
                 parsed_expected_url = urlparse(expected_url)
                 if (

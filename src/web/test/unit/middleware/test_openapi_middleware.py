@@ -256,9 +256,9 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
                     sso=SSOConfig(
                         protocol="SAML2",
                         settings={
-                            "acs_url": "http://localhost:5000/sso",
-                            "https_acs_url": "https://localhost:5000/sso",
                             "relay_state": "http://localhost:5000/sso/redir",
+                            "metadata_url": "http://example.org",
+                            "metadata": "<xml />",
                         },
                     )
                 ),

@@ -76,7 +76,7 @@ class RoleTable:
             role_name = Column("role_name", Unicode, nullable=False, unique=True)
 
             users: "RelationshipProperty[DeclarativeMeta]" = relationship(
-                "User",
+                "_User",
                 secondary=get_table_str("user_role", base),
                 back_populates="roles",
             )
@@ -100,7 +100,7 @@ class UserTable:
             username = Column("username", Unicode, nullable=False, unique=True)
 
             roles: "List[Role] | RelationshipProperty[List[Role]]" = relationship(
-                "Role",
+                "_Role",
                 secondary=get_table_str("user_role", base),
                 back_populates="users",
             )
