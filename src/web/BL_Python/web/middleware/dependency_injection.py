@@ -27,9 +27,7 @@ class AppModule(Module):
         super().__init__()
         if isinstance(app, Flask):
             self._flask_app = app
-        elif isinstance(
-            app, FlaskApp
-        ):  # pyright: ignore[reportUnnecessaryIsInstance] guard against things like not using `MagicMock(spec=...)`
+        elif isinstance(app, FlaskApp):  # pyright: ignore[reportUnnecessaryIsInstance] guard against things like not using `MagicMock(spec=...)`
             self._flask_app = app.app
         else:
             raise ValueError(
@@ -155,7 +153,8 @@ class OpenAPIEndpointDependencyInjectionMiddleware:
                         return await send(message)
 
                     endpoints = cast(
-                        dict[str, FlaskOperation], flask_asgi_app.app.view_functions
+                        dict[str, FlaskOperation | Callable[..., Any]],
+                        flask_asgi_app.app.view_functions,
                     )
 
                     for endpoint_name, endpoint in endpoints.items():
@@ -163,22 +162,24 @@ class OpenAPIEndpointDependencyInjectionMiddleware:
                         if not hasattr(endpoint, "__bindings__"):
                             continue
 
+                        if hasattr(endpoint, "_fn") and isinstance(
+                            endpoint, FlaskOperation
+                        ):
+                            # _fn is the original function that ends up being called.
+                            # we wrap it with Injector, then replace it
+                            endpoints[endpoint_name]._fn = wrap_function(  # pyright: ignore[reportFunctionMemberAccess]
+                                endpoint._fn,
+                                self._flask_injector.injector,
+                            )
                         # If a blueprint is added through anything other than
                         # by Connexion, `_fn` is not set. This happens with, e.g.,
                         # the SSO blueprint.
-                        if not hasattr(endpoint, "_fn"):
+                        else:
                             if callable(endpoint):
                                 endpoints[endpoint_name] = wrap_function(
                                     endpoint,
                                     self._flask_injector.injector,
                                 )
-                        else:
-                            # _fn is the original function that ends up being called.
-                            # we wrap it with Injector, then replace it
-                            endpoints[endpoint_name]._fn = wrap_function(
-                                endpoint._fn,
-                                self._flask_injector.injector,
-                            )
 
                     return await send(message)
 
