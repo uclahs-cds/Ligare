@@ -1,23 +1,52 @@
+import logging
 import logging as log
 from abc import ABC
+from dataclasses import dataclass
 from functools import wraps
 from logging import Logger
-from typing import Any, Callable, ParamSpec, Protocol, Sequence, TypeVar, cast
+from typing import Any, Callable, Dict, ParamSpec, Protocol, Sequence, TypeVar, cast
+from urllib.parse import urlparse
 
+import flask_login
 from BL_Python.identity.config import Config
 from BL_Python.identity.config import Config as RootSSOConfig
 from BL_Python.identity.config import SAML2Config, SSOConfig
 from BL_Python.identity.dependency_injection import SAML2Module, SSOModule
+from BL_Python.identity.SAML2 import SAML2Client
 from BL_Python.platform.identity.user_loader import Role, UserId, UserLoader, UserMixin
+from BL_Python.web.config import Config
+from BL_Python.web.encryption import decrypt_flask_cookie
 from connexion import FlaskApp
-from flask import Flask, Response
+from flask import (
+    Blueprint,
+    Flask,
+    Response,
+    current_app,
+    redirect,
+    request,
+    session,
+    url_for,
+)
+from flask.helpers import make_response
+from flask.wrappers import Response
 from flask_login import LoginManager as FlaskLoginManager
 from flask_login import UserMixin as FlaskLoginUserMixin
+from flask_login import login_user  # pyright: ignore[reportUnknownVariableType]
+from flask_login import logout_user  # pyright: ignore[reportUnknownVariableType]
 from flask_login import current_user
 from flask_login import login_required as flask_login_required
 from injector import Binder, Injector, Module, inject
+from saml2.validate import (
+    MustValueError,
+    NotValid,
+    OutsideCardinality,
+    ResponseLifetimeExceed,
+    ShouldValueError,
+    ToEarly,
+)
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import override
+from werkzeug.exceptions import BadRequest, Forbidden, Unauthorized
 
 
 class _LoginUserMixin(FlaskLoginUserMixin, ABC):
@@ -134,37 +163,61 @@ def login_required(
     return wrapper
 
 
-import logging
-from dataclasses import dataclass
-from logging import Logger
-from typing import Any, Dict, cast
-from urllib.parse import urlparse
+@inject
+def user(log: Logger):
+    user = flask_login.current_user
+    userId: UserId = user.id
+    username = userId.username
+    log.debug(f"Flask current user is {username}")
+    return {"username": username}
 
-import flask_login
-from flask import Blueprint, current_app, redirect, request, session, url_for
-from flask.helpers import make_response
-from flask.wrappers import Response
 
-# fmt: off
-# isort: off
-from flask_login import login_user, logout_user # pyright: ignore[reportUnknownVariableType]
-# isort: on
-from BL_Python.identity.SAML2 import SAML2Client
-from BL_Python.platform.identity.user_loader import UserId, UserLoader
-from BL_Python.web.config import Config
-from BL_Python.web.encryption import decrypt_flask_cookie
+def apikey_auth(token: str, required_scopes: Any):
+    """
+    This is used by Connexion to authorize requests. It is specified in API-v1.yaml.
+    `token` is the value passed either through Connexion ingesting the `session` cookie,
+    or through the manually set value in the Swagger UI. The `session` cookie is available
+    after authenticating.
+    """
+    log = logging.getLogger("connexion")
 
-# fmt: on
-from injector import inject
-from saml2.validate import (
-    MustValueError,
-    NotValid,
-    OutsideCardinality,
-    ResponseLifetimeExceed,
-    ShouldValueError,
-    ToEarly,
-)
-from werkzeug.exceptions import BadRequest, Forbidden, Unauthorized
+    session_data: Dict[str, Any]
+    try:
+        session_data = decrypt_flask_cookie(current_app.config["SECRET_KEY"], token)  # pyright: ignore[reportUnknownArgumentType]
+        # under normal circumstances these session objects are equivalent.
+        # The values will not be equivalent if the cookie is expired and
+        # the browser did not send the `session` cookie, but Swagger UI did.
+        if session_data["_id"] == session["_id"]:
+            log.info("Connexion request has a valid session.")
+            return user(log)
+    except Exception as e:
+        log.error(e)
+
+    log.info("Connexion request is unauthorized.")
+    raise Unauthorized()
+
+
+def _delete_username_cookie(response: Response, log: Logger):
+    response.delete_cookie(SSOBlueprint.SESSION_VALUE_NAMES.USERNAME)
+
+    # `delete_cookie` doesn't have parameters for "Secure" or "SameSite,"
+    # so we add them below.
+    headers = response.headers.get("Set-Cookie")
+    if headers is None:
+        log.error(
+            "Headers is empty, but was expected in order to correctly log out a user.\
+    The user's browser will retain the `username` cookie."
+        )
+        return response
+
+    # Using a dict as an ordered set so the cookie contains only unique parts.
+    header_parts = dict.fromkeys([
+        header_part.strip() for header_part in headers.split(";")
+    ])
+    header_parts["Secure"] = None
+    header_parts["SameSite=None"] = None
+    response.headers.set("Set-Cookie", "; ".join(header_parts.keys()))
+    return response
 
 
 class SSOBlueprint:
@@ -184,69 +237,12 @@ class SSOBlueprint:
 
     SESSION_VALUE_NAMES = _SessionValueNames()
 
-    @staticmethod
-    @inject
-    def user(log: Logger):
-        user = flask_login.current_user
-        userId: UserId = user.id
-        username = userId.username
-        log.debug(f"Flask current user is {username}")
-        return {"username": username}
-
-    @staticmethod
-    def apikey_auth(token: str, required_scopes: Any):
-        """
-        This is used by Connexion to authorize requests. It is specified in API-v1.yaml.
-        `token` is the value passed either through Connexion ingesting the `session` cookie,
-        or through the manually set value in the Swagger UI. The `session` cookie is available
-        after authenticating.
-        """
-        log = logging.getLogger("connexion")
-
-        session_data: Dict[str, Any]
-        try:
-            session_data = decrypt_flask_cookie(current_app.config["SECRET_KEY"], token)  # pyright: ignore[reportUnknownArgumentType]
-            # under normal circumstances these session objects are equivalent.
-            # The values will not be equivalent if the cookie is expired and
-            # the browser did not send the `session` cookie, but Swagger UI did.
-            if session_data["_id"] == session["_id"]:
-                log.info("Connexion request has a valid session.")
-                return SSOBlueprint.user(log)
-        except Exception as e:
-            log.error(e)
-
-        log.info("Connexion request is unauthorized.")
-        raise Unauthorized()
-
-    @staticmethod
-    def _delete_username_cookie(response: Response, log: Logger):
-        response.delete_cookie(SSOBlueprint.SESSION_VALUE_NAMES.USERNAME)
-
-        # `delete_cookie` doesn't have parameters for "Secure" or "SameSite,"
-        # so we add them below.
-        headers = response.headers.get("Set-Cookie")
-        if headers is None:
-            log.error(
-                "Headers is empty, but was expected in order to correctly log out a user.\
-        The user's browser will retain the `username` cookie."
-            )
-            return response
-
-        # Using a dict as an ordered set so the cookie contains only unique parts.
-        header_parts = dict.fromkeys([
-            header_part.strip() for header_part in headers.split(";")
-        ])
-        header_parts["Secure"] = None
-        header_parts["SameSite=None"] = None
-        response.headers.set("Set-Cookie", "; ".join(header_parts.keys()))
-        return response
-
     def _SSOBlueprint(self, sso_blueprint: Blueprint):
         @sso_blueprint.route("/user")
         @flask_login_required
         @inject
         def user(log: Logger):
-            return SSOBlueprint.user(log)
+            return user(log)
 
         @sso_blueprint.route("/logout")
         @flask_login_required
@@ -257,7 +253,7 @@ class SSOBlueprint:
             response = make_response('{"status_code": 200, "status": "200 OK"}', 200)
             response.headers["Content-Type"] = "application/json"
 
-            return SSOBlueprint._delete_username_cookie(response, log)
+            return _delete_username_cookie(response, log)
 
         @sso_blueprint.route("/login/<idp_name>")
         @inject
@@ -375,7 +371,7 @@ class SSOBlueprint:
                 SSOBlueprint.SESSION_VALUE_NAMES.AUTHENTICATED
             ) and request.cookies.get(SSOBlueprint.SESSION_VALUE_NAMES.USERNAME):
                 log.info("Session expired; clearing username cookie.")
-                return SSOBlueprint._delete_username_cookie(response, log)
+                return _delete_username_cookie(response, log)
 
             return response
 
