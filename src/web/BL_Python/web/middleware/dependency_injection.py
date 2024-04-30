@@ -27,7 +27,9 @@ class AppModule(Module):
         super().__init__()
         if isinstance(app, Flask):
             self._flask_app = app
-        elif isinstance(app, FlaskApp):  # pyright: ignore[reportUnnecessaryIsInstance] guard against things like not using `MagicMock(spec=...)`
+        elif isinstance(
+            app, FlaskApp
+        ):  # pyright: ignore[reportUnnecessaryIsInstance] guard against things like not using `MagicMock(spec=...)`
             self._flask_app = app.app
         else:
             raise ValueError(
@@ -165,14 +167,18 @@ class OpenAPIEndpointDependencyInjectionMiddleware:
                         # by Connexion, `_fn` is not set. This happens with, e.g.,
                         # the SSO blueprint.
                         if not hasattr(endpoint, "_fn"):
-                            continue
-
-                        # _fn is the original function that ends up being called.
-                        # we wrap it with Injector, then replace it
-                        endpoints[endpoint_name]._fn = wrap_function(
-                            endpoint._fn,
-                            self._flask_injector.injector,
-                        )
+                            if callable(endpoint):
+                                endpoints[endpoint_name] = wrap_function(
+                                    endpoint,
+                                    self._flask_injector.injector,
+                                )
+                        else:
+                            # _fn is the original function that ends up being called.
+                            # we wrap it with Injector, then replace it
+                            endpoints[endpoint_name]._fn = wrap_function(
+                                endpoint._fn,
+                                self._flask_injector.injector,
+                            )
 
                     return await send(message)
 

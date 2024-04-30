@@ -1,6 +1,7 @@
 from BL_Python.identity.config import SAML2Config, SSOConfig
 from BL_Python.identity.SAML2 import SAML2Client
 from BL_Python.programming.collections.dict import AnyDict
+from flask import url_for
 
 # from flask import url_for
 from injector import Binder, CallableProvider, Module, inject, singleton
@@ -43,20 +44,28 @@ class SAML2Module(SSOModule):
         # FIXME application assumes this is not None, but it technically can be ... and then it will crash
         metadata: str = settings.metadata
 
-        # acs_url = url_for("sso.idp_initiated", idp_name="okta", _external=True)
-        # https_acs_url = url_for(
-        #    "sso.idp_initiated", idp_name="okta", _external=True, _scheme="https"
-        # )
+        acs_url = (
+            settings.acs_url
+            if settings.acs_url is not None
+            else url_for("sso.idp_initiated", idp_name="okta", _external=True)
+        )
+        https_acs_url = (
+            settings.https_acs_url
+            if settings.https_acs_url is not None
+            else url_for(
+                "sso.idp_initiated", idp_name="okta", _external=True, _scheme="https"
+            )
+        )
         client_settings: AnyDict = {
-            "entityid": settings.acs_url,
+            "entityid": acs_url,
             "service": {
                 "sp": {
                     "endpoints": {
                         "assertion_consumer_service": [
-                            (settings.acs_url, BINDING_HTTP_REDIRECT),
-                            (settings.acs_url, BINDING_HTTP_POST),
-                            (settings.https_acs_url, BINDING_HTTP_REDIRECT),
-                            (settings.https_acs_url, BINDING_HTTP_POST),
+                            (acs_url, BINDING_HTTP_REDIRECT),
+                            (acs_url, BINDING_HTTP_POST),
+                            (https_acs_url, BINDING_HTTP_REDIRECT),
+                            (https_acs_url, BINDING_HTTP_POST),
                         ]
                     }
                 }
