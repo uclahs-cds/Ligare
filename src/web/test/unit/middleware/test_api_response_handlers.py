@@ -41,7 +41,7 @@ class TestApiResponseHandlers(CreateFlaskApp):
     ):
         csp_value = "default-src 'self' cdn.example.com;"
         basic_config.web.security.csp = csp_value
-        flask_client = flask_client_configurable(basic_config)
+        flask_client = next(flask_client_configurable(basic_config))
         response = flask_client.client.get("/")
         header_value = response.headers.get(CONTENT_SECURITY_POLICY_HEADER)
         assert header_value == csp_value
@@ -77,7 +77,7 @@ class TestApiResponseHandlers(CreateFlaskApp):
         basic_config: Config,
     ):
         setattr(basic_config.web.security.cors, config_attribute_name, value)
-        flask_client = flask_client_configurable(basic_config)
+        flask_client = next(flask_client_configurable(basic_config))
         response = flask_client.client.get("/")
         header_value = response.headers.get(header)
         assert header_value == ",".join(value) if isinstance(value, list) else value

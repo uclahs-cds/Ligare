@@ -25,8 +25,12 @@ import pytest
 import yaml
 from _pytest.fixtures import SubRequest
 from BL_Python.database.migrations.alembic.env import set_up_database
+from BL_Python.identity.config import SAML2Config, SSOConfig
+from BL_Python.platform.dependency_injection import UserLoaderModule
+from BL_Python.platform.identity import Role, User
 from BL_Python.platform.identity.user_loader import TRole, UserId, UserMixin
-from BL_Python.programming.config import AbstractConfig
+from BL_Python.programming.collections.dict import AnyDict
+from BL_Python.programming.config import AbstractConfig, ConfigBuilder
 from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import (
     App,
@@ -43,6 +47,7 @@ from BL_Python.web.config import (
     FlaskSessionCookieConfig,
 )
 from BL_Python.web.encryption import encrypt_flask_cookie
+from BL_Python.web.middleware.sso import SAML2MiddlewareModule
 from connexion import FlaskApp
 from flask import Flask, Request, Response
 from flask.ctx import RequestContext
@@ -74,6 +79,10 @@ class ClientInjector(Generic[T_flask_client]):
 
     client: T_flask_client
     injector: FlaskInjector
+
+
+def get_session() -> AnyDict:
+    return {}
 
 
 class AppGetter(Protocol[T_app]):
@@ -109,7 +118,7 @@ class ClientInjectorConfigurable(Protocol[T_app, T_flask_client]):
         config: Config,
         client_init_hook: TClientInitHook[T_app] | None = None,
         app_init_hook: TAppInitHook | None = None,
-    ) -> ClientInjector[T_flask_client]: ...
+    ) -> Generator[ClientInjector[T_flask_client], Any, None]: ...
 
 
 FlaskClientInjectorConfigurable = ClientInjectorConfigurable[Flask, FlaskClient]
@@ -155,7 +164,9 @@ class TestSessionMiddleware:
     def __call__(
         self, environ: dict[Any, Any], start_response: Callable[[Request], Response]
     ) -> Any:
-        from flask import request, session
+        from flask import request
+
+        session = get_session()
 
         session["_id"] = get_random_str()
 
@@ -205,15 +216,20 @@ class CreateApp(Generic[T_app]):
     _automatic_mocks: dict[str, MagicMock] = defaultdict()
 
     def _basic_config(self) -> Config:
-        return Config(
-            flask=FlaskConfig(
-                app_name=self.app_name,
-                env="Testing",
-                session=FlaskSessionConfig(
-                    cookie=FlaskSessionCookieConfig(secret_key=get_random_str())
-                ),
-            )
+        config = (
+            ConfigBuilder[Config]()
+            .with_root_config(Config)
+            .with_configs([SSOConfig])
+            .build()
+        )()
+        config.flask = FlaskConfig(
+            app_name=self.app_name,
+            env="Testing",
+            session=FlaskSessionConfig(
+                cookie=FlaskSessionCookieConfig(secret_key=get_random_str())
+            ),
         )
+        return config
 
     def _openapi_config(self) -> Config:
         config = self._basic_config()
@@ -242,7 +258,7 @@ class CreateApp(Generic[T_app]):
         _ = self.mock_user(user, mocker, roles)
 
         with app.injector.app.test_request_context() as request_context:
-            from flask import session
+            session = get_session()
 
             session["_id"] = get_random_str()
             session["authenticated"] = True
@@ -306,12 +322,12 @@ class CreateApp(Generic[T_app]):
             [AppGetter[T_app]],
             Generator[ClientInjector[T_flask_client], Any, None],
         ],
-    ):
+    ) -> ClientInjectorConfigurable[T_app, T_flask_client]:
         def _client_getter(
             config: Config,
             client_init_hook: TClientInitHook[T_app] | None = None,
             app_init_hook: TAppInitHook | None = None,
-        ):
+        ) -> Generator[ClientInjector[T_flask_client], Any, None]:
             application_configs: list[type[AbstractConfig]] | None = None
             application_modules: list[Module] | None = None
             if app_init_hook is not None:
@@ -326,7 +342,9 @@ class CreateApp(Generic[T_app]):
             if client_init_hook is not None:
                 client_init_hook(application_result)
 
-            return next(client_getter(lambda: application_result))
+            app_result = next(client_getter(lambda: application_result))
+            with app_result.injector.app.app_context():
+                yield app_result
 
         return _client_getter
 
@@ -392,11 +410,28 @@ class CreateFlaskApp(CreateApp[Flask]):
         # prevents the creation of a Connexion application
         if config.flask is not None:
             config.flask.openapi = None
+            config.sso = SSOConfig(
+                protocol="SAML2",
+                settings=SAML2Config(relay_state="", metadata_url="", metadata=""),
+            )
+            # [sso]
+            # protocol = "SAML2"
+            #
+            # [sso.settings]
+            # relay_state = "http://localhost:5050/v1/ui/"
+            # metadata_url = "https://dev-1848455.okta.com/app/exk15twboelVBNJ0R5d7/sso/saml/metadata"
+            # metadata = '<?xml version="1.0" encoding="UTF-8"?><md:EntityDescriptor entityID="http://www.okta.com/exk15twboelVBNJ0R5d7" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"><md:IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><md:KeyDescriptor use="signing"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>MIIDpjCCAo6gAwIBAgIGAXpZkbYbMA0GCSqGSIb3DQEBCwUAMIGTMQswCQYDVQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzENMAsGA1UECgwET2t0YTEUMBIGA1UECwwLU1NPUHJvdmlkZXIxFDASBgNVBAMMC2Rldi0xODQ4NDU1MRwwGgYJKoZIhvcNAQkBFg1pbmZvQG9rdGEuY29tMB4XDTIxMDYyOTIwNTgxOVoXDTMxMDYyOTIwNTkxOVowgZMxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1TYW4gRnJhbmNpc2NvMQ0wCwYDVQQKDARPa3RhMRQwEgYDVQQLDAtTU09Qcm92aWRlcjEUMBIGA1UEAwwLZGV2LTE4NDg0NTUxHDAaBgkqhkiG9w0BCQEWDWluZm9Ab2t0YS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCIcvhBKyG9QG0oyn39Qwm15IWUbQIY+oUOadplsaQdOkwVFPw58ZosgpjZseB1nhtrKWkz0VrGM0gAvapM6n3H1xbLEXWWf38RP+t4vKtnAjb4MsFhU3HDZt6kVRAxWZbrDHeoP82aFNyNfGsYXGAIuBc/QUc7EUnT5+7r5XCsFu9CEbz/IBoYcrobhLO816sXDsbcsmKZ9e5O3A6sZcNPExTCrP0lR4tkY5gdm2GJkWLM6FBV55mGg8uWyJUkUp5qPa9/O39pjK0ng/56lnwKDmIgHG27wtcwBhWBLrBn6p4yUpTV19qJdbMtr1U+5miLTLL3qeFXxt+Phk0NTcRVAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAHJunNiNdQ/nRfXl6fj7JRB4X4OuEoldE7ZjV0Jb/ZizMwQlo/b0C545OrPJ3Si2MP3t/7X1fgqkMfKP/mB+Oxe4BzWUouO/MrocvRdbCVDhxEBbIv9wfoieW5o/XHZ8d9Zgvv1yz9rc3YuY8nFov9K12DcIRT0y21CHTDNk9hd+2VQbdV4e97EpxbG3c3qLJYqaCjnGZdkoBt5WIrNLPqQa8HD+JpN2NLmOEbwRhgob8T43AbgYNh3Dg9GB87AJ0FVMfyuGfryYENQ+vLxKUcJ81HpZkWdhd2GpyW6Hic0uoKZ6glWWcLbkj9EbKUrOieHVk/1RvMI1c5uNS+QUMwU=</ds:X509Certificate></ds:X509Data></ds:KeyInfo></md:KeyDescriptor><md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://dev-1848455.okta.com/app/dev-1848455_cap_1/exk15twboelVBNJ0R5d7/sso/saml"/><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://dev-1848455.okta.com/app/dev-1848455_cap_1/exk15twboelVBNJ0R5d7/sso/saml"/></md:IDPSSODescriptor></md:EntityDescriptor>'
 
         with mocker.patch(
             "BL_Python.web.application.load_config",
             return_value=config,
         ):
+            if application_configs is None:
+                application_configs = []
+            if application_modules is None:
+                application_modules = []
+            application_configs.append(SSOConfig)
+            application_modules.append(SAML2MiddlewareModule)
             app = App[Flask].create(
                 "config.toml", application_configs, application_modules
             )
@@ -431,8 +466,10 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
                 _GeneratorContextManager[SecureCookieSession],
                 client.session_transaction(),
             )
+            session = get_session()
             flask_session = stack.enter_context(flask_session_ctx_manager)
             flask_session["_id"] = get_random_str()
+            session["_id"] = flask_session["_id"]
             client.set_cookie(
                 cast(str, app.config["SESSION_COOKIE_NAME"]),
                 encrypt_flask_cookie(
@@ -485,7 +522,7 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
         def _flask_request_getter(
             config: Config, request_context_args: dict[Any, Any] | None = None
         ):
-            flask_client = flask_client_configurable(config)
+            flask_client = next(flask_client_configurable(config))
             request_context = next(
                 self._flask_request(flask_client.client, request_context_args)
             )
@@ -512,6 +549,21 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
             "BL_Python.web.application.load_config",
             return_value=config,
         ):
+            if application_configs is None:
+                application_configs = []
+            if application_modules is None:
+                application_modules = []
+            application_configs.append(SSOConfig)
+            application_modules.append(SAML2MiddlewareModule)
+            application_modules.append(
+                UserLoaderModule(
+                    loader=User,  # pyright: ignore[reportArgumentType]
+                    roles=Role,  # pyright: ignore[reportArgumentType]
+                    user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    bases=[],
+                )
+            )
             app = App[FlaskApp].create(
                 "config.toml", application_configs, application_modules
             )
@@ -545,7 +597,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
                 TrustedHostMiddleware,
                 allowed_hosts=["localhost", "localhost:5000"],
             )
-            # FIXME this needs to set session data
+
             client: TestClient = stack.enter_context(
                 result.app_injector.app.test_client()
             )
@@ -644,7 +696,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
         def _flask_request_getter(
             config: Config, request_context_args: dict[Any, Any] | None = None
         ):
-            flask_client = openapi_client_configurable(config)
+            flask_client = next(openapi_client_configurable(config))
             request_context = next(
                 self._openapi_request(flask_client.client, request_context_args)
             )

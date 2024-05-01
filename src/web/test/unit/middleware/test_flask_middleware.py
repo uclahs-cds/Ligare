@@ -31,7 +31,7 @@ class TestFlaskMiddleware(CreateFlaskApp):
         basic_config: Config,
     ):
         basic_config.logging.format = format
-        flask_client = flask_client_configurable(basic_config)
+        flask_client = next(flask_client_configurable(basic_config))
         response = flask_client.client.get("/")
 
         assert response.headers[CORRELATION_ID_HEADER]
@@ -45,7 +45,7 @@ class TestFlaskMiddleware(CreateFlaskApp):
         basic_config: Config,
     ):
         basic_config.logging.format = format
-        flask_client = flask_client_configurable(basic_config)
+        flask_client = next(flask_client_configurable(basic_config))
         correlation_id = str(uuid4())
         response = flask_client.client.get(
             "/", headers={CORRELATION_ID_HEADER: correlation_id}

@@ -244,7 +244,7 @@ class TestCreateFlaskApp(CreateFlaskApp):
             Exception,
             match=r"^You must set \[flask\] in the application configuration\.$",
         ):
-            _ = flask_client_configurable(Config())
+            _ = next(flask_client_configurable(Config()))
 
     def test__CreateFlaskApp__create_app__loads_config_from_toml(
         self, basic_config: Config, mocker: MockerFixture

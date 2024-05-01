@@ -42,7 +42,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
     ):
         openapi_config.logging.format = format
         openapi_mock_controller.begin()
-        flask_client = openapi_client_configurable(openapi_config)
+        flask_client = next(openapi_client_configurable(openapi_config))
 
         response = flask_client.client.get("/")
 
@@ -59,7 +59,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
     ):
         openapi_config.logging.format = format
         openapi_mock_controller.begin()
-        flask_client = openapi_client_configurable(openapi_config)
+        flask_client = next(openapi_client_configurable(openapi_config))
         correlation_id = str(uuid.uuid4())
         response = flask_client.client.get(
             "/", headers={CORRELATION_ID_HEADER: correlation_id}
@@ -78,7 +78,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
         openapi_config.logging.format = format
         correlation_id = "abc123"
         openapi_mock_controller.begin()
-        flask_client = openapi_client_configurable(openapi_config)
+        flask_client = next(openapi_client_configurable(openapi_config))
 
         response = flask_client.client.get(
             "/", headers={CORRELATION_ID_HEADER: correlation_id}
@@ -187,7 +187,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
             _ = bind_errorhandler(app.app_injector.app, code_or_exception)
 
         openapi_mock_controller.begin()
-        _ = openapi_client_configurable(openapi_config, client_init_hook)
+        _ = next(openapi_client_configurable(openapi_config, client_init_hook))
 
         flask_errorhandler_mock.assert_called_with(code_or_exception)
 
@@ -263,15 +263,10 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
                     )
                 ),
             )
-            bind_middleware(
-                app.app_injector.app,
-                app.app_injector.flask_injector,
-                SAML2MiddlewareModule.SAML2Middleware,  # pyright: ignore[reportArgumentType]
-            )
 
         openapi_mock_controller.begin()
-        app = openapi_client_configurable(
-            openapi_config, client_init_hook, app_init_hook
+        app = next(
+            openapi_client_configurable(openapi_config, client_init_hook, app_init_hook)
         )
 
         response = app.client.get("/saml/logout")

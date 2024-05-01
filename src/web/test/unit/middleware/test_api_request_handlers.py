@@ -16,6 +16,7 @@ class TestApiRequestHandlers(CreateFlaskApp):
         flask_before_request_mock = mocker.patch(
             "flask.sansio.scaffold.Scaffold.before_request"
         )
+        _ = mocker.patch("BL_Python.web.middleware.sso.get_session")
 
         _ = register_api_request_handlers(flask_client.client.application)
 

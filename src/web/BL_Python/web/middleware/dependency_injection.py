@@ -7,8 +7,7 @@ from connexion.apps.flask import FlaskASGIApp, FlaskOperation
 from connexion.middleware.main import MiddlewarePosition
 from flask import Config as Config
 from flask import Flask
-from flask_injector import wrap_function  # pyright: ignore[reportUnknownVariableType]
-from flask_injector import FlaskInjector
+from flask_injector import FlaskInjector, wrap_function
 from injector import Binder, Injector, Module
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import override
