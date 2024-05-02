@@ -65,7 +65,7 @@ class App(Generic[T_app]):
         config_filename: str = "config.toml",
         # FIXME should be a list of PydanticDataclass
         application_configs: list[type[AbstractConfig]] | None = None,
-        application_modules: list[Module] | None = None,
+        application_modules: list[Module | type[Module]] | None = None,
     ) -> CreateAppResult[T_app]:
         """
         Bootstrap the Flask applcation.
@@ -85,7 +85,7 @@ def create_app(
     config_filename: str = "config.toml",
     # FIXME should be a list of PydanticDataclass
     application_configs: list[type[AbstractConfig]] | None = None,
-    application_modules: list[Module] | None = None,
+    application_modules: list[Module | type[Module]] | None = None,
     # FIXME eventually should replace with builders
     # and configurators so this list of params doesn't
     # just grow and grow.

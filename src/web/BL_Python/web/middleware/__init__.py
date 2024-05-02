@@ -46,7 +46,7 @@ T_error_handler = TypeVar("T_error_handler", bound=ErrorHandlerCallable)
 TFlaskApp = Flask | FlaskApp
 T_flask_app = TypeVar("T_flask_app", bound=TFlaskApp)
 
-RegisterMiddlewareCallback = Callable[[Module, FlaskApp], None]
+RegisterMiddlewareCallback = Callable[[FlaskApp], None]
 
 
 def bind_errorhandler(

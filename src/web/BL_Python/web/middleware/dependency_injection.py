@@ -47,7 +47,7 @@ class AppModule(Module):
 
 def configure_dependencies(
     app: TFlaskApp,
-    application_modules: list[Module] | None = None,
+    application_modules: list[Module | type[Module]] | None = None,
 ) -> FlaskInjector:
     """
     Configures dependency injection and registers all Flask
@@ -59,7 +59,11 @@ def configure_dependencies(
     else:
         flask_app = app
 
-    modules = [AppModule(app)] + (application_modules if application_modules else [])
+    modules = [
+        (module if isinstance(module, Module) else module())
+        for module in [AppModule(app)]
+        + (application_modules if application_modules else [])
+    ]
 
     # bootstrap the flask application and its dependencies
     flask_injector = FlaskInjector(flask_app, modules)
@@ -83,7 +87,7 @@ def configure_dependencies(
                 module, "register_middleware", None
             )
             if register_callback is not None and callable(register_callback):
-                register_callback(module, app)
+                register_callback(app)
 
         # this binds all BL_Python middlewares with Injector
         _configure_openapi_middleware_dependencies(app, flask_injector)

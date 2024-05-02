@@ -405,22 +405,15 @@ class CreateFlaskApp(CreateApp[Flask]):
         config: Config,
         mocker: MockerFixture,
         application_configs: list[type[AbstractConfig]] | None = None,
-        application_modules: list[Module] | None = None,
+        application_modules: list[Module | type[Module]] | None = None,
     ) -> Generator[FlaskAppResult, Any, None]:
         # prevents the creation of a Connexion application
         if config.flask is not None:
             config.flask.openapi = None
-            config.sso = SSOConfig(
+            config.sso = SSOConfig(  # pyright: ignore[reportAttributeAccessIssue]
                 protocol="SAML2",
                 settings=SAML2Config(relay_state="", metadata_url="", metadata=""),
             )
-            # [sso]
-            # protocol = "SAML2"
-            #
-            # [sso.settings]
-            # relay_state = "http://localhost:5050/v1/ui/"
-            # metadata_url = "https://dev-1848455.okta.com/app/exk15twboelVBNJ0R5d7/sso/saml/metadata"
-            # metadata = '<?xml version="1.0" encoding="UTF-8"?><md:EntityDescriptor entityID="http://www.okta.com/exk15twboelVBNJ0R5d7" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"><md:IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><md:KeyDescriptor use="signing"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>MIIDpjCCAo6gAwIBAgIGAXpZkbYbMA0GCSqGSIb3DQEBCwUAMIGTMQswCQYDVQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzENMAsGA1UECgwET2t0YTEUMBIGA1UECwwLU1NPUHJvdmlkZXIxFDASBgNVBAMMC2Rldi0xODQ4NDU1MRwwGgYJKoZIhvcNAQkBFg1pbmZvQG9rdGEuY29tMB4XDTIxMDYyOTIwNTgxOVoXDTMxMDYyOTIwNTkxOVowgZMxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1TYW4gRnJhbmNpc2NvMQ0wCwYDVQQKDARPa3RhMRQwEgYDVQQLDAtTU09Qcm92aWRlcjEUMBIGA1UEAwwLZGV2LTE4NDg0NTUxHDAaBgkqhkiG9w0BCQEWDWluZm9Ab2t0YS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCIcvhBKyG9QG0oyn39Qwm15IWUbQIY+oUOadplsaQdOkwVFPw58ZosgpjZseB1nhtrKWkz0VrGM0gAvapM6n3H1xbLEXWWf38RP+t4vKtnAjb4MsFhU3HDZt6kVRAxWZbrDHeoP82aFNyNfGsYXGAIuBc/QUc7EUnT5+7r5XCsFu9CEbz/IBoYcrobhLO816sXDsbcsmKZ9e5O3A6sZcNPExTCrP0lR4tkY5gdm2GJkWLM6FBV55mGg8uWyJUkUp5qPa9/O39pjK0ng/56lnwKDmIgHG27wtcwBhWBLrBn6p4yUpTV19qJdbMtr1U+5miLTLL3qeFXxt+Phk0NTcRVAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAHJunNiNdQ/nRfXl6fj7JRB4X4OuEoldE7ZjV0Jb/ZizMwQlo/b0C545OrPJ3Si2MP3t/7X1fgqkMfKP/mB+Oxe4BzWUouO/MrocvRdbCVDhxEBbIv9wfoieW5o/XHZ8d9Zgvv1yz9rc3YuY8nFov9K12DcIRT0y21CHTDNk9hd+2VQbdV4e97EpxbG3c3qLJYqaCjnGZdkoBt5WIrNLPqQa8HD+JpN2NLmOEbwRhgob8T43AbgYNh3Dg9GB87AJ0FVMfyuGfryYENQ+vLxKUcJ81HpZkWdhd2GpyW6Hic0uoKZ6glWWcLbkj9EbKUrOieHVk/1RvMI1c5uNS+QUMwU=</ds:X509Certificate></ds:X509Data></ds:KeyInfo></md:KeyDescriptor><md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://dev-1848455.okta.com/app/dev-1848455_cap_1/exk15twboelVBNJ0R5d7/sso/saml"/><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://dev-1848455.okta.com/app/dev-1848455_cap_1/exk15twboelVBNJ0R5d7/sso/saml"/></md:IDPSSODescriptor></md:EntityDescriptor>'
 
         with mocker.patch(
             "BL_Python.web.application.load_config",
