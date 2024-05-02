@@ -18,16 +18,7 @@ from BL_Python.web.encryption import decrypt_flask_cookie
 from connexion import FlaskApp
 from connexion.lifecycle import ConnexionRequest
 from connexion.middleware import MiddlewarePosition
-from flask import (
-    Blueprint,
-    Flask,
-    Response,
-    current_app,
-    redirect,
-    request,
-    session,
-    url_for,
-)
+from flask import Blueprint, Flask, Response, current_app, redirect, request, url_for
 from flask.helpers import make_response
 from flask.sessions import SessionMixin
 from flask.wrappers import Response
@@ -167,11 +158,17 @@ def login_required(
 
 @inject
 def get_username(log: Logger):
-    user = flask_login.current_user
-    userId: UserId = user.id
-    username = userId.username
-    log.debug(f"Flask current user is {username}")
-    return {"username": username}
+    try:
+        # FIXME it seems as if this value is not immediately populated
+        # and we get back None. However, soon after we get the actual value.
+        user = flask_login.current_user
+        userId: UserId = user.id
+        username = userId.username
+        log.debug(f"Flask current user is {username}")
+        return {"username": username}
+    except:
+        session = get_session()
+        return {"username": session["username"]}
 
 
 def apikey_auth(token: str, required_scopes: Any):
@@ -267,9 +264,9 @@ def logout(log: Logger):  # pyright: ignore[reportUnusedFunction]
 @sso_blueprint.route("/login/<idp_name>")
 @inject
 def sp_initiated(  # pyright: ignore[reportUnusedFunction]
-    idp_name: str, cap_saml2: SAML2Client, config: SSOConfig, log: Logger
+    idp_name: str, saml2_client: SAML2Client, config: SSOConfig, log: Logger
 ):
-    redirect_url = cap_saml2.prepare_user_authentication(
+    redirect_url = saml2_client.prepare_user_authentication(
         relay_state=cast(SAML2Config, config.settings).relay_state
     )
 
@@ -285,7 +282,7 @@ def sp_initiated(  # pyright: ignore[reportUnusedFunction]
 @inject
 def idp_initiated(  # pyright: ignore[reportUnusedFunction]
     idp_name: str,
-    cap_saml2: SAML2Client,
+    saml2_client: SAML2Client,
     user_loader: UserLoader[UserMixin[Role]],
     config: Config,
     sso_config: SSOConfig,
@@ -296,7 +293,7 @@ def idp_initiated(  # pyright: ignore[reportUnusedFunction]
 
     user: UserMixin[Role] | None = None
     try:
-        (username, _) = cap_saml2.handle_user_login(saml_response)
+        (username, _) = saml2_client.handle_user_login(saml_response)
         log.info(f"Login username is {username}")
         # FIXME should enable a way to set the default role here?
         user = user_loader.user_loader(username, None, True)
@@ -319,7 +316,7 @@ def idp_initiated(  # pyright: ignore[reportUnusedFunction]
 
     login_user(user, remember=False, duration=session_duration)
 
-    session = get_session()
+    from flask import session
 
     session[SESSION_VALUE_NAMES.AUTHENTICATED] = True
     session[SESSION_VALUE_NAMES.USERNAME] = user.id.username
@@ -367,7 +364,8 @@ def idp_initiated(  # pyright: ignore[reportUnusedFunction]
 def make_session_permanent(
     config: Config,
 ):  # pyright: ignore[reportUnusedFunction]
-    session = get_session()
+    from flask import session
+
     session.permanent = (
         config.flask.session.permanent
         if config.flask and config.flask.session
@@ -379,7 +377,8 @@ def make_session_permanent(
 # @sso_blueprint.after_app_request  # pyright: ignore[reportUntypedFunctionDecorator]
 @inject
 def remove_username_cookie_without_session(response: Response, log: Logger):  # pyright: ignore[reportUnusedFunction]
-    session = get_session()
+    from flask import session
+
     # if the session has expired but the client still has the username cookie,
     # the username cookie needs to be cleared from the client
     if not session.get(  # pyright: ignore[reportUnknownMemberType]
@@ -462,6 +461,8 @@ class CustomRequestMiddleware:
             await self.app(scope, receive, send)
             return
 
+        # FIXME try to import flask.session first?
+
         connexion_request = ConnexionRequest(scope)
         session_data = app.session_interface.open_session(app, connexion_request)
 
@@ -515,7 +516,6 @@ class SAML2MiddlewareModule(Module):
                 injector.binder.bind(SSOModule, to=SAML2Module())
 
                 log.debug("Registering SSO blueprint.")
-                # app.register_blueprint(SSOBlueprint().sso_blueprint)
                 app.register_blueprint(sso_blueprint)
                 # trigger side-effect - adds login_manager to app
                 _ = injector.get(LoginManager)

@@ -98,7 +98,7 @@ class UserLoader(Generic[TUserMixin]):
         try:
             user = (
                 session.query(self._user_table)
-                .join(self._user_table.roles)
+                .outerjoin(self._user_table.roles)
                 .filter(self._user_table.username == username)
                 .options(contains_eager(self._user_table.roles))
                 .one_or_none()
