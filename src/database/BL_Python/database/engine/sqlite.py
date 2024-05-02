@@ -93,7 +93,7 @@ class SQLiteScopedSession(ScopedSession):
 
             for table in metadata_base.metadata.sorted_tables:
                 # If the table has already been renamed, skip it.
-                if table.name.split(".")[0] == table.schema:
+                if not table.schema or table.name.split(".")[0] == table.schema:
                     continue
 
                 # The metadata name needs to be changed to support most constructs
