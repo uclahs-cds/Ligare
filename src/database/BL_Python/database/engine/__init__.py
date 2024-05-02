@@ -17,7 +17,7 @@ class DatabaseEngine:
         echo: bool = False,
         execution_options: dict[str, str] | None = None,
         connect_args: DatabaseConnectArgsConfig | None = None,
-        bases: list[type[MetaBase]] | None = None,
+        bases: list[MetaBase | type[MetaBase]] | None = None,
     ) -> SQLiteScopedSession | PostgreSQLScopedSession:
         schema_rindex = connection_string.find(":") if connection_string else -1
         if schema_rindex == -1 or schema_rindex == 0:

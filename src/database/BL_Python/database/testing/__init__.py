@@ -32,20 +32,20 @@ def mock_postgresql_connection(mocker: MockerFixture) -> MockPostgreSQLConnectio
     )
 
 
-def _set_up_database_container(bases: list[type[MetaBase]]):
+def _set_up_database_container(bases: list[MetaBase | type[MetaBase]]):
     database_config = inmemory_database_config()
     config = Config(database=database_config)
 
     return get_database_ioc_container(config, bases=bases)
 
 
-def _get_bases_parameter(request: FixtureRequest):
+def _get_bases_parameter(request: FixtureRequest) -> list[MetaBase | type[MetaBase]]:
     if not hasattr(request, "param"):
         raise Exception(
             f"`{set_up_database.__name__}` requires an the indirect parameter of type `list[type[MetaBase]]`."
         )
 
-    return cast(list[type[MetaBase]], request.param)
+    return cast(list[MetaBase | type[MetaBase]], request.param)
 
 
 @pytest.fixture

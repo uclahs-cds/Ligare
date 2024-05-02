@@ -15,7 +15,7 @@ class ScopedSessionModule(Module):
     Configure SQLAlchemy Session depedencies for Injector.
     """
 
-    _bases: list[type[MetaBase]] | None = None
+    _bases: list[MetaBase | type[MetaBase]] | None = None
 
     @override
     def configure(self, binder: Binder) -> None:
@@ -35,7 +35,7 @@ class ScopedSessionModule(Module):
         # It is safe for this method to be called multiple times.
         binder.bind(Session, to=CallableProvider(self._get_session))
 
-    def __init__(self, bases: list[type[MetaBase]] | None = None) -> None:
+    def __init__(self, bases: list[MetaBase | type[MetaBase]] | None = None) -> None:
         super().__init__()
         self._bases = bases
 
@@ -71,7 +71,7 @@ def get_database_config_container(config: Config):
 
 
 def get_database_ioc_container(
-    config: Config, bases: list[type[MetaBase]] | None = None
+    config: Config, bases: list[MetaBase | type[MetaBase]] | None = None
 ):
     container = get_database_config_container(config)
     container.binder.install(ScopedSessionModule(bases=bases))

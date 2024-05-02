@@ -13,7 +13,7 @@ from typing_extensions import override
 
 
 class UserLoaderModule(Module):
-    _bases: list[type[MetaBase]] | None = None
+    _bases: list[MetaBase | type[MetaBase]] | None = None
 
     def __init__(
         self,
@@ -21,7 +21,7 @@ class UserLoaderModule(Module):
         roles: type[Role],
         user_table: type[DbUser],
         role_table: type[DbRole],
-        bases: list[type[MetaBase]] | None = None,
+        bases: list[MetaBase | type[MetaBase]] | None = None,
     ) -> None:
         self._loader = loader
         self._roles = roles

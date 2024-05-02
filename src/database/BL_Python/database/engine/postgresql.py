@@ -2,21 +2,25 @@ from importlib.util import find_spec
 from typing import Any, Callable, Union
 
 from BL_Python.database.config import DatabaseConnectArgsConfig
-from BL_Python.database.types import MetaBase
+from BL_Python.database.types import IScopedSessionFactory, MetaBase
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import sessionmaker
+from typing_extensions import override
 
 
-class PostgreSQLScopedSession(ScopedSession):
+class PostgreSQLScopedSession(
+    ScopedSession, IScopedSessionFactory["PostgreSQLScopedSession"]
+):
+    @override
     @staticmethod
     def create(
         connection_string: str,
         echo: bool = False,
         execution_options: dict[str, Any] | None = None,
         connect_args: DatabaseConnectArgsConfig | None = None,
-        bases: list[type[MetaBase]] | None = None,
+        bases: list[MetaBase | type[MetaBase]] | None = None,
     ) -> "PostgreSQLScopedSession":
         if find_spec("psycopg2") is None:
             raise ModuleNotFoundError(
@@ -38,7 +42,7 @@ class PostgreSQLScopedSession(ScopedSession):
         )
 
     @staticmethod
-    def _alter_base_schemas(engine: Engine, bases: list[type[MetaBase]]):
+    def _alter_base_schemas(engine: Engine, bases: list[MetaBase | type[MetaBase]]):
         # This renames all tables to undo any renaming that previously happened
         # from, e.g., our SQLite engine.
         for metadata_base in bases:
