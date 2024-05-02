@@ -1,13 +1,19 @@
 import re
 import uuid
+from contextlib import ExitStack
+from contextvars import Token
 from logging import Logger
 from typing import Any, Awaitable, Callable, Literal, TypeVar, cast
 from uuid import uuid4
 
 import json_logging
-from BL_Python.programming.collections.dict import AnyDict
-from connexion import ConnexionMiddleware, FlaskApp, utils
-from flask import Flask, Response
+from BL_Python.programming.collections.dict import AnyDict, merge
+from connexion import ConnexionMiddleware, FlaskApp, context, utils
+from connexion.middleware import MiddlewarePosition
+from flask import Flask, Request, Response, request
+from flask.ctx import AppContext
+from flask.globals import _cv_app  # pyright: ignore[reportPrivateUsage]
+from flask.globals import current_app
 from flask.typing import (
     AfterRequestCallable,
     BeforeRequestCallable,
@@ -15,7 +21,7 @@ from flask.typing import (
 )
 from injector import inject
 from starlette.types import ASGIApp, Receive, Scope, Send
-from typing_extensions import TypedDict
+from typing_extensions import TypedDict, final
 
 from ...config import Config
 from ..consts import (
@@ -451,6 +457,95 @@ class CorrelationIDMiddleware:
         await self._app(scope, receive, wrapped_send)
 
 
+@final
+class FlaskContextMiddleware:
+    """
+    Connexion does not set Flask contexts in all cases they may be needed, like
+    in middlewares that execute before ContextMiddleware. This middleware creates
+    the Flask application, request, and session contexts if they are not currently set.
+    """
+
+    def __init__(
+        self,
+        app: ASGIApp,
+    ) -> None:
+        self.app = app
+
+    @inject
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send, app: Flask
+    ) -> None:
+        receive_token: Token[Receive] | None = None
+        scope_token: Token[Scope] | None = None
+        app_ctx_token: Token[AppContext] | None = None
+
+        try:
+            receive_token = context._receive.set(receive)  # pyright: ignore[reportPrivateUsage]
+            scope_token = context._scope.set(scope)  # pyright: ignore[reportPrivateUsage]
+
+            if scope["type"] not in ["http", "websocket"]:
+                await self.app(scope, receive, send)
+                return
+
+            with ExitStack() as exit_stack:
+                if not isinstance(current_app, Flask):  # pyright: ignore[reportUnnecessaryIsInstance] it is not a Flask if it is not set
+                    app_ctx = exit_stack.enter_context(app.app_context())
+
+                    app_ctx_token = _cv_app.set(app_ctx)
+
+                if not isinstance(request, Request):  # pyright: ignore[reportUnnecessaryIsInstance] it is not a Request if it is not set
+                    request_environ = merge(
+                        {
+                            "PATH_INFO": scope.get("path")
+                            or context.request._starlette_request.url.path,
+                            "wsgi.url_scheme": scope.get("scheme")
+                            or context.request._starlette_request.url.scheme,
+                            "REQUEST_METHOD": scope.get("method")
+                            or context.request._starlette_request.method,
+                            # there is the possibility this value in scope is "127.0.0.1" when using "localhost"
+                            # which is not consistent with the _starlette_request value.
+                            "SERVER_NAME": (
+                                scope["server"][0]
+                                if scope.get("server")
+                                else context.request._starlette_request.base_url.hostname
+                            ),
+                            "SERVER_PORT": (
+                                scope["server"][1]
+                                if scope.get("server")
+                                else context.request._starlette_request.base_url.port
+                            ),
+                            "QUERY_STRING": scope.get("query_string")
+                            or context.request._starlette_request.url.query,
+                            "REMOTE_ADDR": ":".join([
+                                str(value) for value in scope["client"]
+                            ])
+                            or f"{context.request._starlette_request.client.host}:{context.request._starlette_request.client.port}",
+                        },
+                        dict({
+                            (
+                                f"{'HTTP_' if header.upper() not in ['CONTENT_TYPE', 'CONTENT_LENGTH'] else ''}{header.upper().replace('-', '_')}",
+                                value,
+                            )
+                            for header, value in context.request.headers.items()
+                        }),
+                    )
+
+                    request_ctx = exit_stack.enter_context(
+                        app.request_context(request_environ)
+                    )
+                    request_ctx.push()
+
+                await self.app(scope, receive, send)
+
+        finally:
+            if app_ctx_token is not None:
+                _cv_app.reset(app_ctx_token)
+            if receive_token is not None:
+                context._receive.reset(receive_token)  # pyright: ignore[reportPrivateUsage]
+            if scope_token is not None:
+                context._scope.reset(scope_token)  # pyright: ignore[reportPrivateUsage]
+
+
 def register_openapi_api_request_handlers(app: FlaskApp):
     app.add_middleware(RequestLoggerMiddleware)
 
@@ -458,3 +553,7 @@ def register_openapi_api_request_handlers(app: FlaskApp):
 def register_openapi_api_response_handlers(app: FlaskApp):
     app.add_middleware(CorrelationIDMiddleware)
     app.add_middleware(ResponseLoggerMiddleware)
+
+
+def register_openapi_context_middleware(app: FlaskApp):
+    app.add_middleware(FlaskContextMiddleware, MiddlewarePosition.BEFORE_EXCEPTION)

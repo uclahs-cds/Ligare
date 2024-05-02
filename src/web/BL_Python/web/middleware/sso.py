@@ -1,7 +1,6 @@
 import logging
 import logging as log
 from abc import ABC
-from contextvars import ContextVar
 from dataclasses import dataclass
 from functools import wraps
 from logging import Logger
@@ -26,11 +25,17 @@ from BL_Python.platform.identity.user_loader import Role, UserId, UserLoader, Us
 from BL_Python.web.config import Config
 from BL_Python.web.encryption import decrypt_flask_cookie
 from connexion import FlaskApp
-from connexion.lifecycle import ConnexionRequest
-from connexion.middleware import MiddlewarePosition
-from flask import Blueprint, Flask, Response, current_app, redirect, request, url_for
+from flask import (
+    Blueprint,
+    Flask,
+    Response,
+    current_app,
+    redirect,
+    request,
+    session,
+    url_for,
+)
 from flask.helpers import make_response
-from flask.sessions import SessionMixin
 from flask.wrappers import Response
 from flask_login import LoginManager as FlaskLoginManager
 from flask_login import UserMixin as FlaskLoginUserMixin
@@ -48,7 +53,7 @@ from saml2.validate import (
     ToEarly,
 )
 from starlette.types import ASGIApp, Receive, Scope, Send
-from typing_extensions import NotRequired, final, override
+from typing_extensions import NotRequired, override
 from werkzeug.exceptions import BadRequest, Forbidden, Unauthorized
 
 
@@ -172,21 +177,11 @@ class Username(TypedDict):
 
 @inject
 def get_username(log: Logger) -> Username:
-    try:
-        # FIXME it seems as if this value is not immediately populated
-        # and we get back None. However, soon after we get the actual value.
-        user = flask_login.current_user
-        userId: UserId = user.id
-        username = userId.username
-        log.debug(f"Flask current user is {username}")
-        return {"username": username}
-    except:
-        session = get_session()
-
-        if session is None:
-            return {}
-
-        return {"username": session["username"]}
+    user = flask_login.current_user
+    userId: UserId = user.id
+    username = userId.username
+    log.debug(f"Flask current user is {username}")
+    return {"username": username}
 
 
 def apikey_auth(token: str, required_scopes: Any):
@@ -200,11 +195,6 @@ def apikey_auth(token: str, required_scopes: Any):
 
     session_data: Dict[str, Any]
     try:
-        session = get_session()
-
-        if not session:
-            raise Unauthorized()
-
         session_data = decrypt_flask_cookie(current_app.config["SECRET_KEY"], token)  # pyright: ignore[reportUnknownArgumentType]
         # under normal circumstances these session objects are equivalent.
         # The values will not be equivalent if the cookie is expired and
@@ -242,14 +232,6 @@ def _delete_username_cookie(response: Response, log: Logger):
     return response
 
 
-# class SSOBlueprint:
-#    sso_blueprint: Blueprint
-#
-#    def __init__(self) -> None:
-#        super().__init__()
-#        # https://github.com/jpf/okta-pysaml2-example/blob/master/app.py
-#        self.sso_blueprint = Blueprint("sso", __name__, url_prefix="/saml")
-#        self._SSOBlueprint(self.sso_blueprint)
 sso_blueprint = Blueprint("sso", __name__, url_prefix="/saml")
 
 
@@ -457,45 +439,6 @@ class LoginManager(FlaskLoginManager):
         raise Unauthorized(response.data, response)
 
 
-REQUEST_SESSION_CTX_KEY = "request_session"
-
-_request_session_ctx_var: ContextVar[SessionMixin | None] = ContextVar[
-    SessionMixin | None
-](REQUEST_SESSION_CTX_KEY, default=None)
-
-
-def get_session() -> SessionMixin | None:
-    return _request_session_ctx_var.get()
-
-
-@final
-class SessionMiddleware:
-    def __init__(
-        self,
-        app: ASGIApp,
-    ) -> None:
-        self.app = app
-
-    @inject
-    async def __call__(
-        self, scope: Scope, receive: Receive, send: Send, app: Flask
-    ) -> None:
-        if scope["type"] not in ["http", "websocket"]:
-            await self.app(scope, receive, send)
-            return
-
-        # FIXME try to import flask.session first?
-
-        connexion_request = ConnexionRequest(scope)
-        session_data = app.session_interface.open_session(app, connexion_request)  # pyright: ignore[reportArgumentType]
-
-        session = _request_session_ctx_var.set(session_data)
-
-        await self.app(scope, receive, send)
-
-        _request_session_ctx_var.reset(session)
-
-
 class SAML2MiddlewareModule(Module):
     @override
     def configure(self, binder: Binder) -> None:
@@ -503,7 +446,6 @@ class SAML2MiddlewareModule(Module):
 
     def register_middleware(self, app: FlaskApp):
         app.add_middleware(SAML2MiddlewareModule.SAML2Middleware)
-        app.add_middleware(SessionMiddleware, MiddlewarePosition.BEFORE_SECURITY)
 
     class SAML2Middleware:
         _app: ASGIApp
@@ -523,11 +465,6 @@ class SAML2MiddlewareModule(Module):
             log: Logger,
         ) -> None:
             async def wrapped_send(message: Any) -> None:
-                # nonlocal scope
-                # nonlocal receive
-                # nonlocal send
-                # nonlocal app
-
                 # Only run during startup of the application
                 if (
                     scope["type"] != "lifespan"

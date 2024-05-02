@@ -29,7 +29,6 @@ from BL_Python.identity.config import SAML2Config, SSOConfig
 from BL_Python.platform.dependency_injection import UserLoaderModule
 from BL_Python.platform.identity import Role, User
 from BL_Python.platform.identity.user_loader import TRole, UserId, UserMixin
-from BL_Python.programming.collections.dict import AnyDict
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder
 from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import (
@@ -49,7 +48,7 @@ from BL_Python.web.config import (
 from BL_Python.web.encryption import encrypt_flask_cookie
 from BL_Python.web.middleware.sso import SAML2MiddlewareModule
 from connexion import FlaskApp
-from flask import Flask, Request, Response
+from flask import Flask, Request, Response, session
 from flask.ctx import RequestContext
 from flask.sessions import SecureCookieSession
 from flask.testing import FlaskClient
@@ -79,10 +78,6 @@ class ClientInjector(Generic[T_flask_client]):
 
     client: T_flask_client
     injector: FlaskInjector
-
-
-def get_session() -> AnyDict:
-    return {}
 
 
 class AppGetter(Protocol[T_app]):
@@ -167,8 +162,6 @@ class TestSessionMiddleware:
         self, environ: dict[Any, Any], start_response: Callable[[Request], Response]
     ) -> Any:
         from flask import request
-
-        session = get_session()
 
         session["_id"] = get_random_str()
 
@@ -260,8 +253,6 @@ class CreateApp(Generic[T_app]):
         _ = self.mock_user(user, mocker, roles)
 
         with app.injector.app.test_request_context() as request_context:
-            session = get_session()
-
             session["_id"] = get_random_str()
             session["authenticated"] = True
             session["username"] = CreateApp._MOCK_USER_USERNAME
@@ -461,10 +452,8 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
                 _GeneratorContextManager[SecureCookieSession],
                 client.session_transaction(),
             )
-            session = get_session()
             flask_session = stack.enter_context(flask_session_ctx_manager)
             flask_session["_id"] = get_random_str()
-            session["_id"] = flask_session["_id"]
             client.set_cookie(
                 cast(str, app.config["SESSION_COOKIE_NAME"]),
                 encrypt_flask_cookie(

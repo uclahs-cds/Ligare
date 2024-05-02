@@ -9,6 +9,7 @@ from BL_Python.web.middleware.flask import (
 from BL_Python.web.middleware.openapi import (
     register_openapi_api_request_handlers,
     register_openapi_api_response_handlers,
+    register_openapi_context_middleware,
 )
 from connexion import FlaskApp
 from flask import Flask, Response
@@ -72,6 +73,12 @@ def register_api_response_handlers(app: TFlaskApp):
         return register_flask_api_response_handlers(app)
     else:
         return register_openapi_api_response_handlers(app)
+
+
+def register_context_middleware(app: TFlaskApp):
+    if not isinstance(app, FlaskApp):
+        return
+    return register_openapi_context_middleware(app)
 
 
 def register_error_handlers(app: TFlaskApp):

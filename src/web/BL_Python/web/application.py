@@ -22,6 +22,7 @@ from .config import Config
 from .middleware import (
     register_api_request_handlers,
     register_api_response_handlers,
+    register_context_middleware,
     register_error_handlers,
 )
 from .middleware.dependency_injection import configure_dependencies
@@ -143,6 +144,7 @@ def create_app(
     register_error_handlers(app)
     _ = register_api_request_handlers(app)
     _ = register_api_response_handlers(app)
+    _ = register_context_middleware(app)
     # register_app_teardown_handlers(app)
 
     # Register every subconfig as a ConfigModule.
