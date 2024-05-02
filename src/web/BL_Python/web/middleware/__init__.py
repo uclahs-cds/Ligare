@@ -17,7 +17,6 @@ from flask.typing import (
     BeforeRequestCallable,
     ResponseReturnValue,
 )
-from injector import Module
 from werkzeug.exceptions import HTTPException, Unauthorized
 
 # pyright: reportUnusedFunction=false

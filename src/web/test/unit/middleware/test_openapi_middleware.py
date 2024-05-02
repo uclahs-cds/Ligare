@@ -226,6 +226,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
             application_errorhandler_mock.call_args[0][0], expected_exception_type
         )
 
+    # FIXME just a temporary test as an example set up for testing SAML2
     def test__SAML2Middleware__something(
         self,
         openapi_config: Config,
@@ -235,7 +236,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
     ):
         def app_init_hook(
             application_configs: list[type[AbstractConfig]],
-            application_modules: list[Module],
+            application_modules: list[Module | type[Module]],
         ):
             application_modules.append(
                 UserLoaderModule(

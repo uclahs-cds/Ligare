@@ -96,7 +96,9 @@ class AppGetter(Protocol[T_app]):
     ) -> CreateAppResult[T_app]: ...
 
 
-TAppInitHook = Callable[[list[type[AbstractConfig]], list[Module]], None] | None
+TAppInitHook = (
+    Callable[[list[type[AbstractConfig]], list[Module | type[Module]]], None] | None
+)
 TClientInitHook = Callable[[CreateAppResult[T_app]], None] | None
 
 
@@ -314,7 +316,7 @@ class CreateApp(Generic[T_app]):
                 Config,
                 MockerFixture,
                 list[type[AbstractConfig]] | None,
-                list[Module] | None,
+                list[Module | type[Module]] | None,
             ],
             Generator[CreateAppResult[T_app], Any, None],
         ],
@@ -329,7 +331,7 @@ class CreateApp(Generic[T_app]):
             app_init_hook: TAppInitHook | None = None,
         ) -> Generator[ClientInjector[T_flask_client], Any, None]:
             application_configs: list[type[AbstractConfig]] | None = None
-            application_modules: list[Module] | None = None
+            application_modules: list[Module | type[Module]] | None = None
             if app_init_hook is not None:
                 application_configs = []
                 application_modules = []
@@ -530,7 +532,7 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         config: Config,
         mocker: MockerFixture,
         application_configs: list[type[AbstractConfig]] | None = None,
-        application_modules: list[Module] | None = None,
+        application_modules: list[Module | type[Module]] | None = None,
     ) -> Generator[OpenAPIAppResult, Any, None]:
         # prevents the creation of a Connexion application
         if config.flask is None or config.flask.openapi is None:
