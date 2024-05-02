@@ -5,7 +5,17 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from functools import wraps
 from logging import Logger
-from typing import Any, Callable, Dict, ParamSpec, Protocol, Sequence, TypeVar, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    ParamSpec,
+    Protocol,
+    Sequence,
+    TypedDict,
+    TypeVar,
+    cast,
+)
 from urllib.parse import urlparse
 
 import flask_login
@@ -38,7 +48,7 @@ from saml2.validate import (
     ToEarly,
 )
 from starlette.types import ASGIApp, Receive, Scope, Send
-from typing_extensions import override
+from typing_extensions import NotRequired, final, override
 from werkzeug.exceptions import BadRequest, Forbidden, Unauthorized
 
 
@@ -156,8 +166,12 @@ def login_required(
     return wrapper
 
 
+class Username(TypedDict):
+    username: NotRequired[str]
+
+
 @inject
-def get_username(log: Logger):
+def get_username(log: Logger) -> Username:
     try:
         # FIXME it seems as if this value is not immediately populated
         # and we get back None. However, soon after we get the actual value.
@@ -168,6 +182,10 @@ def get_username(log: Logger):
         return {"username": username}
     except:
         session = get_session()
+
+        if session is None:
+            return {}
+
         return {"username": session["username"]}
 
 
@@ -183,6 +201,10 @@ def apikey_auth(token: str, required_scopes: Any):
     session_data: Dict[str, Any]
     try:
         session = get_session()
+
+        if not session:
+            raise Unauthorized()
+
         session_data = decrypt_flask_cookie(current_app.config["SECRET_KEY"], token)  # pyright: ignore[reportUnknownArgumentType]
         # under normal circumstances these session objects are equivalent.
         # The values will not be equivalent if the cookie is expired and
@@ -252,7 +274,7 @@ def user(log: Logger):
 @sso_blueprint.route("/logout")
 @flask_login_required
 @inject
-def logout(log: Logger):  # pyright: ignore[reportUnusedFunction]
+def logout(log: Logger):
     log.info(f"Logging out user {flask_login.current_user}")
     logout_user()
     response = make_response('{"status_code": 200, "status": "200 OK"}', 200)
@@ -263,7 +285,7 @@ def logout(log: Logger):  # pyright: ignore[reportUnusedFunction]
 
 @sso_blueprint.route("/login/<idp_name>")
 @inject
-def sp_initiated(  # pyright: ignore[reportUnusedFunction]
+def sp_initiated(
     idp_name: str, saml2_client: SAML2Client, config: SSOConfig, log: Logger
 ):
     redirect_url = saml2_client.prepare_user_authentication(
@@ -280,7 +302,7 @@ def sp_initiated(  # pyright: ignore[reportUnusedFunction]
 
 @sso_blueprint.route("/login/<idp_name>", methods=["POST"])
 @inject
-def idp_initiated(  # pyright: ignore[reportUnusedFunction]
+def idp_initiated(
     idp_name: str,
     saml2_client: SAML2Client,
     user_loader: UserLoader[UserMixin[Role]],
@@ -363,7 +385,7 @@ def idp_initiated(  # pyright: ignore[reportUnusedFunction]
 @inject
 def make_session_permanent(
     config: Config,
-):  # pyright: ignore[reportUnusedFunction]
+):
     from flask import session
 
     session.permanent = (
@@ -376,7 +398,7 @@ def make_session_permanent(
 # FIXME these after_app_requests need to be made middleware
 # @sso_blueprint.after_app_request  # pyright: ignore[reportUntypedFunctionDecorator]
 @inject
-def remove_username_cookie_without_session(response: Response, log: Logger):  # pyright: ignore[reportUnusedFunction]
+def remove_username_cookie_without_session(response: Response, log: Logger):
     from flask import session
 
     # if the session has expired but the client still has the username cookie,
@@ -446,7 +468,8 @@ def get_session() -> SessionMixin | None:
     return _request_session_ctx_var.get()
 
 
-class CustomRequestMiddleware:
+@final
+class SessionMiddleware:
     def __init__(
         self,
         app: ASGIApp,
@@ -464,7 +487,7 @@ class CustomRequestMiddleware:
         # FIXME try to import flask.session first?
 
         connexion_request = ConnexionRequest(scope)
-        session_data = app.session_interface.open_session(app, connexion_request)
+        session_data = app.session_interface.open_session(app, connexion_request)  # pyright: ignore[reportArgumentType]
 
         session = _request_session_ctx_var.set(session_data)
 
@@ -480,7 +503,7 @@ class SAML2MiddlewareModule(Module):
 
     def register_middleware(self, app: FlaskApp):
         app.add_middleware(SAML2MiddlewareModule.SAML2Middleware)
-        app.add_middleware(CustomRequestMiddleware, MiddlewarePosition.BEFORE_SECURITY)
+        app.add_middleware(SessionMiddleware, MiddlewarePosition.BEFORE_SECURITY)
 
     class SAML2Middleware:
         _app: ASGIApp

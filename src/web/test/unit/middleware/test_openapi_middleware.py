@@ -11,12 +11,10 @@ from BL_Python.web.application import OpenAPIAppResult
 from BL_Python.web.config import Config
 from BL_Python.web.middleware import bind_errorhandler
 from BL_Python.web.middleware.consts import CORRELATION_ID_HEADER
-from BL_Python.web.middleware.dependency_injection import bind_middleware
 from BL_Python.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
-from BL_Python.web.middleware.sso import SAML2MiddlewareModule
 from BL_Python.web.testing.create_app import (
     CreateOpenAPIApp,
     OpenAPIClientInjectorConfigurable,
