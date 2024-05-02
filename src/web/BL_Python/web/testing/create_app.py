@@ -593,9 +593,12 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
                     f"""This fixture created a `{type(result)}.{type(result.app_injector.app) if getattr(result, "app", None) else "None"}` application, but is only meant for `{FlaskApp}`.
 Ensure either that [openapi] is set in the [flask] config, or use the `flask_client` fixture."""
                 )
+            config = result.app_injector.flask_injector.injector.get(Config)
+            host = config.flask.host if config.flask else "localhost"
+            port = config.flask.port if config.flask else "5000"
             result.app_injector.app.add_middleware(
                 TrustedHostMiddleware,
-                allowed_hosts=["localhost", "localhost:5000"],
+                allowed_hosts=[host, f"{host}:{port}"],
             )
 
             client: TestClient = stack.enter_context(
