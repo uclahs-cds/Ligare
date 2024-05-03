@@ -1,2 +1,3 @@
 global-include *.pyi
 global-include py.typed
+global-include aws-ssm.ini
