@@ -8,6 +8,7 @@ from BL_Python.web.config import Config, FlaskConfig, FlaskOpenApiConfig
 from BL_Python.web.testing.create_app import CreateOpenAPIApp
 from connexion import FlaskApp
 from flask import Flask
+from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
 
@@ -43,6 +44,10 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
     def test__CreateOpenAPIApp__create_app__loads_config_from_toml(
         self, basic_config: Config, mocker: MockerFixture
     ):
+        _ = mocker.patch(
+            "BL_Python.web.application.SSMParameters",
+            return_value=MagicMock(load_config=MagicMock(return_value=None)),
+        )
         load_config_mock = mocker.patch(
             "BL_Python.web.application.load_config", return_value=basic_config
         )
@@ -56,6 +61,10 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
     def test__CreateOpenAPIApp__create_app__uses_custom_config_types(
         self, mocker: MockerFixture
     ):
+        _ = mocker.patch(
+            "BL_Python.web.application.SSMParameters",
+            return_value=MagicMock(load_config=MagicMock(return_value=None)),
+        )
         toml_filename = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__create_app__uses_custom_config_types.__name__}-config.toml"
         toml_load_result = {
             "flask": {
@@ -93,6 +102,10 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         basic_config: Config,
         mocker: MockerFixture,
     ):
+        _ = mocker.patch(
+            "BL_Python.web.application.SSMParameters",
+            return_value=MagicMock(load_config=MagicMock(return_value=None)),
+        )
         object.__setattr__(basic_config.flask, config_var_name, var_value)
 
         environ.update({envvar_name: var_value})
@@ -121,6 +134,10 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         should_fail: bool,
         mocker: MockerFixture,
     ):
+        _ = mocker.patch(
+            "BL_Python.web.application.SSMParameters",
+            return_value=MagicMock(load_config=MagicMock(return_value=None)),
+        )
         environ.update({"FLASK_APP": "", "FLASK_ENV": ""})
 
         if envvar_name is not None:
@@ -143,6 +160,10 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
     ):
         toml_filename = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__create_app__configures_appropriate_app_type_based_on_config.__name__}-config.toml"
         app_name = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__create_app__configures_appropriate_app_type_based_on_config.__name__}-app_name"
+        _ = mocker.patch(
+            "BL_Python.web.application.SSMParameters",
+            return_value=MagicMock(load_config=MagicMock(return_value=None)),
+        )
         _ = mocker.patch("BL_Python.web.application.register_error_handlers")
         _ = mocker.patch("BL_Python.web.application.register_api_request_handlers")
         _ = mocker.patch("BL_Python.web.application.register_api_response_handlers")

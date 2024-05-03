@@ -408,20 +408,20 @@ class CreateFlaskApp(CreateApp[Flask]):
                 settings=SAML2Config(relay_state="", metadata_url="", metadata=""),
             )
 
-        with mocker.patch(
-            "BL_Python.web.application.load_config",
-            return_value=config,
-        ):
-            if application_configs is None:
-                application_configs = []
-            if application_modules is None:
-                application_modules = []
-            application_configs.append(SSOConfig)
-            application_modules.append(SAML2MiddlewareModule)
-            app = App[Flask].create(
-                "config.toml", application_configs, application_modules
-            )
-            yield app
+        _ = mocker.patch("BL_Python.web.application.load_config", return_value=config)
+        _ = mocker.patch(
+            "BL_Python.web.application.SSMParameters",
+            return_value=MagicMock(load_config=MagicMock(return_value=config)),
+        )
+
+        if application_configs is None:
+            application_configs = []
+        if application_modules is None:
+            application_modules = []
+        application_configs.append(SSOConfig)
+        application_modules.append(SAML2MiddlewareModule)
+        app = App[Flask].create("config.toml", application_configs, application_modules)
+        yield app
 
     @pytest.fixture()
     def _get_basic_flask_app(
@@ -529,29 +529,31 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
                 "[openapi] not set in config. Cannot create OpenAPI test client."
             )
 
-        with mocker.patch(
-            "BL_Python.web.application.load_config",
-            return_value=config,
-        ):
-            if application_configs is None:
-                application_configs = []
-            if application_modules is None:
-                application_modules = []
-            application_configs.append(SSOConfig)
-            application_modules.append(SAML2MiddlewareModule)
-            application_modules.append(
-                UserLoaderModule(
-                    loader=User,  # pyright: ignore[reportArgumentType]
-                    roles=Role,  # pyright: ignore[reportArgumentType]
-                    user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                    role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                    bases=[],
-                )
+        _ = mocker.patch("BL_Python.web.application.load_config", return_value=config)
+        _ = mocker.patch(
+            "BL_Python.web.application.SSMParameters",
+            return_value=MagicMock(load_config=MagicMock(return_value=config)),
+        )
+
+        if application_configs is None:
+            application_configs = []
+        if application_modules is None:
+            application_modules = []
+        application_configs.append(SSOConfig)
+        application_modules.append(SAML2MiddlewareModule)
+        application_modules.append(
+            UserLoaderModule(
+                loader=User,  # pyright: ignore[reportArgumentType]
+                roles=Role,  # pyright: ignore[reportArgumentType]
+                user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                bases=[],
             )
-            app = App[FlaskApp].create(
-                "config.toml", application_configs, application_modules
-            )
-            yield app
+        )
+        app = App[FlaskApp].create(
+            "config.toml", application_configs, application_modules
+        )
+        yield app
 
     @pytest.fixture()
     def _get_openapi_app(
