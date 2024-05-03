@@ -1,5 +1,3 @@
-# import logging
-# from configparser import ConfigParser
 from dataclasses import dataclass
 from functools import lru_cache
 from logging.config import fileConfig
@@ -28,11 +26,8 @@ from sqlalchemy.engine import Connectable, Connection, Engine
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.schema import SchemaItem
 
-# from AWS import load_ssm_application_parameters
-
 
 class type_include_object(Protocol):
-    # self, object: Table, name: str, type_: str, reflected: Any, compare_to: Any
     def __call__(
         self,
         object: SchemaItem,
@@ -71,16 +66,6 @@ class AlembicEnvSetup:
 
     @lru_cache(maxsize=1)
     def get_config(self):
-        # TODO re-integrate AWS SSM at a later time
-        # aws_ssm_config = ConfigParser()
-        # loaded_config_files = aws_ssm_config.read("aws-ssm.ini")
-        # if loaded_config_files:
-        #    load_ssm_application_parameters(aws_ssm_config)
-        # else:
-        #    logging.getLogger().info(
-        #        "Could not read aws-ssm.ini config file. Skipping SSM parameter lookup."
-        #    )
-
         # this is the Alembic Config object, which provides
         # access to the values within the .ini file in use.
         config = context.config

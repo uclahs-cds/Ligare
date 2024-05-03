@@ -1,3 +1,4 @@
+import logging
 from configparser import ConfigParser
 from pathlib import Path
 from typing import cast
@@ -5,6 +6,7 @@ from typing import cast
 from alembic import context
 from alembic.command import downgrade, upgrade
 from alembic.config import Config as AlembicConfig
+from BL_Python.AWS.ssm import SSMParameters
 from BL_Python.database.config import Config
 from BL_Python.database.dependency_injection import get_database_config_container
 from BL_Python.database.migrations.alembic.env_setup import AlembicEnvSetup
@@ -18,7 +20,19 @@ def get_migration_config(config_filename: Path | None = None):
         config_filename = Path("config.toml")
 
     config_type = ConfigBuilder[Config]().with_root_config(Config).build()
-    return load_config(config_type, config_filename)
+
+    database_config: Config | None = None
+    try:
+        # requires that aws-ssm.ini exists and is correctly configured
+        ssm_parameters = SSMParameters()
+        database_config = ssm_parameters.load_config(config_type)
+    except Exception as e:
+        logging.getLogger().warn(f"SSM parameter load failed: {e}")
+
+    if database_config is None:
+        database_config = load_config(config_type, config_filename)
+
+    return database_config
 
 
 def run_migrations_with_config(bases: list[MetaBase], config: Config):
