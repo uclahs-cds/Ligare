@@ -10,6 +10,7 @@ from os import environ, path
 from typing import Generic, Optional, TypeVar, cast
 
 import json_logging
+from BL_Python.AWS.ssm import SSMParameters
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
 from BL_Python.programming.dependency_injection import ConfigModule
 from connexion import FlaskApp
@@ -115,13 +116,19 @@ def create_app(
             .with_configs(application_configs)\
             .build()
         # fmt: on
-    full_config: Config
-    if config_overrides:
-        full_config = load_config(
-            config_type, config_filename, {"flask": config_overrides}
-        )
-    else:
-        full_config = load_config(config_type, config_filename)
+
+    # TODO need to do this in alembic migrations too
+    full_config: Config | None = None
+    ssm_parameters = SSMParameters()
+    full_config = ssm_parameters.load_config(config_type)
+
+    if full_config is None:
+        if config_overrides:
+            full_config = load_config(
+                config_type, config_filename, {"flask": config_overrides}
+            )
+        else:
+            full_config = load_config(config_type, config_filename)
 
     full_config.prepare_env_for_flask()
 
