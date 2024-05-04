@@ -117,7 +117,6 @@ def create_app(
             .build()
         # fmt: on
 
-    # TODO need to do this in alembic migrations too
     full_config: Config | None = None
     try:
         # requires that aws-ssm.ini exists and is correctly configured
