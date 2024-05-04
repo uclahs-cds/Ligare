@@ -103,3 +103,4 @@ tput init 2> /dev/null
 for package in ${packages[@]}; do
     publish $package $repository
 done
+

@@ -119,8 +119,12 @@ def create_app(
 
     # TODO need to do this in alembic migrations too
     full_config: Config | None = None
-    ssm_parameters = SSMParameters()
-    full_config = ssm_parameters.load_config(config_type)
+    try:
+        # requires that aws-ssm.ini exists and is correctly configured
+        ssm_parameters = SSMParameters()
+        full_config = ssm_parameters.load_config(config_type)
+    except Exception as e:
+        logging.getLogger().warn(f"SSM parameter load failed: {e}")
 
     if full_config is None:
         if config_overrides:
