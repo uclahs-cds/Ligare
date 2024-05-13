@@ -83,8 +83,8 @@ _dev_configure : $(VENV) $(PYPROJECT_FILES)
 # By default, psycopg2 is not installed
 # but it should be for development
 _dev_build : _dev_configure
-	@if [ -d $(call package_to_dist,all) ]; then \
-		echo "Package $@ is already built, skipping..."; \
+	if [ -d $(call package_to_dist,all) ]; then \
+		echo "Package BL_Python.all is already built, skipping..."; \
 	else \
 		$(ACTIVATE_VENV) && \
 		pip install -e .[dev-dependencies] && \
@@ -99,8 +99,8 @@ _cicd_configure : $(VENV) $(PYPROJECT_FILES)
 # By default, psycopg2 is not installed
 # but it should be for CI/CD
 _cicd_build : _cicd_configure
-	@if [ -f $(call package_to_inst,) ]; then \
-		echo "Package is already built, skipping..."; \
+	if [ -f $(call package_to_inst,) ]; then \
+		echo "Package BL_Python.all is already built, skipping..."; \
 	else \
 		$(ACTIVATE_VENV) && \
 		pip install .[dev-dependencies] && \
@@ -110,8 +110,8 @@ _cicd_build : _cicd_configure
 
 BL_Python.all: $(DEFAULT_TARGET)
 $(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PYPROJECT_FILES)
-	@if [ -d $(call package_to_dist,$*) ]; then \
-		echo "Package $@ is already built, skipping..."; \
+	if [ -d $(call package_to_dist,$*) ]; then \
+		echo "Package $* is already built, skipping..."; \
 	else \
 		$(ACTIVATE_VENV) && \
 		if [ "$@" = "BL_Python.database" ]; then \
