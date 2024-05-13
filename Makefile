@@ -111,7 +111,7 @@ _cicd_build : _cicd_configure
 BL_Python.all: $(DEFAULT_TARGET)
 $(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PYPROJECT_FILES)
 	@if [ -d $(call package_to_dist,$*) ]; then \
-		@echo "Package $@ is already built, skipping..."; \
+		echo "Package $@ is already built, skipping..."; \
 	else \
 		$(ACTIVATE_VENV) && \
 		if [ "$@" = "BL_Python.database" ]; then \
@@ -134,10 +134,10 @@ $(call dep_to_venv_path,typing_extensions.py): $(VENV)
 
 $(PACKAGE_PATHS) : $(VENV) $(SETUP_DEPENDENCIES)
 $(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES)
-	$(ACTIVATE_VENV) && \
 	REWRITE_DEPENDENCIES=$(REWRITE_DEPENDENCIES) \
 	GITHUB_REF=$(GITHUB_REF) \
 	GITHUB_WORKSPACE=$(GITHUB_WORKSPACE) \
+	$(ACTIVATE_VENV) && \
 	./.github/workflows/CICD-scripts/pyproject_dependency_rewrite.py -c $@
 
 $(VENV) :
@@ -165,16 +165,17 @@ test-ruff : $(VENV) $(BUILD_TARGET)
 	ruff format --preview --respect-gitignore --check
 
 test-pyright : $(VENV) $(BUILD_TARGET)
-	$(ACTIVATE_VENV)
 ifeq ($(PYRIGHT_MODE),pip)
+	$(ACTIVATE_VENV) && \
 	pyright
 else ifeq ($(PYRIGHT_MODE),npm)
 # this isn't the real install path everywhere,
 # but this is used for CI/CD
+	$(ACTIVATE_VENV) && \
 	./node_modules/bin/pyright
 else
 	@echo "Invalid PYRIGHT_MODE '$(PYRIGHT_MODE)'"; \
-	@exit 1
+	exit 1
 endif
 
 # don't exit with an error
