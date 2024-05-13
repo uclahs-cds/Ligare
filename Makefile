@@ -37,7 +37,7 @@ PYTEST_REPORT := pytest
 # This variable is reassigned to whichever of the dev/cicd
 # targets actually runs.
 DEFAULT_TARGET ?= dev
-.DEFAULT_GOAL = $(DEFAULT_TARGET)
+.DEFAULT_GOAL := $(DEFAULT_TARGET)
 
 
 ifeq ($(DEFAULT_TARGET),dev)
