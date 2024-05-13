@@ -134,10 +134,10 @@ $(call dep_to_venv_path,typing_extensions.py): $(VENV)
 
 $(PACKAGE_PATHS) : $(VENV) $(SETUP_DEPENDENCIES)
 $(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES)
+	$(ACTIVATE_VENV) && \
 	REWRITE_DEPENDENCIES=$(REWRITE_DEPENDENCIES) \
 	GITHUB_REF=$(GITHUB_REF) \
 	GITHUB_WORKSPACE=$(GITHUB_WORKSPACE) \
-	$(ACTIVATE_VENV) && \
 	./.github/workflows/CICD-scripts/pyproject_dependency_rewrite.py -c $@
 
 $(VENV) :
