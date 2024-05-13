@@ -86,9 +86,9 @@ _dev_build : _dev_configure
 	@if [ -d $(call package_to_dist,all) ]; then \
 		echo "Package $@ is already built, skipping..."; \
 	else \
-		$(ACTIVATE_VENV); \
-		pip install -e .[dev-dependencies]; \
-		pip install -e src/database[postgres-binary]; \
+		$(ACTIVATE_VENV) && \
+		pip install -e .[dev-dependencies] && \
+		pip install -e src/database[postgres-binary] && \
 		rm -rf $(PACKAGE_INSTALL_DIR); \
 	fi
 	@$(REPORT_VENV_USAGE)
@@ -102,8 +102,8 @@ _cicd_build : _cicd_configure
 	@if [ -f $(call package_to_inst,) ]; then \
 		echo "Package is already built, skipping..."; \
 	else \
-		$(ACTIVATE_VENV); \
-		pip install .[dev-dependencies]; \
+		$(ACTIVATE_VENV) && \
+		pip install .[dev-dependencies] && \
 		pip install src/database[postgres-binary]; \
 	fi
 	@$(REPORT_VENV_USAGE)
@@ -113,7 +113,7 @@ $(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PY
 	@if [ -d $(call package_to_dist,$*) ]; then \
 		@echo "Package $@ is already built, skipping..."; \
 	else \
-		$(ACTIVATE_VENV); \
+		$(ACTIVATE_VENV) && \
 		if [ "$@" = "BL_Python.database" ]; then \
 			pip install -e $(dir $<)[postgres-binary]; \
 		else \
@@ -125,16 +125,16 @@ $(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PY
 
 SETUP_DEPENDENCIES=$(call dep_to_venv_path,toml/__init__.py) $(call dep_to_venv_path,typing_extensions.py)
 $(call dep_to_venv_path,toml/__init__.py): $(VENV)
-	$(ACTIVATE_VENV); \
+	$(ACTIVATE_VENV) && \
 	pip install toml
 
 $(call dep_to_venv_path,typing_extensions.py): $(VENV)
-	$(ACTIVATE_VENV); \
+	$(ACTIVATE_VENV) && \
 	pip install typing_extensions
 
 $(PACKAGE_PATHS) : $(VENV) $(SETUP_DEPENDENCIES)
 $(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES)
-	$(ACTIVATE_VENV); \
+	$(ACTIVATE_VENV) && \
 	REWRITE_DEPENDENCIES=$(REWRITE_DEPENDENCIES) \
 	GITHUB_REF=$(GITHUB_REF) \
 	GITHUB_WORKSPACE=$(GITHUB_WORKSPACE) \
@@ -142,26 +142,26 @@ $(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES)
 
 $(VENV) :
 	test -d $(VENV) || env python$(PYTHON_VERSION) -m venv $(VENV)
-	$(ACTIVATE_VENV); \
+	$(ACTIVATE_VENV) && \
 	pip install -U pip
 
 format-isort : $(VENV) $(BUILD_TARGET)
-	$(ACTIVATE_VENV); \
+	$(ACTIVATE_VENV) && \
 	isort src
 
 format-ruff : $(VENV) $(BUILD_TARGET)
-	$(ACTIVATE_VENV); \
+	$(ACTIVATE_VENV) && \
 	ruff format --preview --respect-gitignore
 
 .PHONY: format format-ruff format-isort
 format : $(VENV) $(BUILD_TARGET) format-isort format-ruff
 
 test-isort : $(VENV) $(BUILD_TARGET)
-	$(ACTIVATE_VENV); \
+	$(ACTIVATE_VENV) && \
 	isort --check-only src
 
 test-ruff : $(VENV) $(BUILD_TARGET)
-	$(ACTIVATE_VENV); \
+	$(ACTIVATE_VENV) && \
 	ruff format --preview --respect-gitignore --check
 
 test-pyright : $(VENV) $(BUILD_TARGET)
@@ -180,17 +180,17 @@ endif
 # don't exit with an error
 # while testing bandit.
 test-bandit : $(VENV) $(BUILD_TARGET)
-	$(ACTIVATE_VENV); \
-	-bandit -c pyproject.toml \
+	-$(ACTIVATE_VENV) && \
+	bandit -c pyproject.toml \
 		--format sarif \
 		--output $(REPORTS_DIR)/$(BANDIT_REPORT) \
 		-r .
 
 test-pytest : $(VENV) $(BUILD_TARGET)
-	$(ACTIVATE_VENV); \
+	-$(ACTIVATE_VENV) && \
 	pytest $(PYTEST_FLAGS) && PYTEST_EXIT_CODE=0 || PYTEST_EXIT_CODE=$$?; \
-	-coverage html --data-file=$(REPORTS_DIR)/$(PYTEST_REPORT)/.coverage; \
-	-junit2html $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.xml $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.html; \
+	coverage html --data-file=$(REPORTS_DIR)/$(PYTEST_REPORT)/.coverage; \
+	junit2html $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.xml $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.html; \
 	exit $$PYTEST_EXIT_CODE
 
 .PHONY: test test-pytest test-bandit test-pyright test-ruff test-isort
@@ -204,7 +204,7 @@ test : clean-test
 publish-all : REWRITE_DEPENDENCIES=false
 # Publishing should use a real install. Reset the build env.
 publish-all : reset $(VENV)
-	$(ACTIVATE_VENV); \
+	$(ACTIVATE_VENV) && \
 	./publish_all.sh $(PYPI_REPO)
 
 clean-build :
