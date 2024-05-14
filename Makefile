@@ -59,50 +59,40 @@ PACKAGE_INSTALL_DIR := $(VENV)/lib/python*/site-packages/BL_Python
 # used to suppress outputs of targets (see `test` and `clean-test`)
 CMD_PREFIX=
 
-define package_to_dist
-$(VENV)/lib/python$(PYTHON_VERSION)/site-packages/BL_Python.$(1)-*.dist-info
-endef
-
-define package_to_inst
-$(VENV)/lib/python$(PYTHON_VERSION)/site-packages/BL_Python/$(1)/__init__.py
-endef
-
-define dep_to_venv_path
-$(VENV)/lib/python$(PYTHON_VERSION)/site-packages/$(1)
-endef
-
 PYPROJECT_FILES=./pyproject.toml $(wildcard src/*/pyproject.toml)
 PACKAGE_PATHS=$(subst /pyproject.toml,,$(PYPROJECT_FILES))
 PACKAGES=$(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
 
 
 .PHONY: dev
-dev : $(VENV) $(SETUP_DEPENDENCIES)
+dev : $(VENV) _setup_dependencies
 	$(MAKE) _dev_build DEFAULT_TARGET=dev
 _dev_configure : $(VENV) $(PYPROJECT_FILES)
 # By default, psycopg2 is not installed
 # but it should be for development
 _dev_build : _dev_configure
-	if [ -d $(call package_to_dist,all) ]; then \
+# `pip list` is multiple seconds faster than `pip show` ...
+	$(ACTIVATE_VENV) && \
+	if pip list -l --no-index | grep '^BL_Python\.all\s'; then \
 		echo "Package BL_Python.all is already built, skipping..."; \
 	else \
-		$(ACTIVATE_VENV) && \
 		pip install -e .[dev-dependencies] && \
 		pip install -e src/database[postgres-binary] && \
 		rm -rf $(PACKAGE_INSTALL_DIR); \
 	fi
 	@$(REPORT_VENV_USAGE)
 
-cicd : $(VENV) $(SETUP_DEPENDENCIES)
+cicd : $(VENV) _setup_dependencies
 	$(MAKE) _cicd_build DEFAULT_TARGET=cicd
 _cicd_configure : $(VENV) $(PYPROJECT_FILES)
 # By default, psycopg2 is not installed
 # but it should be for CI/CD
 _cicd_build : _cicd_configure
-	if [ -f $(call package_to_inst,) ]; then \
+# `pip list` is multiple seconds faster than `pip show` ...
+	$(ACTIVATE_VENV) && \
+	if pip list -l --no-index | grep '^BL_Python\.all\s'; then \
 		echo "Package BL_Python.all is already built, skipping..."; \
 	else \
-		$(ACTIVATE_VENV) && \
 		pip install .[dev-dependencies] && \
 		pip install src/database[postgres-binary]; \
 	fi
@@ -110,10 +100,11 @@ _cicd_build : _cicd_configure
 
 BL_Python.all: $(DEFAULT_TARGET)
 $(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PYPROJECT_FILES)
-	if [ -d $(call package_to_dist,$*) ]; then \
+# `pip list` is multiple seconds faster than `pip show` ...
+	$(ACTIVATE_VENV) && \
+	if pip list -l --no-index | grep '^BL_Python\.$*\s'; then \
 		echo "Package $* is already built, skipping..."; \
 	else \
-		$(ACTIVATE_VENV) && \
 		if [ "$@" = "BL_Python.database" ]; then \
 			pip install -e $(dir $<)[postgres-binary]; \
 		else \
@@ -123,17 +114,20 @@ $(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PY
 	fi
 	@$(REPORT_VENV_USAGE)
 
-SETUP_DEPENDENCIES=$(call dep_to_venv_path,toml/__init__.py) $(call dep_to_venv_path,typing_extensions.py)
-$(call dep_to_venv_path,toml/__init__.py): $(VENV)
+.PHONY: _setup_dependencies
+_setup_dependencies: $(VENV)
 	$(ACTIVATE_VENV) && \
-	pip install toml
+	if ! pip list -l --no-index | grep '^toml$*\s'; then \
+		pip install toml; \
+	fi
 
-$(call dep_to_venv_path,typing_extensions.py): $(VENV)
 	$(ACTIVATE_VENV) && \
-	pip install typing_extensions
+	if ! pip list -l --no-index | grep '^typing_extensions$*\s'; then \
+		pip install typing_extensions; \
+	fi
 
-$(PACKAGE_PATHS) : $(VENV) $(SETUP_DEPENDENCIES)
-$(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES)
+$(PACKAGE_PATHS) : $(VENV) _setup_dependencies
+$(PYPROJECT_FILES) : $(VENV) _setup_dependencies
 	$(ACTIVATE_VENV) && \
 	REWRITE_DEPENDENCIES=$(REWRITE_DEPENDENCIES) \
 	GITHUB_REF=$(GITHUB_REF) \
