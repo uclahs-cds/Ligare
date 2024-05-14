@@ -9,6 +9,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+# [0.2.0] - 2024-05-14
+### Added
+- New package `BL_Python.identity` for SSO
+- SAML2 support in `BL_Python.web`
+- Package interconnectivity for managing user identities in a database and tying into SSO and SAML2
+- User session support through `flask-login`
+- A Makefile so developers can get started by running `make`
+- Many `pytest` fixtures for more easily testing Connexion and Flask applications
+- `FlaskContextMiddleware` to make it easier to alter all aspects of an ASGI application in any middleware that runs at any time
+- Alembic database migration support in both `BL_Python.database` and scaffolded `BL_Python.web` applications
+
+### Fixed
+- Possible crash when using dependency injection in some middlewares
+- Inconsistencies in database schema names during application runtime
+
+# [0.1.0] - 2024-02-16
 ### Added
 - Setuptools package configurations for:
   - `BL_Python`
