@@ -1,5 +1,6 @@
+from abc import ABC
 from logging import Logger
-from typing import Protocol, Type, cast
+from typing import Type, cast
 
 from injector import inject
 from sqlalchemy import Boolean, Column, Unicode
@@ -11,38 +12,59 @@ from typing_extensions import override
 from .feature_flag_router import FeatureFlagRouter
 
 
-class FeatureFlag(Protocol):
+class FeatureFlag(ABC):
+    def __init__(  # pyright: ignore[reportMissingSuperCall]
+        self,
+        /,
+        name: str,
+        description: str,
+        enabled: bool | None = False,
+    ) -> None:
+        raise NotImplementedError(
+            f"`{FeatureFlag.__class__.__name__}` should only be used for type checking."
+        )
+
     __tablename__: str
     name: Column[Unicode] | str
-    enabled: Column[Boolean] | bool
     description: Column[Unicode] | str
+    enabled: Column[Boolean] | bool
 
 
 class FeatureFlagTable:
-    def __new__(cls, base: Type[DeclarativeMeta]):
-        class FeatureFlag(base):
+    def __new__(cls, base: Type[DeclarativeMeta]) -> type[FeatureFlag]:
+        class _FeatureFlag(base):
             """
             A feature flag.
             """
 
             __tablename__ = "feature_flag"
 
-            name = Column("name", Unicode, primary_key=True, nullable=False)
-            enabled = Column("enabled", Boolean, nullable=True, default=False)
-            description = Column("description", Unicode, nullable=False)
+            name: Column[Unicode] | str = Column(
+                "name", Unicode, primary_key=True, nullable=False
+            )
+            description: Column[Unicode] | str = Column(
+                "description", Unicode, nullable=False
+            )
+            enabled: Column[Boolean] | bool = Column(
+                "enabled", Boolean, nullable=True, default=False
+            )
 
             @override
             def __repr__(self) -> str:
                 return "<FeatureFlag %s>" % (self.name)
 
-        return FeatureFlag
+        return cast(type[FeatureFlag], _FeatureFlag)
 
 
 class DBFeatureFlagRouter(FeatureFlagRouter):
+    _feature_flag: type[FeatureFlag]
     _session: Session
 
     @inject
-    def __init__(self, session: Session, logger: Logger) -> None:
+    def __init__(
+        self, feature_flag: type[FeatureFlag], session: Session, logger: Logger
+    ) -> None:
+        self._feature_flag = feature_flag
         self._session = session
         super().__init__(logger)
 
@@ -68,8 +90,8 @@ class DBFeatureFlagRouter(FeatureFlagRouter):
         feature_flag: FeatureFlag
         try:
             feature_flag = (
-                self._session.query(FeatureFlag)
-                .filter(cast(Column[Unicode], FeatureFlag.name) == name)
+                self._session.query(self._feature_flag)
+                .filter(cast(Column[Unicode], self._feature_flag.name) == name)
                 .one()
             )
         except NoResultFound as e:
@@ -101,8 +123,8 @@ class DBFeatureFlagRouter(FeatureFlagRouter):
                 return enabled
 
         feature_flag = (
-            self._session.query(FeatureFlag)
-            .filter(cast(Column[Unicode], FeatureFlag.name) == name)
+            self._session.query(self._feature_flag)
+            .filter(cast(Column[Unicode], self._feature_flag.name) == name)
             .one_or_none()
         )
 

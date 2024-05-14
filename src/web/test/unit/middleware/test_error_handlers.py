@@ -2,7 +2,7 @@ from json.decoder import JSONDecoder
 from typing import Callable
 
 import pytest
-from BL_Python.web.testing.create_app import CreateApp, FlaskClientInjector
+from BL_Python.web.testing.create_app import CreateFlaskApp, FlaskClientInjector
 from flask import Response, abort
 from werkzeug.exceptions import Unauthorized
 
@@ -12,7 +12,7 @@ def _raise_custom_unauthorized_exception():
     raise Unauthorized(response.data, response)
 
 
-class TestErrorHandlers(CreateApp):
+class TestErrorHandlers(CreateFlaskApp):
     @pytest.mark.parametrize(
         "expected_status_code,expected_status_msg,failure_lambda",
         [

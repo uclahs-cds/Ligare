@@ -83,6 +83,7 @@ declare -a packages=( \
     src/database \
     src/development \
     src/GitHub\
+    src/identity \
     src/platform \
     src/programming \
     src/testing \
@@ -102,3 +103,4 @@ tput init 2> /dev/null
 for package in ${packages[@]}; do
     publish $package $repository
 done
+

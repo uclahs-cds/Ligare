@@ -2,7 +2,7 @@ from sqlite3 import Connection
 from typing import Any, Callable
 
 from BL_Python.database.config import DatabaseConnectArgsConfig
-from BL_Python.database.types import MetaBase
+from BL_Python.database.types import IScopedSessionFactory, MetaBase
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm.scoping import ScopedSession
@@ -11,16 +11,18 @@ from sqlalchemy.pool import Pool, StaticPool
 from sqlalchemy.pool.base import (
     _ConnectionRecord,  # pyright: ignore[reportPrivateUsage]
 )
+from typing_extensions import override
 
 
-class SQLiteScopedSession(ScopedSession):
+class SQLiteScopedSession(ScopedSession, IScopedSessionFactory["SQLiteScopedSession"]):
+    @override
     @staticmethod
     def create(
         connection_string: str,
         echo: bool = False,
         execution_options: dict[str, Any] | None = None,
         connect_args: DatabaseConnectArgsConfig | None = None,
-        bases: list[type[MetaBase]] | None = None,
+        bases: list[MetaBase | type[MetaBase]] | None = None,
     ) -> "SQLiteScopedSession":
         """
         Create a new session factory for SQLite.
@@ -67,14 +69,14 @@ class SQLiteScopedSession(ScopedSession):
         )
 
     @staticmethod
-    def _alter_base_schemas(engine: Engine, bases: list[type[MetaBase]]):
+    def _alter_base_schemas(engine: Engine, bases: list[MetaBase | type[MetaBase]]):
         # SQLite does not have schemas, which are mapped to None above,
         # however, we can "fake" it by querying table names with periods,
         # e.g., `SELECT * FROM 'foo.table'`.
         # This renames all tables to include the schema name in their name.
         for metadata_base in bases:
             metadata_base.metadata.reflect(bind=engine)
-            for table_subclass in metadata_base.__subclasses__():
+            for table_subclass in type(metadata_base).__subclasses__(metadata_base):
                 schema: str | None = None
                 if hasattr(metadata_base, "__table_args__") and isinstance(
                     metadata_base.__table_args__, dict
@@ -93,7 +95,7 @@ class SQLiteScopedSession(ScopedSession):
 
             for table in metadata_base.metadata.sorted_tables:
                 # If the table has already been renamed, skip it.
-                if table.name.split(".")[0] == table.schema:
+                if not table.schema or table.name.split(".")[0] == table.schema:
                     continue
 
                 # The metadata name needs to be changed to support most constructs

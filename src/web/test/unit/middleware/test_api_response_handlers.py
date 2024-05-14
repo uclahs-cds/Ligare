@@ -13,7 +13,7 @@ from BL_Python.web.middleware.consts import (
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
 from BL_Python.web.testing.create_app import (
-    CreateApp,
+    CreateFlaskApp,
     FlaskClientInjector,
     FlaskClientInjectorConfigurable,
 )
@@ -22,7 +22,7 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 
-class TestApiResponseHandlers(CreateApp):
+class TestApiResponseHandlers(CreateFlaskApp):
     def test__register_api_response_handlers__binds_flask_before_request(
         self, flask_client: FlaskClientInjector, mocker: MockerFixture
     ):
@@ -41,7 +41,7 @@ class TestApiResponseHandlers(CreateApp):
     ):
         csp_value = "default-src 'self' cdn.example.com;"
         basic_config.web.security.csp = csp_value
-        flask_client = flask_client_configurable(basic_config)
+        flask_client = next(flask_client_configurable(basic_config))
         response = flask_client.client.get("/")
         header_value = response.headers.get(CONTENT_SECURITY_POLICY_HEADER)
         assert header_value == csp_value
@@ -77,7 +77,7 @@ class TestApiResponseHandlers(CreateApp):
         basic_config: Config,
     ):
         setattr(basic_config.web.security.cors, config_attribute_name, value)
-        flask_client = flask_client_configurable(basic_config)
+        flask_client = next(flask_client_configurable(basic_config))
         response = flask_client.client.get("/")
         header_value = response.headers.get(header)
         assert header_value == ",".join(value) if isinstance(value, list) else value

@@ -29,9 +29,13 @@ classifiers = [
 
 dependencies = [
     "BL_Python.programming",
+    "BL_Python.platform",
+    "BL_Python.identity",
+    "BL_Python.database",
 
     "Flask == 3.0.2",
     "flask-injector",
+    "flask-login",
     "connexion == 3.0.6",
     "connexion[uvicorn]",
     "swagger_ui_bundle",

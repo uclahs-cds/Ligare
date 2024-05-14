@@ -1,5 +1,3 @@
-# import logging
-# from configparser import ConfigParser
 from dataclasses import dataclass
 from functools import lru_cache
 from logging.config import fileConfig
@@ -15,17 +13,21 @@ from injector import inject
 # TODO only do this when using PostgreSQL,
 # and detect if the module is installed
 # so we can show a helpful error message
-from psycopg2.errors import UndefinedTable
+try:
+    from psycopg2.errors import UndefinedTable  # pyright: ignore[reportAssignmentType]
+except ImportError:
+
+    class UndefinedTable:
+        pass
+
+
 from sqlalchemy import MetaData, Table, engine_from_config, pool
 from sqlalchemy.engine import Connectable, Connection, Engine
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.schema import SchemaItem
 
-# from AWS import load_ssm_application_parameters
-
 
 class type_include_object(Protocol):
-    # self, object: Table, name: str, type_: str, reflected: Any, compare_to: Any
     def __call__(
         self,
         object: SchemaItem,
@@ -64,16 +66,6 @@ class AlembicEnvSetup:
 
     @lru_cache(maxsize=1)
     def get_config(self):
-        # TODO re-integrate AWS SSM at a later time
-        # aws_ssm_config = ConfigParser()
-        # loaded_config_files = aws_ssm_config.read("aws-ssm.ini")
-        # if loaded_config_files:
-        #    load_ssm_application_parameters(aws_ssm_config)
-        # else:
-        #    logging.getLogger().info(
-        #        "Could not read aws-ssm.ini config file. Skipping SSM parameter lookup."
-        #    )
-
         # this is the Alembic Config object, which provides
         # access to the values within the .ini file in use.
         config = context.config

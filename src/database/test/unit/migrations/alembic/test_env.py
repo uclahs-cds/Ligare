@@ -8,7 +8,9 @@ from pytest_mock import MockerFixture
 
 
 def test__run_migrations__sets_default_config_filename(mocker: MockerFixture):
-    _ = mocker.patch("BL_Python.database.migrations.alembic.env.Injector")
+    _ = mocker.patch(
+        "BL_Python.database.migrations.alembic.env.get_database_config_container"
+    )
     _ = mocker.patch("BL_Python.database.migrations.alembic.env.load_config")
     _ = mocker.patch("BL_Python.database.migrations.alembic.env.context")
     path_mock = mocker.patch("BL_Python.database.migrations.alembic.env.Path")
@@ -20,7 +22,9 @@ def test__run_migrations__sets_default_config_filename(mocker: MockerFixture):
 
 def test__run_migrations__uses_specified_config_filename(mocker: MockerFixture):
     _ = mocker.patch("BL_Python.database.migrations.alembic.env.Path")
-    _ = mocker.patch("BL_Python.database.migrations.alembic.env.Injector")
+    _ = mocker.patch(
+        "BL_Python.database.migrations.alembic.env.get_database_config_container"
+    )
     config_mock = mocker.patch("BL_Python.database.migrations.alembic.env.Config")
     load_config_mock = mocker.patch(
         "BL_Python.database.migrations.alembic.env.load_config"
@@ -45,13 +49,13 @@ def test__run_migrations__runs_correct_migration_mode(mode: str, mocker: MockerF
         run_migrations_offline=MagicMock(), run_migrations_online=MagicMock()
     )
     _ = mocker.patch(
-        "BL_Python.database.migrations.alembic.env.Injector",
+        "BL_Python.database.migrations.alembic.env.get_database_config_container",
         return_value=MagicMock(
             create_object=MagicMock(return_value=alembic_env_setup_mock)
         ),
     )
 
-    run_migrations(MagicMock())
+    _ = run_migrations(MagicMock())
 
     if mode == "offline":
         alembic_env_setup_mock.run_migrations_offline.assert_called_once()

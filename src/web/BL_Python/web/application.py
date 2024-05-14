@@ -10,6 +10,7 @@ from os import environ, path
 from typing import Generic, Optional, TypeVar, cast
 
 import json_logging
+from BL_Python.AWS.ssm import SSMParameters
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
 from BL_Python.programming.dependency_injection import ConfigModule
 from connexion import FlaskApp
@@ -22,6 +23,7 @@ from .config import Config
 from .middleware import (
     register_api_request_handlers,
     register_api_response_handlers,
+    register_context_middleware,
     register_error_handlers,
 )
 from .middleware.dependency_injection import configure_dependencies
@@ -30,7 +32,7 @@ _get_program_dir = lambda: path.dirname(get_path_executed_script())
 _get_exec_dir = lambda: path.abspath(".")
 
 TApp = Flask | FlaskApp
-T_app = TypeVar("T_app", bound=TApp, covariant=True)
+T_app = TypeVar("T_app", bound=TApp)
 
 
 @dataclass
@@ -65,7 +67,7 @@ class App(Generic[T_app]):
         config_filename: str = "config.toml",
         # FIXME should be a list of PydanticDataclass
         application_configs: list[type[AbstractConfig]] | None = None,
-        application_modules: list[Module] | None = None,
+        application_modules: list[Module | type[Module]] | None = None,
     ) -> CreateAppResult[T_app]:
         """
         Bootstrap the Flask applcation.
@@ -85,7 +87,7 @@ def create_app(
     config_filename: str = "config.toml",
     # FIXME should be a list of PydanticDataclass
     application_configs: list[type[AbstractConfig]] | None = None,
-    application_modules: list[Module] | None = None,
+    application_modules: list[Module | type[Module]] | None = None,
     # FIXME eventually should replace with builders
     # and configurators so this list of params doesn't
     # just grow and grow.
@@ -114,13 +116,22 @@ def create_app(
             .with_configs(application_configs)\
             .build()
         # fmt: on
-    full_config: Config
-    if config_overrides:
-        full_config = load_config(
-            config_type, config_filename, {"flask": config_overrides}
-        )
-    else:
-        full_config = load_config(config_type, config_filename)
+
+    full_config: Config | None = None
+    try:
+        # requires that aws-ssm.ini exists and is correctly configured
+        ssm_parameters = SSMParameters()
+        full_config = ssm_parameters.load_config(config_type)
+    except Exception as e:
+        logging.getLogger().warn(f"SSM parameter load failed: {e}")
+
+    if full_config is None:
+        if config_overrides:
+            full_config = load_config(
+                config_type, config_filename, {"flask": config_overrides}
+            )
+        else:
+            full_config = load_config(config_type, config_filename)
 
     full_config.prepare_env_for_flask()
 
@@ -143,6 +154,7 @@ def create_app(
     register_error_handlers(app)
     _ = register_api_request_handlers(app)
     _ = register_api_response_handlers(app)
+    _ = register_context_middleware(app)
     # register_app_teardown_handlers(app)
 
     # Register every subconfig as a ConfigModule.
@@ -158,7 +170,7 @@ def create_app(
     # The `full_config` module cannot be overridden unless the application
     # IoC container is fiddled with. `full_config` is the instance registered
     # to `AbstractConfig`.
-    modules = application_modules + [ConfigModule(full_config, type(full_config))]
+    modules = application_modules + [ConfigModule(full_config, Config)]
     flask_injector = configure_dependencies(app, application_modules=modules)
 
     flask_app = app.app if isinstance(app, FlaskApp) else app

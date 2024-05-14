@@ -2,6 +2,11 @@ import uuid
 from typing import Literal
 
 import pytest
+from BL_Python.identity.config import Config as RootSSOConfig
+from BL_Python.identity.config import SSOConfig
+from BL_Python.platform.dependency_injection import UserLoaderModule
+from BL_Python.platform.identity import Role, User
+from BL_Python.programming.config import AbstractConfig
 from BL_Python.web.application import OpenAPIAppResult
 from BL_Python.web.config import Config
 from BL_Python.web.middleware import bind_errorhandler
@@ -11,19 +16,20 @@ from BL_Python.web.middleware.flask import (
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
 from BL_Python.web.testing.create_app import (
-    CreateApp,
+    CreateOpenAPIApp,
     OpenAPIClientInjectorConfigurable,
     OpenAPIMockController,
     RequestConfigurable,
 )
 from connexion import FlaskApp
 from flask import Flask, abort
+from injector import Module
 from mock import MagicMock
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
 
-class TestOpenAPIMiddleware(CreateApp):
+class TestOpenAPIMiddleware(CreateOpenAPIApp):
     @pytest.mark.parametrize("format", ["plaintext", "JSON"])
     def test___register_api_response_handlers__sets_correlation_id_response_header_when_not_set_in_request_header(
         self,
@@ -34,7 +40,7 @@ class TestOpenAPIMiddleware(CreateApp):
     ):
         openapi_config.logging.format = format
         openapi_mock_controller.begin()
-        flask_client = openapi_client_configurable(openapi_config)
+        flask_client = next(openapi_client_configurable(openapi_config))
 
         response = flask_client.client.get("/")
 
@@ -51,7 +57,7 @@ class TestOpenAPIMiddleware(CreateApp):
     ):
         openapi_config.logging.format = format
         openapi_mock_controller.begin()
-        flask_client = openapi_client_configurable(openapi_config)
+        flask_client = next(openapi_client_configurable(openapi_config))
         correlation_id = str(uuid.uuid4())
         response = flask_client.client.get(
             "/", headers={CORRELATION_ID_HEADER: correlation_id}
@@ -70,7 +76,7 @@ class TestOpenAPIMiddleware(CreateApp):
         openapi_config.logging.format = format
         correlation_id = "abc123"
         openapi_mock_controller.begin()
-        flask_client = openapi_client_configurable(openapi_config)
+        flask_client = next(openapi_client_configurable(openapi_config))
 
         response = flask_client.client.get(
             "/", headers={CORRELATION_ID_HEADER: correlation_id}
@@ -175,11 +181,11 @@ class TestOpenAPIMiddleware(CreateApp):
     ):
         flask_errorhandler_mock = mocker.patch("flask.Flask.errorhandler")
 
-        def app_init_hook(app: OpenAPIAppResult):
+        def client_init_hook(app: OpenAPIAppResult):
             _ = bind_errorhandler(app.app_injector.app, code_or_exception)
 
         openapi_mock_controller.begin()
-        _ = openapi_client_configurable(openapi_config, app_init_hook)
+        _ = next(openapi_client_configurable(openapi_config, client_init_hook))
 
         flask_errorhandler_mock.assert_called_with(code_or_exception)
 
@@ -219,3 +225,51 @@ class TestOpenAPIMiddleware(CreateApp):
         assert isinstance(
             application_errorhandler_mock.call_args[0][0], expected_exception_type
         )
+
+    # FIXME just a temporary test as an example set up for testing SAML2
+    def test__SAML2Middleware__something(
+        self,
+        openapi_config: Config,
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_mock_controller: OpenAPIMockController,
+        mocker: MockerFixture,
+    ):
+        def app_init_hook(
+            application_configs: list[type[AbstractConfig]],
+            application_modules: list[Module | type[Module]],
+        ):
+            application_modules.append(
+                UserLoaderModule(
+                    loader=User,  # pyright: ignore[reportArgumentType]
+                    roles=Role,  # pyright: ignore[reportArgumentType]
+                    user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    bases=[],
+                )
+            )
+
+        def client_init_hook(app: OpenAPIAppResult):
+            app.app_injector.flask_injector.injector.binder.bind(
+                RootSSOConfig,
+                to=RootSSOConfig(
+                    sso=SSOConfig(
+                        protocol="SAML2",
+                        settings={
+                            "relay_state": "http://localhost:5000/sso/redir",
+                            "metadata_url": "http://example.org",
+                            "metadata": "<xml />",
+                        },
+                    )
+                ),
+            )
+
+        openapi_mock_controller.begin()
+        app = next(
+            openapi_client_configurable(openapi_config, client_init_hook, app_init_hook)
+        )
+
+        response = app.client.get("/saml/logout")
+
+        # 401 for now because no real auth is configured.
+        # if SSO was broken, 500 would return
+        assert response.status_code == 401

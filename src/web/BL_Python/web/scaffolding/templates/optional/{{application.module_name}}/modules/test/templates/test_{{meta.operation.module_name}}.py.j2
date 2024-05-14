@@ -1,4 +1,8 @@
-from BL_Python.web.testing.create_app import CreateApp
+{% if template_type == "basic" %}
+from BL_Python.web.testing.create_app import CreateFlaskApp as CreateApp
+{% elif template_type == "openapi" %}
+from BL_Python.web.testing.create_app import CreateOpenAPIApp as CreateApp
+{% endif %}
 from {{application.module_name}} import create_app
 from BL_Python.web.testing.config import UseInmemoryDatabase
 

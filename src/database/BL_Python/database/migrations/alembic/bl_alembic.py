@@ -337,6 +337,10 @@ class BLAlembic:
                 """
                 self._log.debug(f"Exiting `{MsgCaptureCtxManager.__name__}` context.")
                 alembic.util.messaging.msg = _msg_original
+
+                if exc_type is not None:
+                    return False
+
                 return True
 
         return MsgCaptureCtxManager(self._log)

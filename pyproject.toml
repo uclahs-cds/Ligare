@@ -32,6 +32,7 @@ dependencies = [
     "BL_Python.database",
     "BL_Python.development",
     "BL_Python.GitHub",
+    "BL_Python.identity",
     "BL_Python.platform",
     "BL_Python.programming",
     "BL_Python.testing",
@@ -55,6 +56,7 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 "BL_Python.database" = "src/database/BL_Python/database"
 "BL_Python.development" = "src/development/BL_Python/development"
 "BL_Python.GitHub" = "src/GitHub/BL_Python/GitHub"
+"BL_Python.identity" = "src/identity/BL_Python/identity"
 "BL_Python.platform" = "src/platform/BL_Python/platform"
 "BL_Python.programming" = "src/programming/BL_Python/programming"
 "BL_Python.testing" = "src/testing/BL_Python/testing"
@@ -67,6 +69,7 @@ packages = [
     "BL_Python.database",
     "BL_Python.development",
     "BL_Python.GitHub",
+    "BL_Python.identity",
     "BL_Python.platform",
     "BL_Python.programming",
     "BL_Python.testing",
@@ -117,6 +120,7 @@ extraPaths = [
     "src/database",
     "src/development",
     "src/GitHub",
+    "src/identity",
     "src/platform",
     "src/programming",
     "src/testing",
@@ -149,6 +153,7 @@ pythonpath = [
     "src/database",
     "src/development",
     "src/GitHub",
+    "src/identity",
     "src/platform",
     "src/programming",
     "src/testing",
@@ -161,6 +166,7 @@ testpaths = [
     "src/database/test",
     "src/development/test",
     "src/GitHub/test",
+    "src/identity/test",
     "src/platform/test",
     "src/programming/test",
     "src/testing/test",
