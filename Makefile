@@ -41,11 +41,9 @@ DEFAULT_TARGET ?= dev
 
 
 ifeq ($(DEFAULT_TARGET),dev)
-    CONFIGURE_TARGET := _dev_configure
-    BUILD_TARGET := _dev_build
+    BUILD_TARGET := $(SETUP_DEV_SENTINEL)
 else ifeq ($(DEFAULT_TARGET),cicd)
-    CONFIGURE_TARGET := _cicd_configure
-    BUILD_TARGET := _cicd_build
+    BUILD_TARGET := $(SETUP_CICD_SENTINEL) 
 else
     $(error DEFAULT_TARGET must be one of "dev" or "cicd")
 endif
@@ -64,13 +62,25 @@ PACKAGE_PATHS=$(subst /pyproject.toml,,$(PYPROJECT_FILES))
 PACKAGES=$(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
 
 
+MAKE_ARTIFACT_DIRECTORY = .make
+$(MAKE_ARTIFACT_DIRECTORY):
+	mkdir -p $(MAKE_ARTIFACT_DIRECTORY)
+
+SETUP_DEPENDENCIES_SENTINEL = $(MAKE_ARTIFACT_DIRECTORY)/dependencies_sentinel
+SETUP_DEV_SENTINEL = $(MAKE_ARTIFACT_DIRECTORY)/setup_dev_sentinel
+SETUP_CICD_SENTINEL = $(MAKE_ARTIFACT_DIRECTORY)/setup_cicd_sentinel
+
+PYPROJECT_FILES_SENTINEL = ./.pyproject_sentinel
+$(PYPROJECT_FILES_SENTINEL): $(VENV)
+	$(MAKE) $(PYPROJECT_FILES)
+	touch $@
+
 .PHONY: dev
-dev : $(VENV) _setup_dependencies
-	$(MAKE) _dev_build DEFAULT_TARGET=dev
-_dev_configure : $(VENV) $(PYPROJECT_FILES)
+dev :
+	$(MAKE) $(SETUP_DEV_SENTINEL) DEFAULT_TARGET=dev
 # By default, psycopg2 is not installed
 # but it should be for development
-_dev_build : _dev_configure
+$(SETUP_DEV_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES_SENTINEL) | $(MAKE_ARTIFACT_DIRECTORY)
 # `pip list` is multiple seconds faster than `pip show` ...
 	$(ACTIVATE_VENV) && \
 	if pip list -l --no-index | grep '^BL_Python\.all\s'; then \
@@ -80,14 +90,13 @@ _dev_build : _dev_configure
 		pip install -e src/database[postgres-binary] && \
 		rm -rf $(PACKAGE_INSTALL_DIR); \
 	fi
+	touch $@
 	@$(REPORT_VENV_USAGE)
 
-cicd : $(VENV) _setup_dependencies
-	$(MAKE) _cicd_build DEFAULT_TARGET=cicd
-_cicd_configure : $(VENV) $(PYPROJECT_FILES)
-# By default, psycopg2 is not installed
-# but it should be for CI/CD
-_cicd_build : _cicd_configure
+.PHONY: cicd
+cicd :
+	$(MAKE) $(SETUP_CICD_SENTINEL) DEFAULT_TARGET=cicd
+$(SETUP_CICD_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES_SENTINEL) | $(MAKE_ARTIFACT_DIRECTORY)
 # `pip list` is multiple seconds faster than `pip show` ...
 	$(ACTIVATE_VENV) && \
 	if pip list -l --no-index | grep '^BL_Python\.all\s'; then \
@@ -96,10 +105,12 @@ _cicd_build : _cicd_configure
 		pip install .[dev-dependencies] && \
 		pip install src/database[postgres-binary]; \
 	fi
+	touch $@
 	@$(REPORT_VENV_USAGE)
 
+.PHONY: BL_Python.all $(PACKAGES)
 BL_Python.all: $(DEFAULT_TARGET)
-$(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PYPROJECT_FILES)
+$(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(PYPROJECT_FILES_SENTINEL) | $(MAKE_ARTIFACT_DIRECTORY)
 # `pip list` is multiple seconds faster than `pip show` ...
 	$(ACTIVATE_VENV) && \
 	if pip list -l --no-index | grep '^BL_Python\.$*\s'; then \
@@ -114,8 +125,7 @@ $(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(CONFIGURE_TARGET) $(PY
 	fi
 	@$(REPORT_VENV_USAGE)
 
-.PHONY: _setup_dependencies
-_setup_dependencies: $(VENV)
+$(SETUP_DEPENDENCIES_SENTINEL): $(VENV) | $(MAKE_ARTIFACT_DIRECTORY)
 	$(ACTIVATE_VENV) && \
 	if ! pip list -l --no-index | grep '^toml$*\s'; then \
 		pip install toml; \
@@ -126,8 +136,10 @@ _setup_dependencies: $(VENV)
 		pip install typing_extensions; \
 	fi
 
-$(PACKAGE_PATHS) : $(VENV) _setup_dependencies
-$(PYPROJECT_FILES) : $(VENV) _setup_dependencies
+	touch $@
+
+$(PACKAGE_PATHS) : $(VENV) $(SETUP_DEPENDENCIES_SENTINEL)
+$(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES_SENTINEL)
 	$(ACTIVATE_VENV) && \
 	REWRITE_DEPENDENCIES=$(REWRITE_DEPENDENCIES) \
 	GITHUB_REF=$(GITHUB_REF) \
@@ -224,6 +236,7 @@ clean-test :
 .PHONY: clean clean-test clean-build
 clean : clean-build clean-test
 	rm -rf $(VENV)
+	rm -rf $(MAKE_ARTIFACT_DIRECTORY)
 	@echo '\nDeactivate your venv with `deactivate`'
 
 .PHONY: remake
