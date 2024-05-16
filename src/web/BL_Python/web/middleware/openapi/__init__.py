@@ -530,6 +530,12 @@ class FlaskContextMiddleware:
                         }),
                     )
 
+                    # Some values, like the query string, are stored as bytes.
+                    # Decode as a UTF-8 str so encoding later doesn't fail.
+                    for key, value in request_environ.items():
+                        if isinstance(value, bytes):
+                            request_environ[key] = value.decode("utf-8")
+
                     request_ctx = exit_stack.enter_context(
                         app.request_context(request_environ)
                     )
