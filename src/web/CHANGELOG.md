@@ -10,9 +10,10 @@ Review the `BL_Python` [CHANGELOG.md](https://github.com/uclahs-cds/BL_Python/bl
 
 ---
 
-## [0.2.1] - 2024-05-16
+## [0.2.2] - 2024-05-16
 ### Changed
 - Ignore sentinel files created by `make`.
 
 ### Fixed
 - Update type annotation for variable causing new failure in Pyright.
+- Resolved crash when query string is stored as a byte array.

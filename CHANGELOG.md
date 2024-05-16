@@ -9,11 +9,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-# `BL_Python.web` [0.2.1] - 2024-05-16
-- [BL_Python.web v0.2.1](https://github.com/uclahs-cds/BL_Python/blob/BL_Python.web-v0.2.1/src/web/CHANGELOG.md#021---2024-05-16)
+# `BL_Python.web` [0.2.2] - 2024-05-16
+- [BL_Python.web v0.2.2](https://github.com/uclahs-cds/BL_Python/blob/BL_Python.web-v0.2.2/src/web/CHANGELOG.md#022---2024-05-16)
 
 # `BL_Python.platform` [0.2.2] - 2024-05-16
-- [BL_Python.platform v0.2.2](https://github.com/uclahs-cds/BL_Python/blob/BL_Python.platform-v0.2.2/src/platform/CHANGELOG.md#021---2024-05-16)
+- [BL_Python.platform v0.2.2](https://github.com/uclahs-cds/BL_Python/blob/BL_Python.platform-v0.2.2/src/platform/CHANGELOG.md#022---2024-05-16)
+
+# `BL_Python.all` [0.2.3] - 2024-05-16
+- Contains all libraries up to v0.2.1, and `BL_Python.platform` v0.2.2 and `BL_Python.web` v0.2.2
 
 # [0.2.0] - 2024-05-14
 ### Added
