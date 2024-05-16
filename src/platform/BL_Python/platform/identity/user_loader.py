@@ -104,7 +104,7 @@ class UserLoader(Generic[TUserMixin]):
             # relationships and referencing the relevant columns.
             user_table_property_mapper = cast(Mapper, class_mapper(self._user_table))
             user_table_properties = cast(
-                list[RelationshipProperty[DbRole] | ColumnProperty],
+                "list[RelationshipProperty[DbRole] | ColumnProperty]",
                 user_table_property_mapper.iterate_properties,  # pyright: ignore[reportUnknownMemberType]
             )
             # Only extract the secondary join table (user_role).

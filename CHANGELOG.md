@@ -12,8 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 # `BL_Python.web` [0.2.1] - 2024-05-16
 - [BL_Python.web v0.2.1](https://github.com/uclahs-cds/BL_Python/blob/BL_Python.web-v0.2.1/src/web/CHANGELOG.md#021---2024-05-16)
 
-# `BL_Python.platform` [0.2.1] - 2024-05-16
-- [BL_Python.platform v0.2.1](https://github.com/uclahs-cds/BL_Python/blob/BL_Python.platform-v0.2.1/src/platform/CHANGELOG.md#021---2024-05-16)
+# `BL_Python.platform` [0.2.2] - 2024-05-16
+- [BL_Python.platform v0.2.2](https://github.com/uclahs-cds/BL_Python/blob/BL_Python.platform-v0.2.2/src/platform/CHANGELOG.md#021---2024-05-16)
 
 # [0.2.0] - 2024-05-14
 ### Added
