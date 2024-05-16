@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 
 ## [Unreleased]
+### Changed
+- Ignore sentinel files created by `make`.
+
+### Fixed
+- Resolve implicit join failure in SQLAlchemy when loading user roles during user authorization.
+- Update type annotation for variable causing new failure in Pyright.
 
 # [0.2.0] - 2024-05-14
 ### Added

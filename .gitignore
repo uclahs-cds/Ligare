@@ -88,3 +88,6 @@ work/
 *.gz
 *.tar
 *.zip
+
+# Other build files
+.make/

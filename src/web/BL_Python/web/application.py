@@ -7,7 +7,7 @@ Flask entry point.
 import logging
 from dataclasses import dataclass
 from os import environ, path
-from typing import Generic, Optional, TypeVar, cast
+from typing import Generator, Generic, Optional, TypeVar, cast
 
 import json_logging
 from BL_Python.AWS.ssm import SSMParameters
@@ -165,7 +165,10 @@ def create_app(
     # Note that, if any `ConfigModule` is provided in `application_modules`,
     # those will override the automatically generated `ConfigModule`s.
     application_modules = [
-        ConfigModule(config, type(config)) for (_, config) in full_config
+        ConfigModule(config, type(config))
+        for (_, config) in cast(
+            Generator[tuple[str, AbstractConfig], None, None], full_config
+        )
     ] + (application_modules if application_modules else [])
     # The `full_config` module cannot be overridden unless the application
     # IoC container is fiddled with. `full_config` is the instance registered
