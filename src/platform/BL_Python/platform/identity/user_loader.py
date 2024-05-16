@@ -4,7 +4,9 @@ from logging import Logger
 from typing import Generic, Protocol, Sequence, Type, TypeVar, cast
 
 from injector import inject
-from sqlalchemy.orm import contains_eager
+from sqlalchemy.orm import class_mapper  # pyright: ignore[reportUnknownVariableType]
+from sqlalchemy.orm import ColumnProperty, RelationshipProperty
+from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.orm.scoping import ScopedSession
 from typing_extensions import override
 
@@ -96,11 +98,39 @@ class UserLoader(Generic[TUserMixin]):
             return
 
         try:
+            # SQLAlchemy generates invalid SQL when attempting an implicit
+            # LEFT JOIN between user -> user_role and user_role -> role.
+            # As such, we handle the join explicitly by extracting the property
+            # relationships and referencing the relevant columns.
+            user_table_property_mapper = cast(Mapper, class_mapper(self._user_table))
+            user_table_properties = cast(
+                list[RelationshipProperty[DbRole] | ColumnProperty],
+                user_table_property_mapper.iterate_properties,  # pyright: ignore[reportUnknownMemberType]
+            )
+            # Only extract the secondary join table (user_role).
+            # We find this by matching on the `role` table relationship
+            # from the `user` table.
+            user_role_table = next(
+                relationship.secondary
+                for relationship in user_table_properties
+                if (entity := getattr(relationship, "entity", None))
+                and entity.class_ == self._role_table
+            )
+
             user = (
                 session.query(self._user_table)
-                .outerjoin(self._user_table.roles)
+                # These two `outerjoin` calls define the explicit
+                # join conditions between the `user` and `role` tables,
+                # and the secondary join table `user_role`.
+                .outerjoin(
+                    user_role_table,
+                    user_role_table.c.user_id == self._user_table.user_id,
+                )
+                .outerjoin(
+                    self._role_table,
+                    user_role_table.c.role_id == self._role_table.role_id,
+                )
                 .filter(self._user_table.username == username)
-                .options(contains_eager(self._user_table.roles))
                 .one_or_none()
             )
 
