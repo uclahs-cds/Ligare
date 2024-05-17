@@ -12,8 +12,8 @@ class LoggingConfig(BaseModel):
 
 
 class WebSecurityCorsConfig(BaseModel):
-    origin: str | None = None
-    allow_credentials: bool = True
+    origins: list[str] | None = None
+    allow_credentials: bool = False
     allow_methods: list[
         Literal[
             "GET",
@@ -27,6 +27,7 @@ class WebSecurityCorsConfig(BaseModel):
             "TRACE",
         ]
     ] = field(default_factory=lambda: ["GET", "POST", "OPTIONS"])
+    allow_headers: list[str | Literal["*"]] = field(default_factory=lambda: ["*"])
 
 
 class WebSecurityConfig(BaseModel):

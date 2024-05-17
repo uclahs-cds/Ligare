@@ -49,7 +49,7 @@ class TestApiResponseHandlers(CreateFlaskApp):
     @pytest.mark.parametrize(
         "header,value,config_attribute_name",
         [
-            (CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, "example.com", "origin"),
+            (CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, ["example.com"], "origins"),
             (
                 CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
                 "False",
