@@ -27,12 +27,7 @@ from ...config import Config
 from ..consts import (
     CONTENT_SECURITY_POLICY_HEADER,
     CORRELATION_ID_HEADER,
-    CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
-    CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
-    CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER,
-    HOST_HEADER,
     INCOMING_REQUEST_MESSAGE,
-    ORIGIN_HEADER,
     OUTGOING_RESPONSE_MESSAGE,
     REQUEST_COOKIE_HEADER,
     RESPONSE_COOKIE_HEADER,
@@ -233,27 +228,6 @@ def _wrap_all_api_responses(
 ):
     correlation_id = _get_correlation_id(request, response, log)
     response_headers = _headers_as_dict(response)
-
-    cors_domain: str | None = None
-    if config.web.security.cors.origin:
-        cors_domain = config.web.security.cors.origin
-    else:
-        if not response_headers.get(CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER):
-            request_headers = _headers_as_dict(request)
-            cors_domain = request_headers.get(ORIGIN_HEADER)
-            if not cors_domain:
-                cors_domain = request_headers.get(HOST_HEADER)
-
-    if cors_domain:
-        response_headers[CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER] = cors_domain
-
-    response_headers[CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER] = str(
-        config.web.security.cors.allow_credentials
-    )
-
-    response_headers[CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER] = ",".join(
-        config.web.security.cors.allow_methods
-    )
 
     response_headers[CORRELATION_ID_HEADER] = correlation_id
 

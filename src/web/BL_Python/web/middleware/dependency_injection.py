@@ -87,7 +87,9 @@ def configure_dependencies(
                 module, "register_middleware", None
             )
             if register_callback is not None and callable(register_callback):
-                register_callback(app)
+                flask_injector.injector.call_with_injection(
+                    register_callback, kwargs={"app": app}
+                )
 
         # this binds all BL_Python middlewares with Injector
         _configure_openapi_middleware_dependencies(app, flask_injector)
