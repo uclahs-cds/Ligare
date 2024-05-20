@@ -1,5 +1,5 @@
 import uuid
-from typing import Literal
+from typing import Literal, cast
 
 import pytest
 from BL_Python.identity.config import Config as RootSSOConfig
@@ -8,13 +8,14 @@ from BL_Python.platform.dependency_injection import UserLoaderModule
 from BL_Python.platform.identity import Role, User
 from BL_Python.programming.config import AbstractConfig
 from BL_Python.web.application import OpenAPIAppResult
-from BL_Python.web.config import Config
+from BL_Python.web.config import Config, WebSecurityCorsConfig
 from BL_Python.web.middleware import bind_errorhandler
 from BL_Python.web.middleware.consts import CORRELATION_ID_HEADER
 from BL_Python.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
 from BL_Python.web.middleware.flask import bind_requesthandler
+from BL_Python.web.middleware.openapi.cors import CORSMiddlewareModule
 from BL_Python.web.testing.create_app import (
     CreateOpenAPIApp,
     OpenAPIClientInjectorConfigurable,
@@ -22,10 +23,13 @@ from BL_Python.web.testing.create_app import (
     RequestConfigurable,
 )
 from connexion import FlaskApp
+from connexion.middleware.exceptions import ExceptionMiddleware
 from flask import Flask, abort
 from injector import Module
 from mock import MagicMock
 from pytest_mock import MockerFixture
+from starlette.middleware.cors import CORSMiddleware
+from starlette.types import ASGIApp
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized
 
 
@@ -273,3 +277,101 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
         # 401 for now because no real auth is configured.
         # if SSO was broken, 500 would return
         assert response.status_code == 401
+
+    def test__CORSMiddlewareModule__adds_CORSMiddleware_to_app(
+        self,
+        openapi_config: Config,
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_mock_controller: OpenAPIMockController,
+        mocker: MockerFixture,
+    ):
+        def app_init_hook(
+            application_configs: list[type[AbstractConfig]],
+            application_modules: list[Module | type[Module]],
+        ):
+            application_modules.append(CORSMiddlewareModule)
+            openapi_config.web.security.cors = WebSecurityCorsConfig(origins=["*"])
+
+        openapi_mock_controller.begin()
+        app = next(openapi_client_configurable(openapi_config, None, app_init_hook))
+
+        flask_app = cast(FlaskApp, app.client.app)
+        assert flask_app.middleware is not None
+        assert flask_app.middleware.middleware_stack is not None
+        assert CORSMiddleware in {
+            type(middleware) for middleware in flask_app.middleware.middleware_stack
+        }
+
+    def test__CORSMiddlewareModule__adds_CORSMiddleware_before_ExceptionMiddleware(
+        self,
+        openapi_config: Config,
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_mock_controller: OpenAPIMockController,
+    ):
+        def app_init_hook(
+            application_configs: list[type[AbstractConfig]],
+            application_modules: list[Module | type[Module]],
+        ):
+            application_modules.append(CORSMiddlewareModule)
+            openapi_config.web.security.cors = WebSecurityCorsConfig(origins=["*"])
+
+        openapi_mock_controller.begin()
+        app = next(openapi_client_configurable(openapi_config, None, app_init_hook))
+
+        flask_app = cast(FlaskApp, app.client.app)
+        assert flask_app.middleware is not None
+        assert flask_app.middleware.middleware_stack is not None
+        middleware_types = [
+            type(middleware) for middleware in flask_app.middleware.middleware_stack
+        ]
+
+        # fmt: off
+        assert\
+            middleware_types.index(cast(ASGIApp, CORSMiddleware))\
+          < middleware_types.index(cast(ASGIApp, ExceptionMiddleware))
+        # fmt: on
+
+    def test__CORSMiddlewareModule__uses_WebSecurityCorsConfig_values(
+        self,
+        openapi_config: Config,
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_mock_controller: OpenAPIMockController,
+    ):
+        def app_init_hook(
+            application_configs: list[type[AbstractConfig]],
+            application_modules: list[Module | type[Module]],
+        ):
+            application_modules.append(CORSMiddlewareModule)
+            openapi_config.web.security.cors = WebSecurityCorsConfig(
+                origins=["*"], allow_credentials=True
+            )
+
+        openapi_mock_controller.begin()
+        app = next(openapi_client_configurable(openapi_config, None, app_init_hook))
+
+        flask_app = cast(FlaskApp, app.client.app)
+        assert flask_app.middleware is not None
+        assert flask_app.middleware.middleware_stack is not None
+        cors_middleware = cast(
+            CORSMiddleware,
+            next(
+                filter(
+                    lambda a: isinstance(a, CORSMiddleware),
+                    flask_app.middleware.middleware_stack,
+                )
+            ),
+        )
+
+        assert (
+            cors_middleware.allow_methods
+            == openapi_config.web.security.cors.allow_methods
+        )
+        assert cors_middleware.allow_origins == openapi_config.web.security.cors.origins
+        assert all([
+            header in cors_middleware.allow_headers
+            for header in openapi_config.web.security.cors.allow_headers
+        ])
+        assert (
+            cors_middleware.preflight_headers["Access-Control-Allow-Credentials"]  # pyright: ignore[reportUnknownMemberType]
+            == "true"
+        )

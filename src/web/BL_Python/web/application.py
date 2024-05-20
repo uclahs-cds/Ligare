@@ -28,8 +28,8 @@ from .middleware import (
 )
 from .middleware.dependency_injection import configure_dependencies
 
-_get_program_dir = lambda: path.dirname(get_path_executed_script())
-_get_exec_dir = lambda: path.abspath(".")
+_get_program_dir = lambda: path.dirname(get_path_executed_script())  # pragma: nocover
+_get_exec_dir = lambda: path.abspath(".")  # pragma: nocover
 
 TApp = Flask | FlaskApp
 T_app = TypeVar("T_app", bound=TApp)
@@ -123,7 +123,7 @@ def create_app(
         ssm_parameters = SSMParameters()
         full_config = ssm_parameters.load_config(config_type)
     except Exception as e:
-        logging.getLogger().warn(f"SSM parameter load failed: {e}")
+        logging.getLogger().warning(f"SSM parameter load failed: {e}")
 
     if full_config is None:
         if config_overrides:

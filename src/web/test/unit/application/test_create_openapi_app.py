@@ -1,3 +1,4 @@
+import logging
 from os import environ
 
 import pytest
@@ -10,6 +11,7 @@ from connexion import FlaskApp
 from flask import Flask
 from mock import MagicMock
 from pydantic import BaseModel
+from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 
@@ -40,6 +42,34 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         )
 
         connexion_mock.assert_called_with(app_name, specification_dir=spec_path)
+
+    def test__CreateOpenAPIApp__create_app__notifies_of_SSM_parameter_load_failure(
+        self, basic_config: Config, mocker: MockerFixture, caplog: LogCaptureFixture
+    ):
+        _ = mocker.patch("BL_Python.web.application.json_logging")
+        _ = mocker.patch(
+            "BL_Python.web.application.load_config", return_value=basic_config
+        )
+        _ = mocker.patch(
+            "BL_Python.web.application.logging.basicConfig",
+            # `create_app` uses `force=True` but that interferes with `caplog`
+            return_value=logging.basicConfig(),
+        )
+
+        with caplog.at_level(logging.WARNING):
+            toml_filename = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__create_app__notifies_of_SSM_parameter_load_failure.__name__}-config.toml"
+            _ = App[Flask].create(config_filename=toml_filename)
+
+        assert next(
+            (
+                record
+                for record in caplog.records
+                if "Skipping SSM parameter lookup." in record.message
+            ),
+            False,
+        )
+
+        # connexion_mock.assert_called_with(app_name, specification_dir=spec_path)
 
     def test__CreateOpenAPIApp__create_app__loads_config_from_toml(
         self, basic_config: Config, mocker: MockerFixture
