@@ -64,7 +64,7 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
             (
                 record
                 for record in caplog.records
-                if "Skipping SSM parameter lookup." in record.message
+                if "SSM parameter load failed:" in record.message
             ),
             False,
         )

@@ -53,7 +53,10 @@ class SSMParameters:
     def load_ssm_application_parameters(
         self, _session: Type[Session] = Session
     ) -> AnyDict | None:
-        _ = self._config.read("aws-ssm.ini")
+        files_read = self._config.read("aws-ssm.ini")
+
+        if not files_read:
+            return
 
         self._log = logging.getLogger(self._config_safe_get("DEFAULT", "LoggerName"))
 

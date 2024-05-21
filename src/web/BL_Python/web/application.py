@@ -122,6 +122,10 @@ def create_app(
         # requires that aws-ssm.ini exists and is correctly configured
         ssm_parameters = SSMParameters()
         full_config = ssm_parameters.load_config(config_type)
+        if not full_config:
+            logging.getLogger().warning(
+                f"SSM parameter load failed: loaded configuration is empty."
+            )
     except Exception as e:
         logging.getLogger().warning(f"SSM parameter load failed: {e}")
 
