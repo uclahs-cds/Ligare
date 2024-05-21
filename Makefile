@@ -31,6 +31,13 @@ REPORTS_DIR ?= reports
 BANDIT_REPORT := bandit.sarif
 PYTEST_REPORT := pytest
 
+# Whether to install psycopg2-binary or psycopg2
+ifdef WITH_PSYCOPG2
+  PSYCOPG2_DEP_NAME := "src/database[postgres]"
+else
+  PSYCOPG2_DEP_NAME := "src/database[postgres-binary]"
+endif
+
 
 # Can be overridden. This is used to change the prereqs
 # of some supporting targets, like `format-ruff`.
@@ -83,7 +90,7 @@ $(SETUP_DEV_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES)
 		echo "Package BL_Python.all is already built, skipping..."; \
 	else \
 		pip install -e .[dev-dependencies] && \
-		pip install -e src/database[postgres-binary] && \
+		pip install -e $(PSYCOPG2_DEP_NAME) && \
 		rm -rf $(PACKAGE_INSTALL_DIR); \
 	fi
 	touch $@
