@@ -57,7 +57,7 @@ PACKAGE_INSTALL_DIR := $(VENV)/lib/python*/site-packages/BL_Python
 # used to suppress outputs of targets (see `test` and `clean-test`)
 CMD_PREFIX=
 
-PYPROJECT_FILES=./pyproject.toml $(wildcard src/*/pyproject.toml)
+PYPROJECT_FILES=pyproject.toml $(wildcard src/*/pyproject.toml)
 PACKAGE_PATHS=$(subst /pyproject.toml,,$(PYPROJECT_FILES))
 PACKAGES=$(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
 
@@ -69,18 +69,14 @@ $(MAKE_ARTIFACT_DIRECTORY):
 SETUP_DEPENDENCIES_SENTINEL = $(MAKE_ARTIFACT_DIRECTORY)/dependencies_sentinel
 SETUP_DEV_SENTINEL = $(MAKE_ARTIFACT_DIRECTORY)/setup_dev_sentinel
 SETUP_CICD_SENTINEL = $(MAKE_ARTIFACT_DIRECTORY)/setup_cicd_sentinel
-
-PYPROJECT_FILES_SENTINEL = $(MAKE_ARTIFACT_DIRECTORY)/pyproject_sentinel
-$(PYPROJECT_FILES_SENTINEL): $(MAKE_ARTIFACT_DIRECTORY) $(VENV)
-	$(MAKE) $(PYPROJECT_FILES)
-	touch $@
+PYPROJECT_FILES_SENTINELS = $(patsubst %, $(MAKE_ARTIFACT_DIRECTORY)/pyproject_files/%, $(subst /,_,$(PYPROJECT_FILES)))
 
 .PHONY: dev
 dev :
 	$(MAKE) $(SETUP_DEV_SENTINEL) DEFAULT_TARGET=dev
 # By default, psycopg2 is not installed
 # but it should be for development
-$(SETUP_DEV_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES_SENTINEL) | $(MAKE_ARTIFACT_DIRECTORY)
+$(SETUP_DEV_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES) | $(MAKE_ARTIFACT_DIRECTORY)
 # `pip list` is multiple seconds faster than `pip show` ...
 	$(ACTIVATE_VENV) && \
 	if pip list -l --no-index | grep '^BL_Python\.all\s'; then \
@@ -96,7 +92,7 @@ $(SETUP_DEV_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES_
 .PHONY: cicd
 cicd :
 	$(MAKE) $(SETUP_CICD_SENTINEL) DEFAULT_TARGET=cicd
-$(SETUP_CICD_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES_SENTINEL) | $(MAKE_ARTIFACT_DIRECTORY)
+$(SETUP_CICD_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES) | $(MAKE_ARTIFACT_DIRECTORY)
 # `pip list` is multiple seconds faster than `pip show` ...
 	$(ACTIVATE_VENV) && \
 	if pip list -l --no-index | grep '^BL_Python\.all\s'; then \
@@ -110,7 +106,7 @@ $(SETUP_CICD_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES
 
 .PHONY: BL_Python.all $(PACKAGES)
 BL_Python.all: $(DEFAULT_TARGET)
-$(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(PYPROJECT_FILES_SENTINEL) | $(MAKE_ARTIFACT_DIRECTORY)
+$(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(PYPROJECT_FILES) | $(MAKE_ARTIFACT_DIRECTORY)
 # `pip list` is multiple seconds faster than `pip show` ...
 	$(ACTIVATE_VENV) && \
 	if pip list -l --no-index | grep '^BL_Python\.$*\s'; then \
@@ -138,13 +134,20 @@ $(SETUP_DEPENDENCIES_SENTINEL): $(VENV) | $(MAKE_ARTIFACT_DIRECTORY)
 
 	touch $@
 
+
 $(PACKAGE_PATHS) : $(VENV) $(SETUP_DEPENDENCIES_SENTINEL)
-$(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES_SENTINEL)
+$(PYPROJECT_FILES_SENTINELS) :
+	mkdir -p $(dir $@) && \
+	touch $@
+.SECONDEXPANSION:
+$(PYPROJECT_FILES) : $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $$(MAKE_ARTIFACT_DIRECTORY)/pyproject_files/$$(subst /,_,$$@)
 	$(ACTIVATE_VENV) && \
+	TARGET_PYPROJECT_FILE="$(subst _,/,$(subst $(MAKE_ARTIFACT_DIRECTORY)/pyproject_files/,,$@))" &&  \
 	REWRITE_DEPENDENCIES=$(REWRITE_DEPENDENCIES) \
 	GITHUB_REF=$(GITHUB_REF) \
 	GITHUB_WORKSPACE=$(GITHUB_WORKSPACE) \
-	./.github/workflows/CICD-scripts/pyproject_dependency_rewrite.py -c $@
+	./.github/workflows/CICD-scripts/pyproject_dependency_rewrite.py -c $$TARGET_PYPROJECT_FILE
+	touch $@
 
 $(VENV) :
 	test -d $(VENV) || env python$(PYTHON_VERSION) -m venv $(VENV)
