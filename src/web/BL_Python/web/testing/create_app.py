@@ -29,7 +29,7 @@ from BL_Python.identity.config import SAML2Config, SSOConfig
 from BL_Python.platform.dependency_injection import UserLoaderModule
 from BL_Python.platform.identity import Role, User
 from BL_Python.platform.identity.user_loader import TRole, UserId, UserMixin
-from BL_Python.programming.config import AbstractConfig, ConfigBuilder
+from BL_Python.programming.config import ConfigBuilder
 from BL_Python.programming.str import get_random_str
 from BL_Python.web.application import (
     App,
@@ -55,6 +55,7 @@ from flask.testing import FlaskClient
 from flask_injector import FlaskInjector
 from injector import Module
 from mock import MagicMock
+from pydantic import BaseModel
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 from pytest_mock.plugin import MockType
@@ -92,7 +93,7 @@ class AppGetter(Protocol[T_app]):
 
 
 TAppInitHook = (
-    Callable[[list[type[AbstractConfig]], list[Module | type[Module]]], None] | None
+    Callable[[list[type[BaseModel]], list[Module | type[Module]]], None] | None
 )
 TClientInitHook = Callable[[CreateAppResult[T_app]], None] | None
 
@@ -306,7 +307,7 @@ class CreateApp(Generic[T_app]):
             [
                 Config,
                 MockerFixture,
-                list[type[AbstractConfig]] | None,
+                list[type[BaseModel]] | None,
                 list[Module | type[Module]] | None,
             ],
             Generator[CreateAppResult[T_app], Any, None],
@@ -321,7 +322,7 @@ class CreateApp(Generic[T_app]):
             client_init_hook: TClientInitHook[T_app] | None = None,
             app_init_hook: TAppInitHook | None = None,
         ) -> Generator[ClientInjector[T_flask_client], Any, None]:
-            application_configs: list[type[AbstractConfig]] | None = None
+            application_configs: list[type[BaseModel]] | None = None
             application_modules: list[Module | type[Module]] | None = None
             if app_init_hook is not None:
                 application_configs = []
@@ -397,7 +398,7 @@ class CreateFlaskApp(CreateApp[Flask]):
         self,
         config: Config,
         mocker: MockerFixture,
-        application_configs: list[type[AbstractConfig]] | None = None,
+        application_configs: list[type[BaseModel]] | None = None,
         application_modules: list[Module | type[Module]] | None = None,
     ) -> Generator[FlaskAppResult, Any, None]:
         # prevents the creation of a Connexion application
@@ -520,7 +521,7 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         self,
         config: Config,
         mocker: MockerFixture,
-        application_configs: list[type[AbstractConfig]] | None = None,
+        application_configs: list[type[BaseModel]] | None = None,
         application_modules: list[Module | type[Module]] | None = None,
     ) -> Generator[OpenAPIAppResult, Any, None]:
         # prevents the creation of a Connexion application

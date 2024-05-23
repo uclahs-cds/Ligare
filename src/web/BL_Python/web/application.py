@@ -18,6 +18,7 @@ from flask import Blueprint, Flask
 from flask_injector import FlaskInjector
 from injector import Module
 from lib_programname import get_path_executed_script
+from pydantic import BaseModel
 
 from .config import Config
 from .middleware import (
@@ -66,7 +67,7 @@ class App(Generic[T_app]):
     def create(
         config_filename: str = "config.toml",
         # FIXME should be a list of PydanticDataclass
-        application_configs: list[type[AbstractConfig]] | None = None,
+        application_configs: list[type[BaseModel]] | None = None,
         application_modules: list[Module | type[Module]] | None = None,
     ) -> CreateAppResult[T_app]:
         """
@@ -86,7 +87,7 @@ class App(Generic[T_app]):
 def create_app(
     config_filename: str = "config.toml",
     # FIXME should be a list of PydanticDataclass
-    application_configs: list[type[AbstractConfig]] | None = None,
+    application_configs: list[type[BaseModel]] | None = None,
     application_modules: list[Module | type[Module]] | None = None,
     # FIXME eventually should replace with builders
     # and configurators so this list of params doesn't

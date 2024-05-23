@@ -6,7 +6,6 @@ from BL_Python.identity.config import Config as RootSSOConfig
 from BL_Python.identity.config import SSOConfig
 from BL_Python.platform.dependency_injection import UserLoaderModule
 from BL_Python.platform.identity import Role, User
-from BL_Python.programming.config import AbstractConfig
 from BL_Python.web.application import OpenAPIAppResult
 from BL_Python.web.config import Config, WebSecurityCorsConfig
 from BL_Python.web.middleware import bind_errorhandler
@@ -27,6 +26,7 @@ from connexion.middleware.exceptions import ExceptionMiddleware
 from flask import Flask, abort
 from injector import Module
 from mock import MagicMock
+from pydantic import BaseModel
 from pytest_mock import MockerFixture
 from starlette.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp
@@ -239,7 +239,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
         mocker: MockerFixture,
     ):
         def app_init_hook(
-            application_configs: list[type[AbstractConfig]],
+            application_configs: list[type[BaseModel]],
             application_modules: list[Module | type[Module]],
         ):
             application_modules.append(
@@ -286,7 +286,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
         mocker: MockerFixture,
     ):
         def app_init_hook(
-            application_configs: list[type[AbstractConfig]],
+            application_configs: list[type[BaseModel]],
             application_modules: list[Module | type[Module]],
         ):
             application_modules.append(CORSMiddlewareModule)
@@ -309,7 +309,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
         openapi_mock_controller: OpenAPIMockController,
     ):
         def app_init_hook(
-            application_configs: list[type[AbstractConfig]],
+            application_configs: list[type[BaseModel]],
             application_modules: list[Module | type[Module]],
         ):
             application_modules.append(CORSMiddlewareModule)
@@ -338,7 +338,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
         openapi_mock_controller: OpenAPIMockController,
     ):
         def app_init_hook(
-            application_configs: list[type[AbstractConfig]],
+            application_configs: list[type[BaseModel]],
             application_modules: list[Module | type[Module]],
         ):
             application_modules.append(CORSMiddlewareModule)
