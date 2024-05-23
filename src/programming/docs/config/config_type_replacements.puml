@@ -1,0 +1,51 @@
+@startuml
+
+package "pydantic"
+{
+    class pydantic_base_model as "BaseModel"
+}
+
+package "BL_Python.identity"
+{
+    class identity_config as "config.Config"
+    {
+        + sso
+    }
+    class identity_config_sso as "config.SSOConfig"
+    {
+        + settings
+    }
+    class identity_config_sso_settings as "config.SSOSettingsConfig"
+    class identity_config_saml2 as "config.SAML2Config"
+}
+
+package "BL_Python.database"
+{
+    class database_config as "config.Config"
+    {
+        + database
+    }
+    class database_config_database as "config.DatabaseConfig"
+    {
+        + connect_args
+    }
+    class database_config_database_connect_args as "config.DatabaseConnectArgsConfig"
+    class database_config_postgresql_database_connect_args as "config.PostgreSQLDatabaseConnectArgsConfig"
+    class database_config_sqlite_database_connect_args as "config.SQLiteDatabaseConnectArgsConfig"
+}
+
+pydantic_base_model <|-- identity_config
+pydantic_base_model <|-- database_config
+
+identity_config *-right- identity_config_sso
+identity_config_sso *-- identity_config_sso_settings
+identity_config_sso *.. identity_config_saml2
+identity_config_sso_settings <|-down- identity_config_saml2
+
+database_config *-right- database_config_database
+database_config_database *-- database_config_database_connect_args
+database_config_database *.. database_config_postgresql_database_connect_args
+database_config_database *.. database_config_sqlite_database_connect_args
+database_config_database_connect_args <|-down- database_config_postgresql_database_connect_args
+database_config_database_connect_args <|-down- database_config_sqlite_database_connect_args
+@enduml

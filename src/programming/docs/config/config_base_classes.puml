@@ -1,0 +1,37 @@
+@startuml
+
+package pydantic
+{
+    class pydantic_base_model as "BaseModel"
+}
+
+package "BL_Python.web"
+{
+    class web_config as "config.Config"
+    {
+        + logging
+        + web
+        + flask
+    }
+}
+
+package  "BL_Python.identity"
+{
+    class identity_config as "config.Config"
+    {
+        + sso
+    }
+}
+
+package "BL_Python.database"
+{
+    class database_config as "config.Config"
+    {
+        + database
+    }
+}
+
+pydantic_base_model <|-- web_config
+pydantic_base_model <|-- identity_config
+pydantic_base_model <|-- database_config
+@enduml

@@ -1,0 +1,96 @@
+@startuml
+left to right direction
+
+package pydantic
+{
+    class pydantic_base_model as "BaseModel"
+}
+
+package "BL_Python.web"
+{
+    class web_config as "config.Config"
+    {
+        + logging
+        + web
+        + flask
+    }
+    class web_config_logging as "config.LoggingConfig"
+    class web_config_flask as "config.FlaskConfig"
+    {
+        + openapi
+        + session
+    }
+    class web_config_flask_openapi as "config.FlaskOpenApiConfig"
+    class web_config_flask_session as "config.FlaskSessionConfig"
+    {
+        + cookie
+    }
+
+    class web_config_flask_session_cookie as "config.FlaskSessionCookieConfig"
+    class web_config_web as "config.WebConfig"
+    {
+        + security
+    }
+
+    class web_config_web_security as "config.WebSecurityConfig"
+    {
+        + cors
+    }
+    class web_config_web_security_cors as "config.WebSecurityCorsConfig"
+}
+
+package "BL_Python.identity"
+{
+    class identity_config as "config.Config"
+    {
+        + sso
+    }
+    class identity_config_sso as "config.SSOConfig"
+    {
+        + settings
+    }
+    class identity_config_sso_settings as "config.SSOSettingsConfig"
+    class identity_config_saml2 as "config.SAML2Config"
+}
+
+package "BL_Python.database"
+{
+    class database_config as "config.Config"
+    {
+        + database
+    }
+    class database_config_database as "config.DatabaseConfig"
+    {
+        + connect_args
+    }
+    class database_config_database_connect_args as "config.DatabaseConnectArgsConfig"
+    class database_config_postgresql_database_connect_args as "config.PostgreSQLDatabaseConnectArgsConfig"
+    class database_config_sqlite_database_connect_args as "config.SQLiteDatabaseConnectArgsConfig"
+}
+
+pydantic_base_model <|-- web_config
+pydantic_base_model <|-- identity_config
+pydantic_base_model <|-- database_config
+
+web_config *-- web_config_flask
+web_config *-- web_config_web
+web_config *--- web_config_logging
+web_config_flask *-- web_config_flask_openapi
+web_config_flask *-- web_config_flask_session
+web_config_flask_session *-- web_config_flask_session_cookie
+web_config_web *-- web_config_web_security
+web_config_web_security *-- web_config_web_security_cors
+
+identity_config *-- identity_config_sso
+identity_config_sso *-- identity_config_sso_settings
+identity_config_sso *.. identity_config_saml2
+identity_config_sso_settings <|-left- identity_config_saml2
+
+database_config *-- database_config_database
+database_config_database *-- database_config_database_connect_args
+database_config_database *.. database_config_postgresql_database_connect_args
+database_config_database *.. database_config_sqlite_database_connect_args
+database_config_database_connect_args <|-- database_config_postgresql_database_connect_args
+database_config_database_connect_args <|-- database_config_sqlite_database_connect_args
+database_config_sqlite_database_connect_args -left[hidden]- database_config_postgresql_database_connect_args
+@enduml
