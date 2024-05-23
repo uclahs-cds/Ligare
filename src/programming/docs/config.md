@@ -49,7 +49,8 @@ from pprint import pprint
 
 toml_file_path = "config.toml"
 with open(toml_file_path, "w") as f:
-        f.write("""log_level="DEBUG"
+        f.write("""\
+log_level="DEBUG"
 format="plaintext"
 """)
 
@@ -71,7 +72,8 @@ from pprint import pprint
 
 toml_file_path = "config.toml"
 with open(toml_file_path, "w") as f:
-        f.write("""[flask]
+        f.write("""\
+[flask]
 app_name="test_app"
 host="127.0.0.1"
 port="5050"
@@ -104,7 +106,8 @@ from pprint import pprint
 
 toml_file_path = "config.toml"
 with open(toml_file_path, "w") as f:
-        f.write("""[database]
+        f.write("""\
+[database]
 connection_string="sqlite:///:memory:"
 """)
 
@@ -128,7 +131,8 @@ from BL_Python.web.config import Config
 
 toml_file_path = "config.toml"
 with open(toml_file_path, "w") as f:
-    f.write("""[database]
+    f.write("""\
+[database]
 connection_string="sqlite:///:memory:"
 [flask]
 app_name="test_app"
