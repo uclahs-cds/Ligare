@@ -160,10 +160,9 @@ GeneratedConfig(
             cors=WebSecurityCorsConfig(...)
         )
     ),
-    flask=FlaskConfig(app_name='test_app', ...),
+    flask=FlaskConfig(app_name='test_app'),
     database=DatabaseConfig(
         connection_string='sqlite:///:memory:',
-        sqlalchemy_echo=False,
         connect_args=SQLiteDatabaseConnectArgsConfig()
     )
 )
