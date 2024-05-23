@@ -147,7 +147,7 @@ pprint(config)
 ```
 
 This prints the following. For brevity, everything except the resulting `Config` and `DatabaseConfig` attributes are elided.
-```toml
+```python
 GeneratedConfig(
     logging=LoggingConfig(...),
     web=WebConfig(
