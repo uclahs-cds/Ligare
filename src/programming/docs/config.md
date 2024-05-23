@@ -134,6 +134,7 @@ with open(toml_file_path, "w") as f:
     f.write("""\
 [database]
 connection_string="sqlite:///:memory:"
+
 [flask]
 app_name="test_app"
 """)
