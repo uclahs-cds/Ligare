@@ -29,7 +29,8 @@ classifiers = [
 
 dependencies = [
     "pysaml2",
-    "requests"
+    "requests",
+    "pydantic"
 ]
 
 dynamic = ["version", "readme"]
