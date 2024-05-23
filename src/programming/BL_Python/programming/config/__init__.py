@@ -4,23 +4,25 @@ from typing import Any, Generic, TypeVar, cast
 
 import toml
 from BL_Python.programming.collections.dict import AnyDict, merge
-
-TConfig = TypeVar("TConfig")
+from pydantic import BaseModel
 
 
 class AbstractConfig(abc.ABC):
     pass
 
 
+TConfig = TypeVar("TConfig", bound=AbstractConfig | BaseModel)
+
+
 class ConfigBuilder(Generic[TConfig]):
     _root_config: type[TConfig] | None = None
-    _configs: list[type[AbstractConfig]] | None = None
+    _configs: list[type[AbstractConfig] | type[BaseModel]] | None = None
 
     def with_root_config(self, config: "type[TConfig]"):
         self._root_config = config
         return self
 
-    def with_configs(self, configs: list[type[AbstractConfig]]):
+    def with_configs(self, configs: list[type[AbstractConfig] | type[BaseModel]]):
         self._configs = configs
         return self
 
@@ -31,7 +33,7 @@ class ConfigBuilder(Generic[TConfig]):
         if not self._configs:
             raise Exception("Cannot build a config without any configs.")
 
-        _new_type_base = self._root_config if self._root_config else object
+        _new_type_base = self._root_config if self._root_config else BaseModel
 
         attrs: dict[Any, Any] = {}
         annotations: dict[str, Any] = {}
