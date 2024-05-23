@@ -30,7 +30,7 @@ Make special note of the dotted-line relationships. These represent types whose 
 
 This concept is similar to interfaces in OOP, however, the types are "late bound" during runtime, and the `__init__` method of the `BaseModel` extensions decide which concrete type should be instantiated, then handles the instantiation.
 
-For example, `SSOConfig` will instantiate `SAML2Config` if the value of its `protocol` attribute is `SAML2`. The instance of `SAML2Config` is then assigned to its `settings` attribute.
+For example, `DatabaseConfig` will instantiate `PostgreSQLDatabaseConnectArgsConfig` or `SQLiteDatabaseConnectArgsConfig` depending on the database engine named in its `connection_string` attribute. The instance of `PostgreSQL...Config` or `SQLite...Config` is then assigned to its `connect_args` attribute.
 
 ### Config System Behavior
 
