@@ -1,9 +1,9 @@
 from BL_Python.identity.config import SAML2Config, SSOConfig
 from BL_Python.identity.SAML2 import SAML2Client
 from BL_Python.programming.collections.dict import AnyDict
-from flask import url_for
 
-# from flask import url_for
+# FIXME the flask stuff should not be in BL_Python.identity
+from flask import url_for
 from injector import Binder, CallableProvider, Module, inject, singleton
 from saml2 import BINDING_HTTP_POST, BINDING_HTTP_REDIRECT
 from typing_extensions import override
