@@ -70,7 +70,9 @@ class AuthCheckUser(Protocol):
 
 
 class AuthCheckOverrideCallable(Protocol):
-    def __call__(self, user: AuthCheckUser, *args: Any, **kwargs: Any) -> bool: ...
+    def __call__(  # pragma: nocover
+        self, user: AuthCheckUser, *args: Any, **kwargs: Any
+    ) -> bool: ...
 
 
 P = ParamSpec("P")
@@ -126,8 +128,8 @@ def login_required(
         if not callable(auth_check_override):
             raise TypeError("Override must be a callable.")
 
-    if not isinstance(roles, list):
-        raise TypeError("Roles must be a list of User Roles.")
+    if not isinstance(roles, Sequence):
+        raise TypeError("Roles must be a Sequence of User Roles.")
 
     login_manager = FlaskLoginManager()
 
@@ -147,8 +149,7 @@ def login_required(
 
                 # if authorization was overriden and successful, don't check roles
                 if unauthorized:
-                    if not isinstance(roles, list):  # pyright: ignore[reportUnnecessaryIsInstance]
-                        # this should end up raising a 401 exception
+                    if not isinstance(roles, Sequence):  # pyright: ignore[reportUnnecessaryIsInstance]
                         return login_manager.unauthorized()
 
                     # if roles is empty, no roles will intersect.

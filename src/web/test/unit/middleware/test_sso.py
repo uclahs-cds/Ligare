@@ -1,4 +1,3 @@
-from dataclasses import dataclass, field
 from typing import Any, Generic, Sequence, cast
 from unittest.mock import MagicMock
 
@@ -46,7 +45,7 @@ class TestUser(UserMixin, Generic[TRole]):
 
 
 class TestSSO(CreateOpenAPIApp):
-    def test__sso__login_required__raises_when_auth_check_override_is_not_callable_or_none(
+    def test__sso__login_required__raises_when_auth_check_override_is_not_callable_and_not_none(
         self,
     ):
         with pytest.raises(TypeError):
@@ -71,7 +70,13 @@ class TestSSO(CreateOpenAPIApp):
         _ = login_required(func)
         flask_login_required_mock.assert_any_call(func)
 
-    def test__sso__login_required__throws_when_roles_is_not_a_list_when_auth_check_override_is_callable(
+    def test__sso__login_required__throws_when_auth_check_override_is_none_and_roles_is_not_callable_or_not_a_Sequence_or_not_none(
+        self, mocker: MockerFixture
+    ):
+        with pytest.raises(TypeError):
+            _ = login_required(auth_check_override=None, roles=True)  # pyright: ignore[reportArgumentType]
+
+    def test__sso__login_required__throws_when_auth_check_override_is_callable_and_roles_is_not_a_Sequence(
         self,
     ):
         with pytest.raises(TypeError):
@@ -124,9 +129,54 @@ class TestSSO(CreateOpenAPIApp):
         def auth_check_override(user: AuthCheckUser, *args: Any, **kwargs: Any) -> bool:
             return True
 
+        decorator = login_required(auth_check_override=auth_check_override, roles=[])
+
+        def route():
+            return [True]
+
+        decorated_func = decorator(route)
+        cast(FlaskApp, openapi_client.client.app).add_url_rule(
+            "/route", "route", decorated_func
+        )
+
+        with self.get_authenticated_request_context(
+            openapi_client, TestUser, mocker, roles=None
+        ):
+            result = openapi_client.client.get("/route")
+
+        assert result.status_code == 200
+
+    def test__sso__login_required__raises_401_when_auth_check_override_returns_false(
+        self, openapi_client: OpenAPIClientInjector, mocker: MockerFixture
+    ):
+        def auth_check_override(user: AuthCheckUser, *args: Any, **kwargs: Any) -> bool:
+            return False
+
+        decorator = login_required(auth_check_override=auth_check_override, roles=[])
+
+        def route():
+            return [True]
+
+        decorated_func = decorator(route)
+        cast(FlaskApp, openapi_client.client.app).add_url_rule(
+            "/route", "route", decorated_func
+        )
+
+        with self.get_authenticated_request_context(
+            openapi_client, TestUser, mocker, roles=None
+        ):
+            result = openapi_client.client.get("/route")
+
+        assert result.status_code == 401
+
+    def test__sso__login_required__returns_status_200_when_auth_check_override_returns_false_and_user_has_sufficient_roles(
+        self, openapi_client: OpenAPIClientInjector, mocker: MockerFixture
+    ):
+        def auth_check_override(user: AuthCheckUser, *args: Any, **kwargs: Any) -> bool:
+            return False
+
         decorator = login_required(
-            auth_check_override=auth_check_override,
-            roles=[TestRole.Role1, TestRole.Role2],
+            auth_check_override=auth_check_override, roles=[TestRole.Role2]
         )
 
         def route():
@@ -138,7 +188,7 @@ class TestSSO(CreateOpenAPIApp):
         )
 
         with self.get_authenticated_request_context(
-            openapi_client, TestUser, mocker, roles=[TestRole.Role1, TestRole.Role2]
+            openapi_client, TestUser, mocker, roles=[TestRole.Role2]
         ):
             result = openapi_client.client.get("/route")
 
@@ -147,7 +197,7 @@ class TestSSO(CreateOpenAPIApp):
     @pytest.mark.parametrize("roles", [None, [], "", 0, 1])
     def test__sso__login_required__raises_401_when_unauthorized_user_has_no_roles(
         self,
-        roles: list[Any] | None,
+        roles: Sequence[Any] | None,
         openapi_client: OpenAPIClientInjector,
         mocker: MockerFixture,
     ):
@@ -202,8 +252,10 @@ class TestSSO(CreateOpenAPIApp):
 
         assert result.status_code == 401
 
+    @pytest.mark.parametrize("user_roles", [[TestRole.Role2], (TestRole.Role2,)])
     def test__sso__login_required__returns_200_when_unauthorized_user_has_sufficient_roles(
         self,
+        user_roles: Sequence[TestRole],
         openapi_client: OpenAPIClientInjector,
         mocker: MockerFixture,
     ):
@@ -212,7 +264,7 @@ class TestSSO(CreateOpenAPIApp):
 
         decorator = login_required(
             auth_check_override=auth_check_override,
-            roles=[TestRole.Role2],
+            roles=user_roles,
         )
 
         def route():
