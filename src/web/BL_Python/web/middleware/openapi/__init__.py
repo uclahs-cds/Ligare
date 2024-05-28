@@ -1,5 +1,6 @@
 import re
 import uuid
+from collections.abc import Iterable
 from contextlib import ExitStack
 from contextvars import Token
 from logging import Logger
@@ -493,7 +494,9 @@ class FlaskContextMiddleware:
                             "REMOTE_ADDR": ":".join([
                                 str(value) for value in scope["client"]
                             ])
-                            or f"{context.request._starlette_request.client.host}:{context.request._starlette_request.client.port}",
+                            if (client := scope.get("client"))
+                            and isinstance(client, Iterable)
+                            else f"{context.request._starlette_request.client.host}:{context.request._starlette_request.client.port}",
                         },
                         dict({
                             (
