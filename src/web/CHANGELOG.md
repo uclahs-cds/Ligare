@@ -11,6 +11,9 @@ Review the `BL_Python` [CHANGELOG.md](https://github.com/uclahs-cds/BL_Python/bl
 ---
 ## Unreleased
 
+### Added
+- ASGI worker classes to support ASGI lifetime and proxy options when running ASGI applications #68
+
 ## [0.2.3] - 2024-05-17
 ### Changed
 - Flask and OpenAPI apps require configuration of CORS origins as an array
