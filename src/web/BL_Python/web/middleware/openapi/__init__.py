@@ -1,5 +1,6 @@
 import re
 import uuid
+from collections.abc import Iterable
 from contextlib import ExitStack
 from contextvars import Token
 from logging import Logger
@@ -7,6 +8,9 @@ from typing import Any, Awaitable, Callable, Literal, TypeVar, cast
 from uuid import uuid4
 
 import json_logging
+import starlette
+import starlette.datastructures
+import starlette.requests
 from BL_Python.programming.collections.dict import AnyDict, merge
 from connexion import ConnexionMiddleware, FlaskApp, context, utils
 from connexion.middleware import MiddlewarePosition
@@ -22,6 +26,7 @@ from flask.typing import (
 from injector import inject
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import TypedDict, final
+from werkzeug.local import LocalProxy
 
 from ...config import Config
 from ..consts import (
@@ -468,40 +473,96 @@ class FlaskContextMiddleware:
                     app_ctx_token = _cv_app.set(app_ctx)
 
                 if not isinstance(request, Request):  # pyright: ignore[reportUnnecessaryIsInstance] it is not a Request if it is not set
+                    request_proxy = cast(
+                        LocalProxy[starlette.requests.Request], context.request
+                    )
+                    starlette_request = cast(
+                        starlette.requests.Request, request_proxy._starlette_request
+                    )
+                    request_headers = cast(
+                        starlette.datastructures.Headers, request_proxy.headers
+                    )
+                    path_info = (
+                        "PATH_INFO",
+                        str(scope.get("path") or starlette_request.url.path),
+                    )
+                    wsgi_url_scheme = (
+                        "wsgi.url_scheme",
+                        str(scope.get("scheme") or starlette_request.url.scheme),
+                    )
+                    request_method = (
+                        "REQUEST_METHOD",
+                        str(scope.get("method") or starlette_request.method),
+                    )
+                    server_hostname = starlette_request.base_url.hostname
+                    server_port = starlette_request.base_url.port
+                    if not server_hostname or not server_port:
+                        # there is the possibility this value in scope is "127.0.0.1" when using "localhost"
+                        # which is not consistent with the _starlette_request value.
+                        server = cast(tuple[str, int] | None, scope.get("server"))
+                        if server:
+                            if not server_hostname:
+                                server_hostname = server[0]
+                            if not server_port:
+                                server_port = server[1]
+                        else:
+                            app_server_name = cast(
+                                dict[str, str | None], current_app.config
+                            ).get("SERVER_NAME")
+                            if app_server_name:
+                                if not server_hostname:
+                                    server_hostname = app_server_name[
+                                        : app_server_name.index(":")
+                                    ]
+                                if not server_port:
+                                    server_port = app_server_name[
+                                        app_server_name.index(":") + 1 :
+                                    ]
+                    if isinstance(server_port, str):
+                        try:
+                            server_port = int(server_port)
+                        except:
+                            # this is the same default port that
+                            # Starlette uses in starlette.middleware.wsgi.build_environ
+                            server_port = 80
+                    server_name = ("SERVER_NAME", server_hostname)
+                    server_port = ("SERVER_PORT", server_port)
+                    query_string = (
+                        "QUERY_STRING",
+                        scope.get("query_string") or starlette_request.url.query,
+                    )
+                    request_client = starlette_request.client
+                    remote_addr = (
+                        "REMOTE_ADDR",
+                        ":".join([str(value) for value in scope["client"]])
+                        if (client := scope.get("client"))
+                        and isinstance(client, Iterable)
+                        else (
+                            "localhost:80"
+                            if request_client is None
+                            else f"{request_client.host}:{request_client.port}"
+                        ),
+                    )
+                    headers = dict({
+                        (
+                            f"{'HTTP_' if header.upper() not in ['CONTENT_TYPE', 'CONTENT_LENGTH'] else ''}{header.upper().replace('-', '_')}",
+                            value,
+                        )
+                        for header, value in request_headers.items()
+                    })
+
                     request_environ = merge(
-                        {
-                            "PATH_INFO": scope.get("path")
-                            or context.request._starlette_request.url.path,
-                            "wsgi.url_scheme": scope.get("scheme")
-                            or context.request._starlette_request.url.scheme,
-                            "REQUEST_METHOD": scope.get("method")
-                            or context.request._starlette_request.method,
-                            # there is the possibility this value in scope is "127.0.0.1" when using "localhost"
-                            # which is not consistent with the _starlette_request value.
-                            "SERVER_NAME": (
-                                scope["server"][0]
-                                if scope.get("server")
-                                else context.request._starlette_request.base_url.hostname
-                            ),
-                            "SERVER_PORT": (
-                                scope["server"][1]
-                                if scope.get("server")
-                                else context.request._starlette_request.base_url.port
-                            ),
-                            "QUERY_STRING": scope.get("query_string")
-                            or context.request._starlette_request.url.query,
-                            "REMOTE_ADDR": ":".join([
-                                str(value) for value in scope["client"]
-                            ])
-                            or f"{context.request._starlette_request.client.host}:{context.request._starlette_request.client.port}",
-                        },
-                        dict({
-                            (
-                                f"{'HTTP_' if header.upper() not in ['CONTENT_TYPE', 'CONTENT_LENGTH'] else ''}{header.upper().replace('-', '_')}",
-                                value,
-                            )
-                            for header, value in context.request.headers.items()
-                        }),
+                        dict([
+                            path_info,
+                            wsgi_url_scheme,
+                            request_method,
+                            server_name,
+                            server_port,
+                            query_string,
+                            remote_addr,
+                        ]),
+                        headers,
+                        True,
                     )
 
                     # Some values, like the query string, are stored as bytes.
