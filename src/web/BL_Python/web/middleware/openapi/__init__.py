@@ -23,6 +23,7 @@ from flask.typing import (
     BeforeRequestCallable,
     ResponseReturnValue,
 )
+from flask_login import AnonymousUserMixin, current_user
 from injector import inject
 from starlette.datastructures import Address
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -214,9 +215,11 @@ def _log_all_api_requests(
         request["path"],
         # ASGI spec states `server` and `client`
         # can be `None` if not available.
-        f"{server.host}:{server.port}" if server else "None",
-        f"{client.host}:{client.port}" if client else "None",
-        request.get("remote_user"),  # FIXME fix this when auth is done
+        f"{server.host}:{server.port}",
+        f"{client.host}:{client.port}",
+        "Anonymous"
+        if isinstance(current_user, AnonymousUserMixin)
+        else current_user.get_id(),
         extra={
             "props": {
                 "correlation_id": correlation_id,
@@ -441,7 +444,7 @@ _DEFAULT_HOSTNAME = "localhost"
 _DEFAULT_PORT = 80
 
 
-def get_server_address():
+def get_server_address() -> Address:
     request_proxy = cast(LocalProxy[starlette.requests.Request], context.request)
     starlette_request = cast(
         starlette.requests.Request, request_proxy._starlette_request
@@ -480,7 +483,7 @@ def get_server_address():
     )
 
 
-def get_remote_address():
+def get_remote_address() -> Address:
     request_proxy = cast(LocalProxy[starlette.requests.Request], context.request)
     starlette_request = cast(
         starlette.requests.Request, request_proxy._starlette_request
@@ -507,6 +510,10 @@ def get_remote_address():
                 remote_port = client[1]
 
     return Address(host=remote_hostname, port=remote_port)
+
+
+def address_to_str(address: Address):
+    return f"{address.host}:{address.port}"
 
 
 @final
@@ -574,7 +581,7 @@ class FlaskContextMiddleware:
                         "QUERY_STRING",
                         scope.get("query_string") or starlette_request.url.query,
                     )
-                    remote_addr = ("REMOTE_ADDR", get_remote_address())
+                    remote_addr = ("REMOTE_ADDR", address_to_str(get_remote_address()))
                     headers = dict({
                         (
                             f"{'HTTP_' if header.upper() not in ['CONTENT_TYPE', 'CONTENT_LENGTH'] else ''}{header.upper().replace('-', '_')}",
