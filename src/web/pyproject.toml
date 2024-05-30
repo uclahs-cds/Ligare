@@ -38,6 +38,7 @@ dependencies = [
     "flask-login",
     "connexion == 3.0.6",
     "connexion[uvicorn]",
+    "uvicorn-worker",
     "swagger_ui_bundle",
     "python-dotenv",
     "json-logging",
