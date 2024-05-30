@@ -11,6 +11,7 @@ Review the `BL_Python` [CHANGELOG.md](https://github.com/uclahs-cds/BL_Python/bl
 ---
 ## Unreleased
 
+## [0.2.4] - 2024-05-30
 ### Added
 - ASGI worker classes to support ASGI lifetime and proxy options when running ASGI applications #68
 

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+# `BL_Python.all` [0.2.5] - 2024-05-30
+
+## `BL_Python.web` [0.2.4] - 2024-05-30
+- [BL_Python.web v0.2.4](https://github.com/uclahs-cds/BL_Python/blob/BL_Python.web-v0.2.4/src/web/CHANGELOG.md#024---2024-05-30)
 
 # `BL_Python.all` [0.2.4] - 2024-05-17
 
