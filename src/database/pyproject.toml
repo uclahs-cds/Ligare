@@ -30,7 +30,7 @@ classifiers = [
 dependencies = [
     "BL_Python.programming",
 
-    "sqlalchemy >= 1.4,< 3.0",
+    "sqlalchemy ~= 1.4.0",
     "alembic ~= 1.8",
     "sqlalchemy2-stubs ~= 0.0.2a34",
     "injector",
