@@ -33,10 +33,10 @@ dependencies = [
     "BL_Python.identity",
     "BL_Python.database",
 
-    "Flask == 3.0.2",
+    "Flask == 3.0.3",
     "flask-injector",
     "flask-login",
-    "connexion == 3.0.6",
+    "connexion == 3.1.0",
     "connexion[uvicorn]",
     "uvicorn-worker",
     "swagger_ui_bundle",
