@@ -237,6 +237,7 @@ clean-test :
 clean : clean-build clean-test
 	rm -rf $(VENV)
 	rm -rf $(MAKE_ARTIFACT_DIRECTORY)
+	rm -f  $(PYPROJECT_FILES_SENTINEL)
 	@echo '\nDeactivate your venv with `deactivate`'
 
 .PHONY: remake
