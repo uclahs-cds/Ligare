@@ -78,7 +78,8 @@ jobs:
             make cicd
 
           echo 'prefix=${{ github.workspace }}/node_modules' >> ~/.npmrc
-          npm install -g pyright@`pyright --version | awk '{print $2}'`
+          . .github-venv/bin/activate && \
+          npm install -g "pyright@`pyright --version | awk '/^pyright [0-9]/{print $2}'`"
 
       - name: Save run cache
         uses: actions/cache/save@v4
