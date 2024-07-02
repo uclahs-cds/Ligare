@@ -85,7 +85,7 @@ dev-dependencies = [
     "pytest ~= 8.0",
     "pytest-mock",
     "mock",
-    "pytest-cov >= 4.1,< 5.1",
+    "pytest-cov >= 4.1,< 5.0",
     "coverage ~= 7.4",
     "junit2html >= 30.1,< 32.0",
     # Pyright >= 1.1.367 breaks the build.
