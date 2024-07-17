@@ -90,7 +90,7 @@ dev-dependencies = [
     "junit2html >= 30.1,< 32.0",
     # Pyright >= 1.1.367 breaks the build.
     # Waiting for new pyright release to fix it. https://github.com/uclahs-cds/BL_Python/issues/79
-    "pyright == 1.1.370",
+    "pyright == 1.1.372",
     "isort ~= 5.13",
     "ruff ~= 0.3",
     "bandit[sarif,toml] ~= 1.7"
