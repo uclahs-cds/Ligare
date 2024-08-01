@@ -89,102 +89,103 @@ class UserLoader(Generic[TUserMixin]):
 
         :raises AssertionError: If a user is loaded from the database, but it is not of the type specified by user_table.
         """
-        session = self._scoped_session()
-
         self._log.debug(f'Loading user "{username}"')
 
         if not username:
             self._log.warn("`username` is empty. Skipping load.")
             return
 
-        try:
-            # SQLAlchemy generates invalid SQL when attempting an implicit
-            # LEFT JOIN between user -> user_role and user_role -> role.
-            # As such, we handle the join explicitly by extracting the property
-            # relationships and referencing the relevant columns.
-            user_table_property_mapper = cast(Mapper, class_mapper(self._user_table))
-            user_table_properties = cast(
-                "list[RelationshipProperty[DbRole] | ColumnProperty]",
-                user_table_property_mapper.iterate_properties,  # pyright: ignore[reportUnknownMemberType]
-            )
-            # Only extract the secondary join table (user_role).
-            # We find this by matching on the `role` table relationship
-            # from the `user` table.
-            user_role_table = next(
-                relationship.secondary
-                for relationship in user_table_properties
-                if (entity := getattr(relationship, "entity", None))
-                and entity.class_ == self._role_table
-            )
-
-            user = (
-                session.query(self._user_table)
-                # These two `outerjoin` calls define the explicit
-                # join conditions between the `user` and `role` tables,
-                # and the secondary join table `user_role`.
-                .outerjoin(
-                    user_role_table,
-                    user_role_table.c.user_id == self._user_table.user_id,
+        with self._scoped_session() as session:
+            try:
+                # SQLAlchemy generates invalid SQL when attempting an implicit
+                # LEFT JOIN between user -> user_role and user_role -> role.
+                # As such, we handle the join explicitly by extracting the property
+                # relationships and referencing the relevant columns.
+                user_table_property_mapper = cast(
+                    Mapper, class_mapper(self._user_table)
                 )
-                .outerjoin(
-                    self._role_table,
-                    user_role_table.c.role_id == self._role_table.role_id,
+                user_table_properties = cast(
+                    "list[RelationshipProperty[DbRole] | ColumnProperty]",
+                    user_table_property_mapper.iterate_properties,  # pyright: ignore[reportUnknownMemberType]
                 )
-                .filter(self._user_table.username == username)
-                .one_or_none()
-            )
-
-            self._log.debug(f'Queried for "{username}" in database')
-
-            if create_if_new_user and user is None:
-                self._log.info(
-                    f'User "{username}" does not already exist in the database'
+                # Only extract the secondary join table (user_role).
+                # We find this by matching on the `role` table relationship
+                # from the `user` table.
+                user_role_table = next(
+                    relationship.secondary
+                    for relationship in user_table_properties
+                    if (entity := getattr(relationship, "entity", None))
+                    and entity.class_ == self._role_table
                 )
 
-                if default_role is None:
-                    user = self._user_table(username=username)
-                else:
-                    role = (
-                        session.query(self._role_table)
-                        .filter(self._role_table.role_name == default_role.name)
-                        .one()
+                user = (
+                    session.query(self._user_table)
+                    # These two `outerjoin` calls define the explicit
+                    # join conditions between the `user` and `role` tables,
+                    # and the secondary join table `user_role`.
+                    .outerjoin(
+                        user_role_table,
+                        user_role_table.c.user_id == self._user_table.user_id,
+                    )
+                    .outerjoin(
+                        self._role_table,
+                        user_role_table.c.role_id == self._role_table.role_id,
+                    )
+                    .filter(self._user_table.username == username)
+                    .one_or_none()
+                )
+
+                self._log.debug(f'Queried for "{username}" in database')
+
+                if create_if_new_user and user is None:
+                    self._log.info(
+                        f'User "{username}" does not already exist in the database'
                     )
 
-                    user = self._user_table(username=username, roles=[role])
+                    if default_role is None:
+                        user = self._user_table(username=username)
+                    else:
+                        role = (
+                            session.query(self._role_table)
+                            .filter(self._role_table.role_name == default_role.name)
+                            .one()
+                        )
 
-                session.add(user)
-                session.commit()
+                        user = self._user_table(username=username, roles=[role])
 
-                self._log.info(f'User "{username}" added to the database')
-            elif user is None:
-                self._log.info(
-                    "Username does not exist. Refusing to create a new user. This happens when a username (likely from a cookie)\
-     cannot be found in the database, and the process should not create a new user."
+                    session.add(user)
+                    session.commit()
+
+                    self._log.info(f'User "{username}" added to the database')
+                elif user is None:
+                    self._log.info(
+                        "Username does not exist. Refusing to create a new user. This happens when a username (likely from a cookie)\
+        cannot be found in the database, and the process should not create a new user."
+                    )
+                    return
+                else:
+                    self._log.debug(f'User "{username}" loaded from the database')
+
+                if not isinstance(user, self._user_table):
+                    raise AssertionError(
+                        f"User object queried from database is unexpected type `{type(user)}`. Expected type `{type(self._user_table)}`."
+                    )
+
+                user_roles = dict(self._roles.__members__.items())
+                roles = cast(
+                    Sequence[Role],
+                    [user_roles[user_role.role_name] for user_role in user.roles],
                 )
-                return
-            else:
-                self._log.debug(f'User "{username}" loaded from the database')
 
-            if not isinstance(user, self._user_table):
-                raise AssertionError(
-                    f"User object queried from database is unexpected type `{type(user)}`. Expected type `{type(self._user_table)}`."
+                return self._loader(
+                    UserId(
+                        user_id=user.user_id,
+                        username=user.username,
+                    ),
+                    roles,
                 )
-
-            user_roles = dict(self._roles.__members__.items())
-            roles = cast(
-                Sequence[Role],
-                [user_roles[user_role.role_name] for user_role in user.roles],
-            )
-
-            return self._loader(
-                UserId(
-                    user_id=user.user_id,
-                    username=user.username,
-                ),
-                roles,
-            )
-        except:
-            self._log.exception(
-                f'Error when loading user "{username}" from the database.'
-            )
-            raise
+            except:
+                self._log.exception(
+                    f'Error when loading user "{username}" from the database.'
+                )
+                raise
