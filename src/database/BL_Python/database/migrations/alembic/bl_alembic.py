@@ -2,7 +2,7 @@ import sys
 from logging import Logger
 from pathlib import Path
 from types import TracebackType
-from typing import Callable
+from typing import BinaryIO, Callable, cast
 
 import alembic.util.messaging
 
@@ -228,7 +228,7 @@ class BLAlembic:
                     open(file.source, "r") as source,
                     open(file.destination, write_mode) as destination,
                 ):
-                    destination.writelines(source.buffer)
+                    destination.writelines(cast(BinaryIO, source.buffer))  # pyright: ignore[reportUnnecessaryCast] Disagreement between pyright and pylance. Pyright things this is a different type, and pylance doesn't like the cast.
             except FileExistsError as e:
                 if e.filename != str(file.destination):
                     raise
