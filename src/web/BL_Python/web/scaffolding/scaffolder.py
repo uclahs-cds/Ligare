@@ -196,9 +196,7 @@ class Scaffolder:
             template = template_environment.get_template(template_name)
 
         if write_rendered_template:
-            template.stream(  # pyright: ignore[reportUnknownMemberType]
-                **template_config
-            ).dump(str(template_output_path))
+            template.stream(**template_config).dump(str(template_output_path))
         else:
             template_stream = template.stream(**template_config)
             while next(template_stream, None):
@@ -252,14 +250,12 @@ class Scaffolder:
             `on_create(config: dict[str, Any], log: Logger) -> None`
         """
         module_hook_path = Path(module_template_directory, "__hook__.py")
-        if self._provider.has_resource(  # pyright: ignore[reportUnknownMemberType]
-            str(module_hook_path)
-        ):
+        if self._provider.has_resource(str(module_hook_path)):
             # load the module from its path
             # and execute it
             spec = spec_from_file_location(
                 "__hook__",
-                self._provider.get_resource_filename(  # pyright: ignore[reportUnknownArgumentType,reportUnknownMemberType]
+                self._provider.get_resource_filename(
                     self._manager, str(module_hook_path)
                 ),
             )
@@ -338,7 +334,7 @@ class Scaffolder:
             # all modules contain templates under templates/
             # but only modules with __meta__.j2 control how
             # their own templates are rendered.
-            if self._provider.has_resource(  # pyright: ignore[reportUnknownMemberType]
+            if self._provider.has_resource(
                 str(Path(module_template_directory, "__meta__.j2"))
             ):
                 module_env = Environment(
