@@ -12,9 +12,10 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
         super().__init__()
 
     def _notify_changed(self, name: str):
-        self._logger.warn(
-            f"Overridding feature flag value for '{name}'. Toggling from {self._feature_flags[name]} to {self._feature_flags[name]}"
-        )
+        if name in self._feature_flags:
+            self._logger.warn(
+                f"Overridding feature flag value for '{name}'. Toggling from {self._feature_flags[name]} to {self._feature_flags[name]}"
+            )
 
     @override
     def _notify_enabled(self, name: str):
@@ -37,8 +38,6 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
 
         is_enabled: Whether the feature flag is to be enabled or disabled.
         """
-        self._notify_changed(name)
-
         if type(name) != str:
             raise TypeError("`name` must be a string.")
 
@@ -47,6 +46,8 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
 
         if not name:
             raise ValueError("`name` parameter is required and cannot be empty.")
+
+        self._notify_changed(name)
 
         self._feature_flags[name] = is_enabled
 
