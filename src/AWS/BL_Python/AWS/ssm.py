@@ -124,7 +124,11 @@ class SSMParameters:
     def load_config(self, config_type: type[TConfig]) -> TConfig | None:
         config: TConfig | None = None
         try:
-            ssm_parameters: AnyDict | None = self.load_ssm_application_parameters()
+            ssm_parameters = self.load_ssm_application_parameters()
+
+            if ssm_parameters is None:
+                raise Exception("SSM parameters were not loaded.")
+
             config = config_type(**ssm_parameters)
         except:
             if not self._continue_on_ssm_failure:
