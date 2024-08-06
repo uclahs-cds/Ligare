@@ -1,6 +1,6 @@
 import json
 from logging import Logger
-from typing import Awaitable, Callable, TypeVar
+from typing import Awaitable, Callable, TypeAlias, TypeVar
 
 from BL_Python.web.middleware.flask import (
     register_flask_api_request_handlers,
@@ -13,11 +13,7 @@ from BL_Python.web.middleware.openapi import (
 )
 from connexion import FlaskApp
 from flask import Flask, Response
-from flask.typing import (
-    AfterRequestCallable,
-    BeforeRequestCallable,
-    ResponseReturnValue,
-)
+from flask.typing import ResponseReturnValue
 from werkzeug.exceptions import HTTPException, Unauthorized
 
 # pyright: reportUnusedFunction=false
@@ -26,8 +22,10 @@ from werkzeug.exceptions import HTTPException, Unauthorized
 # Fixes type problems when using @inject with @app.before_request and @app.after_request.
 # The main difference with these types as opposed to the Flask-defined types is that
 # these types allow the handler to take any arguments, versus no arguments or just Response.
-AfterRequestCallable = Callable[..., Response] | Callable[..., Awaitable[Response]]
-BeforeRequestCallable = (
+AfterRequestCallable: TypeAlias = (
+    Callable[..., Response] | Callable[..., Awaitable[Response]]
+)
+BeforeRequestCallable: TypeAlias = (
     Callable[..., ResponseReturnValue | None]
     | Callable[..., Awaitable[ResponseReturnValue | None]]
 )

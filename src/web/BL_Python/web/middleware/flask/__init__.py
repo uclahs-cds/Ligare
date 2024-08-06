@@ -1,17 +1,13 @@
 import re
 import uuid
 from logging import Logger
-from typing import Awaitable, Callable, Dict, TypeVar
+from typing import Awaitable, Callable, Dict, TypeAlias, TypeVar
 from uuid import uuid4
 
 import json_logging
 from connexion import FlaskApp
 from flask import Flask, Request, Response, request
-from flask.typing import (
-    AfterRequestCallable,
-    BeforeRequestCallable,
-    ResponseReturnValue,
-)
+from flask.typing import ResponseReturnValue
 from injector import inject
 
 from ...config import Config
@@ -35,8 +31,10 @@ from ..consts import (
 # Fixes type problems when using @inject with @app.before_request and @app.after_request.
 # The main difference with these types as opposed to the Flask-defined types is that
 # these types allow the handler to take any arguments, versus no arguments or just Response.
-AfterRequestCallable = Callable[..., Response] | Callable[..., Awaitable[Response]]
-BeforeRequestCallable = (
+AfterRequestCallable: TypeAlias = (
+    Callable[..., Response] | Callable[..., Awaitable[Response]]
+)
+BeforeRequestCallable: TypeAlias = (
     Callable[..., ResponseReturnValue | None]
     | Callable[..., Awaitable[ResponseReturnValue | None]]
 )
