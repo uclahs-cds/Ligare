@@ -16,6 +16,7 @@ def get_test_table(schema_name: str | None = "foo_schema"):
     if schema_name is None:
 
         class _Base: ...  # pyright: ignore[reportRedeclaration]
+
     else:
 
         class _Base:
