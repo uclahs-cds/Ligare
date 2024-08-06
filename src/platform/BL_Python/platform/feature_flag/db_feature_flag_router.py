@@ -9,7 +9,7 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm.session import Session
 from typing_extensions import override
 
-from .feature_flag_router import FeatureFlagRouter
+from .caching_feature_flag_router import CachingFeatureFlagRouter
 
 
 class FeatureFlag(ABC):
@@ -56,7 +56,7 @@ class FeatureFlagTable:
         return cast(type[FeatureFlag], _FeatureFlag)
 
 
-class DBFeatureFlagRouter(FeatureFlagRouter):
+class DBFeatureFlagRouter(CachingFeatureFlagRouter):
     _feature_flag: type[FeatureFlag]
     _session: Session
 
