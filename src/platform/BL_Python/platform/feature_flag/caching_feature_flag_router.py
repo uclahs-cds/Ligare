@@ -30,13 +30,12 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
     @override
     def set_feature_is_enabled(self, name: str, is_enabled: bool) -> None:
         """
-        Enables or disables a feature flag in the in-memory dictionary of feature flags.
+         Enables or disables a feature flag in the in-memory dictionary of feature flags.
 
-        Subclasses should call this method to validate parameters and cache values.
+         Subclasses should call this method to validate parameters and cache values.
 
-        name: The feature flag to check.
-
-        is_enabled: Whether the feature flag is to be enabled or disabled.
+        :param str name: The feature flag to check.
+        :param bool is_enabled: Whether the feature flag is to be enabled or disabled.
         """
         if type(name) != str:
             raise TypeError("`name` must be a string.")
@@ -62,11 +61,11 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
 
         Subclasses should call this method to validate parameters and use cached values.
 
-        name: The feature flag to check.
-
-        default: If the feature flag is not in the in-memory dictionary of flags,
+        :param str name: The feature flag to check.
+        :param bool | None default: If the feature flag is not in the in-memory dictionary of flags,
             this is the default value to return. The default parameter value
             when not specified is `False`.
+        :return bool | None: If `True`, the feature is enabled. If `False` or `None`, the feature is disabled.
         """
         if type(name) != str:
             raise TypeError("`name` must be a string.")
