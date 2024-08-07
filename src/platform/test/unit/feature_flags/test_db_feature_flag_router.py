@@ -177,10 +177,10 @@ def test__feature_is_enabled__checks_cache(
 ):
     session_mock = mocker.patch("sqlalchemy.orm.session.Session")
     feature_is_enabled_mock = mocker.patch(
-        "BL_Python.platform.feature_flag.feature_flag_router.FeatureFlagRouter.feature_is_enabled"
+        "BL_Python.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.feature_is_enabled"
     )
     _ = mocker.patch(
-        "BL_Python.platform.feature_flag.feature_flag_router.FeatureFlagRouter.set_feature_is_enabled"
+        "BL_Python.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.set_feature_is_enabled"
     )
 
     logger = logging.getLogger("FeatureFlagLogger")
@@ -199,10 +199,10 @@ def test__feature_is_enabled__sets_cache(
 ):
     session_mock = mocker.patch("sqlalchemy.orm.session.Session")
     feature_is_enabled_mock = mocker.patch(
-        "BL_Python.platform.feature_flag.feature_flag_router.FeatureFlagRouter.feature_is_enabled"
+        "BL_Python.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.feature_is_enabled"
     )
     set_feature_is_enabled_mock = mocker.patch(
-        "BL_Python.platform.feature_flag.feature_flag_router.FeatureFlagRouter.set_feature_is_enabled"
+        "BL_Python.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.set_feature_is_enabled"
     )
     feature_is_enabled_mock.return_value = True
 
