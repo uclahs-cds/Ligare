@@ -11,21 +11,21 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
         self._feature_flags: dict[str, bool] = {}
         super().__init__()
 
-    def _notify_changed(self, name: str):
+    @override
+    def _notify_change(
+        self, name: str, new_value: bool, old_value: bool | None
+    ) -> None:
         if name in self._feature_flags:
-            self._logger.warn(
-                f"Overridding feature flag value for '{name}'. Toggling from {self._feature_flags[name]} to {self._feature_flags[name]}"
-            )
-
-    @override
-    def _notify_enabled(self, name: str):
-        self._notify_changed(name)
-        super()._notify_enabled(name)
-
-    @override
-    def _notify_disabled(self, name: str):
-        self._notify_changed(name)
-        super()._notify_disabled(name)
+            if new_value == old_value:
+                self._logger.warn(
+                    f"Tried to change feature flag value for '{name}' to the same value. It is already {'enabled' if new_value else 'disabled'}."
+                )
+            else:
+                self._logger.warn(
+                    f"Changing feature flag value for '{name}' from `{old_value}` to `{new_value}`."
+                )
+        else:
+            self._logger.warn(f"Setting new feature flag '{name}' to `{new_value}`.")
 
     @override
     def set_feature_is_enabled(self, name: str, is_enabled: bool) -> None:
@@ -46,7 +46,7 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
         if not name:
             raise ValueError("`name` parameter is required and cannot be empty.")
 
-        self._notify_changed(name)
+        self._notify_change(name, is_enabled, self._feature_flags.get(name))
 
         self._feature_flags[name] = is_enabled
 

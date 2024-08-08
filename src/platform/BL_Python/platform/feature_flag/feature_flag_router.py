@@ -7,24 +7,17 @@ class FeatureFlagRouter(ABC):
     All feature flag routers should extend this class.
     """
 
-    @abstractmethod
-    def _notify_enabled(self, name: str) -> None:
+    def _notify_change(
+        self, name: str, new_value: bool, old_value: bool | None
+    ) -> None:
         """
-        Override to provide a method to be used to notify when a feature is enabled.
+        Override to provide a method to be used to notify when a feature is enabled or disabled.
         Implementation of when and whether this is called is the responsibility of subclasses.
-        This is never called by default.
+        This is never called by default; the base class implementation is a no-op.
 
         :param str name: The name of the feature flag.
-        """
-
-    @abstractmethod
-    def _notify_disabled(self, name: str) -> None:
-        """
-        Override to provide a method to be used to notify when a feature is disabled.
-        Implementation of when and whether this is called is the responsibility of subclasses.
-        This is never called by default.
-
-        :param str name: The name of the feature flag.
+        :param bool new_value: The value that the flag is changing to.
+        :param bool | None old_value: The value that the flag is changing from.
         """
 
     @abstractmethod
