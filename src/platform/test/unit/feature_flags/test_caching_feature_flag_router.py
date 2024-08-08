@@ -5,6 +5,7 @@ import pytest
 from BL_Python.platform.feature_flag.caching_feature_flag_router import (
     CachingFeatureFlagRouter,
 )
+from pytest import LogCaptureFixture
 from typing_extensions import override
 
 _FEATURE_FLAG_TEST_NAME = "foo_feature"
@@ -132,3 +133,62 @@ def test__set_feature_is_enabled__resets_cache_when_flag_enable_is_set(enable: b
 
     assert first_value == enable
     assert second_value == (not enable)
+
+
+@pytest.mark.parametrize("value", [True, False])
+def test__set_feature_is_enabled__notifies_when_setting_new_flag(
+    value: bool,
+    caplog: LogCaptureFixture,
+):
+    logger = logging.getLogger("FeatureFlagLogger")
+    caching_feature_flag_router = CachingFeatureFlagRouter(logger)
+
+    caching_feature_flag_router.set_feature_is_enabled(_FEATURE_FLAG_TEST_NAME, value)
+
+    assert f"Setting new feature flag '{_FEATURE_FLAG_TEST_NAME}' to `{value}`." in {
+        record.msg for record in caplog.records
+    }
+
+
+@pytest.mark.parametrize(
+    "first_value,second_value,expected_log_msg",
+    [
+        [
+            True,
+            True,
+            f"Tried to change feature flag value for '{_FEATURE_FLAG_TEST_NAME}' to the same value. It is already enabled.",
+        ],
+        [
+            False,
+            False,
+            f"Tried to change feature flag value for '{_FEATURE_FLAG_TEST_NAME}' to the same value. It is already disabled.",
+        ],
+        [
+            True,
+            False,
+            f"Changing feature flag value for '{_FEATURE_FLAG_TEST_NAME}' from `True` to `False`.",
+        ],
+        [
+            False,
+            True,
+            f"Changing feature flag value for '{_FEATURE_FLAG_TEST_NAME}' from `False` to `True`.",
+        ],
+    ],
+)
+def test__set_feature_is_enabled__notifies_when_changing_flag(
+    first_value: bool,
+    second_value: bool,
+    expected_log_msg: str,
+    caplog: LogCaptureFixture,
+):
+    logger = logging.getLogger("FeatureFlagLogger")
+    caching_feature_flag_router = CachingFeatureFlagRouter(logger)
+
+    caching_feature_flag_router.set_feature_is_enabled(
+        _FEATURE_FLAG_TEST_NAME, first_value
+    )
+    caching_feature_flag_router.set_feature_is_enabled(
+        _FEATURE_FLAG_TEST_NAME, second_value
+    )
+
+    assert expected_log_msg in {record.msg for record in caplog.records}
