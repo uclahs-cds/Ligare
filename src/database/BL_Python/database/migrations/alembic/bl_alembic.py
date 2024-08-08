@@ -228,7 +228,7 @@ class BLAlembic:
                     open(file.source, "r") as source,
                     open(file.destination, write_mode) as destination,
                 ):
-                    destination.writelines(cast(BinaryIO, source.buffer))  # pyright: ignore[reportUnnecessaryCast] Disagreement between pyright and pylance. Pyright things this is a different type, and pylance doesn't like the cast.
+                    destination.writelines(cast(BinaryIO, source.buffer))
             except FileExistsError as e:
                 if e.filename != str(file.destination):
                     raise
