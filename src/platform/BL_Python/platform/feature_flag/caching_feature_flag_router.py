@@ -70,6 +70,9 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
         """
         self._validate_name(name)
 
+        if type(default) != bool:
+            raise TypeError("`default` must be a boolean.")
+
         return self._feature_flags.get(name, default)
 
     def feature_is_cached(self, name: str):

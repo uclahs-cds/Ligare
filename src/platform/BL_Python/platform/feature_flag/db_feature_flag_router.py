@@ -1,6 +1,6 @@
 from abc import ABC
 from logging import Logger
-from typing import Type, cast
+from typing import Type, cast, overload
 
 from injector import inject
 from sqlalchemy import Boolean, Column, Unicode
@@ -103,7 +103,16 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter):
         self._session.commit()
         super().set_feature_is_enabled(name, is_enabled)
 
-    def feature_is_enabled(self, name: str, check_cache: bool = True) -> bool:  # type: ignore reportIncompatibleMethodOverride
+    @overload
+    def feature_is_enabled(self, name: str, default: bool = False) -> bool: ...
+    @overload
+    def feature_is_enabled(
+        self, name: str, default: bool, check_cache: bool = True
+    ) -> bool: ...
+    @override
+    def feature_is_enabled(
+        self, name: str, default: bool = False, check_cache: bool = True
+    ) -> bool:
         """
         Determine whether a feature flag is enabled or disabled.
         This method returns False if the feature flag does not exist in the database.
@@ -112,13 +121,13 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter):
         for the specified feature flag. It is only cached if the value is
         pulled from the database. If the flag does not exist, no value is cached.
 
-        name: The feature flag to check.
-
-        check_cache: Whether to use the cached value if it is cached. The default is `True`.
+        :param str name: The feature flag to check.
+        :param bool default: The default value to return when a flag does not exist.
+        :param bool check_cache: Whether to use the cached value if it is cached. The default is `True`.
             If the cache is not checked, the new value pulled from the database will be cached.
         """
         if check_cache and super().feature_is_cached(name):
-            return super().feature_is_enabled(name)
+            return super().feature_is_enabled(name, default)
 
         feature_flag = (
             self._session.query(self._feature_flag)
@@ -128,9 +137,9 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter):
 
         if feature_flag is None:
             self._logger.warn(
-                f'Feature flag {name} not found in database. Returning "False" by default.'
+                f'Feature flag {name} not found in database. Returning "{default}" by default.'
             )
-            return False
+            return default
 
         is_enabled = cast(bool, feature_flag.enabled)
 

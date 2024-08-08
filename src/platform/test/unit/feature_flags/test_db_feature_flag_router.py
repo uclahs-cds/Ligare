@@ -67,7 +67,9 @@ def test__feature_is_enabled__defaults_to_false(feature_flag_session: Session):
     assert is_enabled == False
 
 
-def test__feature_is_enabled__defaults_to_false_when_flag_does_not_exist(
+@pytest.mark.parametrize("default", [True, False])
+def test__feature_is_enabled__uses_default_when_flag_does_not_exist(
+    default: bool,
     feature_flag_session: Session,
 ):
     logger = logging.getLogger("FeatureFlagLogger")
@@ -75,9 +77,11 @@ def test__feature_is_enabled__defaults_to_false_when_flag_does_not_exist(
         FeatureFlag, feature_flag_session, logger
     )
 
-    is_enabled = db_feature_flag_router.feature_is_enabled(_FEATURE_FLAG_TEST_NAME)
+    is_enabled = db_feature_flag_router.feature_is_enabled(
+        _FEATURE_FLAG_TEST_NAME, default
+    )
 
-    assert is_enabled == False
+    assert is_enabled == default
 
 
 def test__feature_is_enabled__disallows_empty_name(feature_flag_session: Session):
@@ -187,7 +191,7 @@ def test__feature_is_enabled__checks_cache(
     db_feature_flag_router = DBFeatureFlagRouter(FeatureFlag, session_mock, logger)
 
     _ = db_feature_flag_router.feature_is_enabled(
-        _FEATURE_FLAG_TEST_NAME, check_cache[0]
+        _FEATURE_FLAG_TEST_NAME, False, check_cache[0]
     )
 
     assert feature_is_enabled_mock.call_count == check_cache[1]
@@ -210,7 +214,7 @@ def test__feature_is_enabled__sets_cache(
     db_feature_flag_router = DBFeatureFlagRouter(FeatureFlag, session_mock, logger)
 
     _ = db_feature_flag_router.feature_is_enabled(
-        _FEATURE_FLAG_TEST_NAME, check_cache[0]
+        _FEATURE_FLAG_TEST_NAME, False, check_cache[0]
     )
 
     assert set_feature_is_enabled_mock.call_count == check_cache[1]
