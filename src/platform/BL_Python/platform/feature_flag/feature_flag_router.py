@@ -1,6 +1,4 @@
-from abc import ABC
-from logging import Logger
-from typing import Dict
+from abc import ABC, abstractmethod
 
 
 class FeatureFlagRouter(ABC):
@@ -9,60 +7,34 @@ class FeatureFlagRouter(ABC):
     All feature flag routers should extend this class.
     """
 
-    _logger: Logger
-    _feature_flags: Dict[str, bool]
+    def _notify_change(
+        self, name: str, new_value: bool, old_value: bool | None
+    ) -> None:
+        """
+        Override to provide a method to be used to notify when a feature is enabled or disabled.
+        Implementation of when and whether this is called is the responsibility of subclasses.
+        This is never called by default; the base class implementation is a no-op.
 
-    def __init__(self, logger: Logger) -> None:
-        self._logger = logger
-        self._feature_flags = {}
-        super().__init__()
+        :param str name: The name of the feature flag.
+        :param bool new_value: The value that the flag is changing to.
+        :param bool | None old_value: The value that the flag is changing from.
+        """
 
+    @abstractmethod
     def set_feature_is_enabled(self, name: str, is_enabled: bool) -> None:
         """
-        Enables or disables a feature flag in the in-memory dictionary of feature flags.
+        Enable or disable a feature flag.
 
-        Subclasses should call this method to validate parameters and cache values.
-
-        name: The feature flag to check.
-
-        is_enabled: Whether the feature flag is to be enabled or disabled.
+        :param str name: The name of the feature flag.
+        :param bool is_enabled: If `True`, the feature is enabled. If `False`, the feature is disabled.
         """
-        if name in self._feature_flags:
-            self._logger.warn(
-                f"Overridding feature flag value for '{name}'. Toggling from {self._feature_flags[name]} to {self._feature_flags[name]}"
-            )
-        if type(name) != str:
-            raise TypeError("`name` must be a string.")
 
-        if type(is_enabled) != bool:
-            raise TypeError("`is_enabled` must be a boolean.")
-
-        if not name:
-            raise ValueError("`name` parameter is required and cannot be empty.")
-
-        self._feature_flags[name] = is_enabled
-
-    def feature_is_enabled(
-        self, name: str, default: bool | None = False
-    ) -> bool | None:
+    @abstractmethod
+    def feature_is_enabled(self, name: str, default: bool = False) -> bool:
         """
         Determine whether a feature flag is enabled or disabled.
 
-        Subclasses should call this method to validate parameters and use cached values.
-
-        name: The feature flag to check.
-
-        default: If the feature flag is not in the in-memory dictionary of flags,
-            this is the default value to return. The default parameter value
-            when not specified is `False`.
+        :param str name: The name of the feature flag.
+        :param bool default: A default value to return for cases where a feature flag may not exist. Defaults to False.
+        :return bool: If `True`, the feature is enabled. If `False`, the feature is disabled.
         """
-        if type(name) != str:
-            raise TypeError("`name` must be a string.")
-
-        if not name:
-            raise ValueError("`name` parameter is required and cannot be empty.")
-
-        if name in self._feature_flags:
-            return self._feature_flags[name]
-
-        return default
