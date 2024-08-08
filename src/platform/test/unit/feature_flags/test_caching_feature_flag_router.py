@@ -5,8 +5,8 @@ import pytest
 from BL_Python.platform.feature_flag.caching_feature_flag_router import (
     CachingFeatureFlagRouter,
 )
+from mock import MagicMock
 from pytest import LogCaptureFixture
-from typing_extensions import override
 
 _FEATURE_FLAG_TEST_NAME = "foo_feature"
 
@@ -94,22 +94,14 @@ def test__feature_is_enabled__uses_cache(value: bool):
     logger = logging.getLogger("FeatureFlagLogger")
     caching_feature_flag_router = CachingFeatureFlagRouter(logger)
 
-    call_count = 0
-
-    class FakeDict(dict):  # pyright: ignore[reportMissingTypeArgument]
-        @override
-        def __getitem__(self, key: Any) -> Any:
-            nonlocal call_count
-            call_count += 1
-            return super().__getitem__(key)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-
-    caching_feature_flag_router._feature_flags = FakeDict()  # pyright: ignore[reportPrivateUsage]
-
+    mock_dict = MagicMock()
+    caching_feature_flag_router._feature_flags = mock_dict  # pyright: ignore[reportPrivateUsage]
     caching_feature_flag_router.set_feature_is_enabled(_FEATURE_FLAG_TEST_NAME, value)
+
     _ = caching_feature_flag_router.feature_is_enabled(_FEATURE_FLAG_TEST_NAME)
     _ = caching_feature_flag_router.feature_is_enabled(_FEATURE_FLAG_TEST_NAME)
 
-    assert call_count == 2
+    assert mock_dict.get.call_count == 3
 
 
 @pytest.mark.parametrize("enable", [True, False])

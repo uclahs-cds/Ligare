@@ -30,13 +30,11 @@ class FeatureFlagRouter(ABC):
         """
 
     @abstractmethod
-    def feature_is_enabled(
-        self, name: str, default: bool | None = False
-    ) -> bool | None:
+    def feature_is_enabled(self, name: str, default: bool = False) -> bool:
         """
         Determine whether a feature flag is enabled or disabled.
 
         :param str name: The name of the feature flag.
-        :param bool | None default: A default value to return for cases where a feature flag may not exist. Defaults to False.
-        :return bool | None: If `True`, the feature is enabled. If `False` or `None`, the feature is disabled.
+        :param bool default: A default value to return for cases where a feature flag may not exist. Defaults to False.
+        :return bool: If `True`, the feature is enabled. If `False`, the feature is disabled.
         """

@@ -13,9 +13,7 @@ class TestFeatureFlagRouter(FeatureFlagRouter):
         return super().set_feature_is_enabled(name, is_enabled)
 
     @override
-    def feature_is_enabled(
-        self, name: str, default: bool | None = False
-    ) -> bool | None:
+    def feature_is_enabled(self, name: str, default: bool = False) -> bool:
         return super().feature_is_enabled(name, default)
 
 

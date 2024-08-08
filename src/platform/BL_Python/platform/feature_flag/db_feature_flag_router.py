@@ -117,10 +117,8 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter):
         check_cache: Whether to use the cached value if it is cached. The default is `True`.
             If the cache is not checked, the new value pulled from the database will be cached.
         """
-        if check_cache:
-            enabled = super().feature_is_enabled(name, None)
-            if enabled is not None:
-                return enabled
+        if check_cache and super().feature_is_cached(name):
+            return super().feature_is_enabled(name)
 
         feature_flag = (
             self._session.query(self._feature_flag)

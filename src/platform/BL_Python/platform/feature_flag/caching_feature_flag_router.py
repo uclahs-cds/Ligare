@@ -27,6 +27,13 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
         else:
             self._logger.warn(f"Setting new feature flag '{name}' to `{new_value}`.")
 
+    def _validate_name(self, name: str):
+        if type(name) != str:
+            raise TypeError("`name` must be a string.")
+
+        if not name:
+            raise ValueError("`name` parameter is required and cannot be empty.")
+
     @override
     def set_feature_is_enabled(self, name: str, is_enabled: bool) -> None:
         """
@@ -37,14 +44,10 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
         :param str name: The feature flag to check.
         :param bool is_enabled: Whether the feature flag is to be enabled or disabled.
         """
-        if type(name) != str:
-            raise TypeError("`name` must be a string.")
+        self._validate_name(name)
 
         if type(is_enabled) != bool:
             raise TypeError("`is_enabled` must be a boolean.")
-
-        if not name:
-            raise ValueError("`name` parameter is required and cannot be empty.")
 
         self._notify_change(name, is_enabled, self._feature_flags.get(name))
 
@@ -53,27 +56,23 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
         return super().set_feature_is_enabled(name, is_enabled)
 
     @override
-    def feature_is_enabled(
-        self, name: str, default: bool | None = False
-    ) -> bool | None:
+    def feature_is_enabled(self, name: str, default: bool = False) -> bool:
         """
         Determine whether a feature flag is enabled or disabled.
 
         Subclasses should call this method to validate parameters and use cached values.
 
         :param str name: The feature flag to check.
-        :param bool | None default: If the feature flag is not in the in-memory dictionary of flags,
+        :param bool default: If the feature flag is not in the in-memory dictionary of flags,
             this is the default value to return. The default parameter value
             when not specified is `False`.
-        :return bool | None: If `True`, the feature is enabled. If `False` or `None`, the feature is disabled.
+        :return bool: If `True`, the feature is enabled. If `False`, the feature is disabled.
         """
-        if type(name) != str:
-            raise TypeError("`name` must be a string.")
+        self._validate_name(name)
 
-        if not name:
-            raise ValueError("`name` parameter is required and cannot be empty.")
+        return self._feature_flags.get(name, default)
 
-        if name in self._feature_flags:
-            return self._feature_flags[name]
+    def feature_is_cached(self, name: str):
+        self._validate_name(name)
 
-        return default
+        return name in self._feature_flags
