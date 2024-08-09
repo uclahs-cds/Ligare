@@ -11,6 +11,13 @@ Review the `BL_Python` [CHANGELOG.md](https://github.com/uclahs-cds/BL_Python/bl
 ---
 ## Unreleased
 
+## [0.2.5] - 2024-08-09
+### Changed
+* Update many dependencies
+
+### Fixed
+* Resolved several type and style errors arising from Pyright and Ruff updates [6f3675bd](https://github.com/uclahs-cds/BL_Python/commit/6f3675bd5def3d6700da01869f03d39841fc8049)
+
 ## [0.2.4] - 2024-05-30
 ### Added
 - ASGI worker classes to support ASGI lifetime and proxy options when running ASGI applications #68
