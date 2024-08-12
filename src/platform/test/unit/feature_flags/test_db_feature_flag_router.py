@@ -6,6 +6,7 @@ from Ligare.database.config import DatabaseConfig
 from Ligare.database.dependency_injection import ScopedSessionModule
 from Ligare.platform.feature_flag.db_feature_flag_router import (
     DBFeatureFlagRouter,
+    FeatureFlag,
     FeatureFlagTable,
 )
 from Ligare.programming.dependency_injection import ConfigModule
@@ -15,6 +16,7 @@ from sqlalchemy.orm.session import Session
 
 _FEATURE_FLAG_TEST_NAME = "foo_feature"
 _FEATURE_FLAG_TEST_DESCRIPTION = "foo description"
+_FEATURE_FLAG_LOGGER_NAME = "FeatureFlagLogger"
 
 
 class PlatformMetaBase(DeclarativeMeta):
@@ -28,7 +30,7 @@ class PlatformBase(object):
 from Ligare.database.testing.config import inmemory_database_config
 
 PlatformBase = declarative_base(cls=PlatformBase, metaclass=PlatformMetaBase)
-FeatureFlag = FeatureFlagTable(PlatformBase)
+FeatureFlagTableBase = FeatureFlagTable(PlatformBase)
 
 
 @pytest.fixture()
@@ -47,7 +49,7 @@ def feature_flag_session():
 
 def _create_feature_flag(session: Session):
     session.add(
-        FeatureFlag(
+        FeatureFlagTableBase(
             name=_FEATURE_FLAG_TEST_NAME, description=_FEATURE_FLAG_TEST_DESCRIPTION
         )
     )
@@ -55,9 +57,9 @@ def _create_feature_flag(session: Session):
 
 
 def test__feature_is_enabled__defaults_to_false(feature_flag_session: Session):
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(
-        FeatureFlag, feature_flag_session, logger
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
     )
     _create_feature_flag(feature_flag_session)
 
@@ -72,9 +74,9 @@ def test__feature_is_enabled__uses_default_when_flag_does_not_exist(
     default: bool,
     feature_flag_session: Session,
 ):
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(
-        FeatureFlag, feature_flag_session, logger
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
     )
 
     is_enabled = db_feature_flag_router.feature_is_enabled(
@@ -85,9 +87,9 @@ def test__feature_is_enabled__uses_default_when_flag_does_not_exist(
 
 
 def test__feature_is_enabled__disallows_empty_name(feature_flag_session: Session):
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(
-        FeatureFlag, feature_flag_session, logger
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
     )
 
     with pytest.raises(ValueError):
@@ -98,9 +100,9 @@ def test__feature_is_enabled__disallows_empty_name(feature_flag_session: Session
 def test__feature_is_enabled__disallows_non_string_names(
     name: Any, feature_flag_session: Session
 ):
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(
-        FeatureFlag, feature_flag_session, logger
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
     )
 
     with pytest.raises(TypeError):
@@ -110,9 +112,9 @@ def test__feature_is_enabled__disallows_non_string_names(
 def test__set_feature_is_enabled__fails_when_flag_does_not_exist(
     feature_flag_session: Session,
 ):
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(
-        FeatureFlag, feature_flag_session, logger
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
     )
 
     with pytest.raises(LookupError):
@@ -120,9 +122,9 @@ def test__set_feature_is_enabled__fails_when_flag_does_not_exist(
 
 
 def test__set_feature_is_enabled__disallows_empty_name(feature_flag_session: Session):
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(
-        FeatureFlag, feature_flag_session, logger
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
     )
     _create_feature_flag(feature_flag_session)
 
@@ -134,9 +136,9 @@ def test__set_feature_is_enabled__disallows_empty_name(feature_flag_session: Ses
 def test__set_feature_is_enabled__disallows_non_string_names(
     name: Any, feature_flag_session: Session
 ):
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(
-        FeatureFlag, feature_flag_session, logger
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
     )
 
     with pytest.raises(TypeError):
@@ -147,9 +149,9 @@ def test__set_feature_is_enabled__disallows_non_string_names(
 def test__set_feature_is_enabled__sets_correct_value(
     enable: bool, feature_flag_session: Session
 ):
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(
-        FeatureFlag, feature_flag_session, logger
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
     )
     _create_feature_flag(feature_flag_session)
 
@@ -165,8 +167,10 @@ def test__set_feature_is_enabled__caches_flags(enable: bool, mocker: MockerFixtu
     session_query_mock = mocker.patch("sqlalchemy.orm.session.Session.query")
     session_mock.query = session_query_mock
 
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(FeatureFlag, session_mock, logger)
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, session_mock, logger
+    )
 
     db_feature_flag_router.set_feature_is_enabled(_FEATURE_FLAG_TEST_NAME, enable)
     _ = db_feature_flag_router.feature_is_enabled(_FEATURE_FLAG_TEST_NAME)
@@ -187,8 +191,10 @@ def test__feature_is_enabled__checks_cache(
         "Ligare.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.set_feature_is_enabled"
     )
 
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(FeatureFlag, session_mock, logger)
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, session_mock, logger
+    )
 
     _ = db_feature_flag_router.feature_is_enabled(
         _FEATURE_FLAG_TEST_NAME, False, check_cache[0]
@@ -210,8 +216,10 @@ def test__feature_is_enabled__sets_cache(
     )
     feature_is_enabled_mock.return_value = True
 
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(FeatureFlag, session_mock, logger)
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, session_mock, logger
+    )
 
     _ = db_feature_flag_router.feature_is_enabled(
         _FEATURE_FLAG_TEST_NAME, False, check_cache[0]
@@ -228,8 +236,10 @@ def test__set_feature_is_enabled__resets_cache_when_flag_enable_is_set(
     session_query_mock = mocker.patch("sqlalchemy.orm.session.Session.query")
     session_mock.query = session_query_mock
 
-    logger = logging.getLogger("FeatureFlagLogger")
-    db_feature_flag_router = DBFeatureFlagRouter(FeatureFlag, session_mock, logger)
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, session_mock, logger
+    )
 
     db_feature_flag_router.set_feature_is_enabled(_FEATURE_FLAG_TEST_NAME, enable)
     _ = db_feature_flag_router.feature_is_enabled(_FEATURE_FLAG_TEST_NAME)

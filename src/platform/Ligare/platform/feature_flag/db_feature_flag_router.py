@@ -15,14 +15,14 @@ from .feature_flag_router import FeatureFlag as FeatureFlagBaseData
 
 
 @dataclass(frozen=True)
-class FeatureFlagData(FeatureFlagBaseData):
+class FeatureFlag(FeatureFlagBaseData):
     description: str | None
 
 
-TFeatureFlagData = TypeVar("TFeatureFlagData", bound=FeatureFlagData, covariant=True)
+TFeatureFlag = TypeVar("TFeatureFlag", bound=FeatureFlag, covariant=True)
 
 
-class FeatureFlag(ABC):
+class FeatureFlagTableBase(ABC):
     def __init__(  # pyright: ignore[reportMissingSuperCall]
         self,
         /,
@@ -31,7 +31,7 @@ class FeatureFlag(ABC):
         enabled: bool | None = False,
     ) -> None:
         raise NotImplementedError(
-            f"`{FeatureFlag.__class__.__name__}` should only be used for type checking."
+            f"`{FeatureFlagTableBase.__class__.__name__}` should only be used for type checking."
         )
 
     __tablename__: str
@@ -41,7 +41,7 @@ class FeatureFlag(ABC):
 
 
 class FeatureFlagTable:
-    def __new__(cls, base: Type[DeclarativeMeta]) -> type[FeatureFlag]:
+    def __new__(cls, base: Type[DeclarativeMeta]) -> type[FeatureFlagTableBase]:
         class _FeatureFlag(base):
             """
             A feature flag.
@@ -63,20 +63,20 @@ class FeatureFlagTable:
             def __repr__(self) -> str:
                 return "<FeatureFlag %s>" % (self.name)
 
-        return cast(type[FeatureFlag], _FeatureFlag)
+        return cast(type[FeatureFlagTableBase], _FeatureFlag)
 
 
 class DBFeatureFlagRouter(
-    CachingFeatureFlagRouter[TFeatureFlagData]
+    CachingFeatureFlagRouter[TFeatureFlag]
 ):  # [FeatureFlagData]):
     # The SQLAlchemy table type used for querying from the type[FeatureFlag] database table
-    _feature_flag: type[FeatureFlag]
+    _feature_flag: type[FeatureFlagTableBase]
     # The SQLAlchemy session used for connecting to and querying the database
     _session: Session
 
     @inject
     def __init__(
-        self, feature_flag: type[FeatureFlag], session: Session, logger: Logger
+        self, feature_flag: type[FeatureFlagTableBase], session: Session, logger: Logger
     ) -> None:
         self._feature_flag = feature_flag
         self._session = session
@@ -101,7 +101,7 @@ class DBFeatureFlagRouter(
         if not name:
             raise ValueError("`name` parameter is required and cannot be empty.")
 
-        feature_flag: FeatureFlag
+        feature_flag: FeatureFlagTableBase
         try:
             feature_flag = (
                 self._session.query(self._feature_flag)
@@ -164,11 +164,11 @@ class DBFeatureFlagRouter(
     @override
     def _create_feature_flag(
         self, name: str, enabled: bool, description: str | None = None
-    ) -> TFeatureFlagData:
+    ) -> TFeatureFlag:
         parent_feature_flag = super()._create_feature_flag(name, enabled)
         return cast(
-            TFeatureFlagData,
-            FeatureFlagData(
+            TFeatureFlag,
+            FeatureFlag(
                 parent_feature_flag.name, parent_feature_flag.enabled, description
             ),
         )
@@ -176,7 +176,7 @@ class DBFeatureFlagRouter(
     @override
     def get_feature_flags(
         self, names: list[str] | None = None
-    ) -> Sequence[TFeatureFlagData]:
+    ) -> Sequence[TFeatureFlag]:
         """
         Get all feature flags and their status from the database.
         This methods updates the cache to the values retrieved from the database.
