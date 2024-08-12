@@ -1,11 +1,12 @@
 from logging import Logger
+from typing import Generic, Sequence, cast
 
 from typing_extensions import override
 
-from .feature_flag_router import FeatureFlagRouter
+from .feature_flag_router import FeatureFlag, FeatureFlagRouter, TFeatureFlag
 
 
-class CachingFeatureFlagRouter(FeatureFlagRouter):
+class CachingFeatureFlagRouter(Generic[TFeatureFlag], FeatureFlagRouter[TFeatureFlag]):
     def __init__(self, logger: Logger) -> None:
         self._logger: Logger = logger
         self._feature_flags: dict[str, bool] = {}
@@ -79,3 +80,29 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
         self._validate_name(name)
 
         return name in self._feature_flags
+
+    @override
+    def _create_feature_flag(self, name: str, enabled: bool) -> TFeatureFlag:
+        return cast(TFeatureFlag, FeatureFlag(name, enabled))
+
+    @override
+    def get_feature_flags(
+        self, names: list[str] | None = None
+    ) -> Sequence[TFeatureFlag]:
+        """
+        Get all feature flags and their status.
+        names: Get only the flags contained in this list.
+        """
+        if names is None:
+            return tuple(
+                self._create_feature_flag(name=key, enabled=value)
+                for key, value in self._feature_flags.items()
+            )
+        else:
+            return tuple(
+                (
+                    self._create_feature_flag(name=key, enabled=value)
+                    for key, value in self._feature_flags.items()
+                    if key in names
+                )
+            )

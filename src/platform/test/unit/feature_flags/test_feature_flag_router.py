@@ -1,13 +1,17 @@
 import ast
 import inspect
+from typing import Sequence
 
-from Ligare.platform.feature_flag.feature_flag_router import FeatureFlagRouter
+from Ligare.platform.feature_flag.feature_flag_router import (
+    FeatureFlag,
+    FeatureFlagRouter,
+)
 from typing_extensions import override
 
 _FEATURE_FLAG_TEST_NAME = "foo_feature"
 
 
-class TestFeatureFlagRouter(FeatureFlagRouter):
+class TestFeatureFlagRouter(FeatureFlagRouter[FeatureFlag]):
     @override
     def set_feature_is_enabled(self, name: str, is_enabled: bool) -> None:
         return super().set_feature_is_enabled(name, is_enabled)
@@ -15,6 +19,16 @@ class TestFeatureFlagRouter(FeatureFlagRouter):
     @override
     def feature_is_enabled(self, name: str, default: bool = False) -> bool:
         return super().feature_is_enabled(name, default)
+
+    @override
+    def _create_feature_flag(self, name: str, enabled: bool) -> FeatureFlag:
+        return super()._create_feature_flag(name, enabled)
+
+    @override
+    def get_feature_flags(
+        self, names: list[str] | None = None
+    ) -> Sequence[FeatureFlag]:
+        return super().get_feature_flags(names)
 
 
 class NotifyingFeatureFlagRouter(TestFeatureFlagRouter):

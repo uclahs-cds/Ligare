@@ -1,15 +1,25 @@
 from abc import ABC
+from dataclasses import dataclass
 from logging import Logger
-from typing import Type, cast, overload
+from typing import Sequence, Type, TypeVar, cast, overload
 
 from injector import inject
-from sqlalchemy import Boolean, Column, Unicode
+from sqlalchemy import Boolean, Column, String, Unicode
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm.session import Session
 from typing_extensions import override
 
 from .caching_feature_flag_router import CachingFeatureFlagRouter
+from .feature_flag_router import FeatureFlag as FeatureFlagBaseData
+
+
+@dataclass(frozen=True)
+class FeatureFlagData(FeatureFlagBaseData):
+    description: str | None
+
+
+TFeatureFlagData = TypeVar("TFeatureFlagData", bound=FeatureFlagData, covariant=True)
 
 
 class FeatureFlag(ABC):
@@ -56,8 +66,12 @@ class FeatureFlagTable:
         return cast(type[FeatureFlag], _FeatureFlag)
 
 
-class DBFeatureFlagRouter(CachingFeatureFlagRouter):
+class DBFeatureFlagRouter(
+    CachingFeatureFlagRouter[TFeatureFlagData]
+):  # [FeatureFlagData]):
+    # The SQLAlchemy table type used for querying from the type[FeatureFlag] database table
     _feature_flag: type[FeatureFlag]
+    # The SQLAlchemy session used for connecting to and querying the database
     _session: Session
 
     @inject
@@ -146,3 +160,59 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter):
         super().set_feature_is_enabled(name, is_enabled)
 
         return is_enabled
+
+    @override
+    def _create_feature_flag(
+        self, name: str, enabled: bool, description: str | None = None
+    ) -> TFeatureFlagData:
+        parent_feature_flag = super()._create_feature_flag(name, enabled)
+        return cast(
+            TFeatureFlagData,
+            FeatureFlagData(
+                parent_feature_flag.name, parent_feature_flag.enabled, description
+            ),
+        )
+
+    @override
+    def get_feature_flags(
+        self, names: list[str] | None = None
+    ) -> Sequence[TFeatureFlagData]:
+        """
+        Get all feature flags and their status from the database.
+        This methods updates the cache to the values retrieved from the database.
+        names: Get only the flags contained in this list.
+        """
+        if names is None:
+            all_feature_flags = self._session.query(self._feature_flag).all()
+
+            # needed to circumvent list comprehension scope
+            # https://docs.python.org/3/reference/datamodel.html#class-object-creation
+            _super = super()
+            [
+                _super.set_feature_is_enabled(
+                    cast(str, feature_flag.name), cast(bool, feature_flag.enabled)
+                )
+                for feature_flag in all_feature_flags
+            ]
+
+            return super().get_feature_flags()
+        else:
+            db_feature_flags = (
+                self._session.query(self._feature_flag)
+                .filter(cast(Column[String], self._feature_flag.name).in_(names))
+                .all()
+            )
+
+            feature_flags = tuple(
+                self._create_feature_flag(
+                    name=cast(str, db_feature_flag.name),
+                    enabled=cast(bool, db_feature_flag.enabled),
+                    description=cast(str, db_feature_flag.description),
+                )
+                for db_feature_flag in db_feature_flags
+            )
+
+            for feature_flag in feature_flags:
+                super().set_feature_is_enabled(feature_flag.name, feature_flag.enabled)
+
+            return feature_flags
