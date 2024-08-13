@@ -66,9 +66,7 @@ class FeatureFlagTable:
         return cast(type[FeatureFlagTableBase], _FeatureFlag)
 
 
-class DBFeatureFlagRouter(
-    CachingFeatureFlagRouter[TFeatureFlag]
-):  # [FeatureFlagData]):
+class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
     # The SQLAlchemy table type used for querying from the type[FeatureFlag] database table
     _feature_flag: type[FeatureFlagTableBase]
     # The SQLAlchemy session used for connecting to and querying the database

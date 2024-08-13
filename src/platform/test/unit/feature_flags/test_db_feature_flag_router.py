@@ -47,10 +47,15 @@ def feature_flag_session():
     return session
 
 
-def _create_feature_flag(session: Session):
+def _create_feature_flag(
+    session: Session, name: str | None = None, description: str | None = None
+):
     session.add(
         FeatureFlagTableBase(
-            name=_FEATURE_FLAG_TEST_NAME, description=_FEATURE_FLAG_TEST_DESCRIPTION
+            name=_FEATURE_FLAG_TEST_NAME if name is None else name,
+            description=_FEATURE_FLAG_TEST_DESCRIPTION
+            if description is None
+            else description,
         )
     )
     session.commit()
@@ -252,3 +257,174 @@ def test__set_feature_is_enabled__resets_cache_when_flag_enable_is_set(
     assert session_query_mock.call_count == 2
     assert first_value == enable
     assert second_value == (not enable)
+
+
+def test___create_feature_flag__returns_correct_TFeatureFlag(
+    feature_flag_session: Session,
+):
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
+    )
+
+    feature_flag = db_feature_flag_router._create_feature_flag(  # pyright: ignore[reportPrivateUsage]
+        _FEATURE_FLAG_TEST_NAME, True
+    )
+
+    assert isinstance(feature_flag, FeatureFlag)
+
+
+@pytest.mark.parametrize("value", [True, False])
+def test___create_feature_flag__creates_correct_TFeatureFlag(
+    value: bool,
+    feature_flag_session: Session,
+):
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
+    )
+
+    feature_flag = db_feature_flag_router._create_feature_flag(  # pyright: ignore[reportPrivateUsage]
+        _FEATURE_FLAG_TEST_NAME, value
+    )
+
+    assert feature_flag.name == _FEATURE_FLAG_TEST_NAME
+    assert feature_flag.enabled == value
+
+
+def test__get_feature_flags__returns_empty_sequence_when_no_flags_exist(
+    feature_flag_session: Session,
+):
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
+    )
+
+    feature_flags = db_feature_flag_router.get_feature_flags()
+
+    assert isinstance(feature_flags, tuple)
+    assert not feature_flags
+
+
+@pytest.mark.parametrize(
+    "added_flags,filtered_flags",
+    [
+        [{f"{_FEATURE_FLAG_TEST_NAME}2": True}, [f"{_FEATURE_FLAG_TEST_NAME}1"]],
+        [{f"{_FEATURE_FLAG_TEST_NAME}2": False}, [f"{_FEATURE_FLAG_TEST_NAME}3"]],
+        [
+            {
+                f"{_FEATURE_FLAG_TEST_NAME}1": True,
+                f"{_FEATURE_FLAG_TEST_NAME}1": False,
+                f"{_FEATURE_FLAG_TEST_NAME}2": True,
+                f"{_FEATURE_FLAG_TEST_NAME}2": False,
+                f"{_FEATURE_FLAG_TEST_NAME}3": True,
+                f"{_FEATURE_FLAG_TEST_NAME}3": False,
+            },
+            [f"{_FEATURE_FLAG_TEST_NAME}4", f"{_FEATURE_FLAG_TEST_NAME}5"],
+        ],
+    ],
+)
+def test__get_feature_flags__returns_empty_sequence_when_flags_exist_but_filtered_list_does_not_exist(
+    added_flags: dict[str, bool],
+    filtered_flags: list[str],
+    feature_flag_session: Session,
+):
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
+    )
+
+    for flag_name, enabled in added_flags.items():
+        _create_feature_flag(feature_flag_session, flag_name)
+        db_feature_flag_router.set_feature_is_enabled(flag_name, enabled)
+
+    feature_flags = db_feature_flag_router.get_feature_flags(filtered_flags)
+
+    assert isinstance(feature_flags, tuple)
+    assert len(feature_flags) == 0
+
+
+@pytest.mark.parametrize(
+    "added_flags",
+    [
+        {f"{_FEATURE_FLAG_TEST_NAME}2": True},
+        {f"{_FEATURE_FLAG_TEST_NAME}2": False},
+        {
+            f"{_FEATURE_FLAG_TEST_NAME}1": True,
+            f"{_FEATURE_FLAG_TEST_NAME}1": False,
+            f"{_FEATURE_FLAG_TEST_NAME}2": True,
+            f"{_FEATURE_FLAG_TEST_NAME}2": False,
+            f"{_FEATURE_FLAG_TEST_NAME}3": True,
+            f"{_FEATURE_FLAG_TEST_NAME}3": False,
+        },
+    ],
+)
+def test__get_feature_flags__returns_all_existing_flags(
+    added_flags: dict[str, bool],
+    feature_flag_session: Session,
+):
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
+    )
+
+    for flag_name, enabled in added_flags.items():
+        _create_feature_flag(feature_flag_session, flag_name)
+        db_feature_flag_router.set_feature_is_enabled(flag_name, enabled)
+
+    feature_flags = db_feature_flag_router.get_feature_flags()
+    feature_flags_dict = {
+        feature_flag.name: feature_flag.enabled for feature_flag in feature_flags
+    }
+
+    assert isinstance(feature_flags, tuple)
+    assert len(feature_flags) == len(added_flags)
+
+    for filtered_flag in feature_flags_dict:
+        assert filtered_flag in feature_flags_dict
+        assert feature_flags_dict[filtered_flag] == added_flags[filtered_flag]
+
+
+@pytest.mark.parametrize(
+    "added_flags,filtered_flags",
+    [
+        [{f"{_FEATURE_FLAG_TEST_NAME}2": True}, [f"{_FEATURE_FLAG_TEST_NAME}2"]],
+        [{f"{_FEATURE_FLAG_TEST_NAME}2": False}, [f"{_FEATURE_FLAG_TEST_NAME}2"]],
+        [
+            {
+                f"{_FEATURE_FLAG_TEST_NAME}1": True,
+                f"{_FEATURE_FLAG_TEST_NAME}1": False,
+                f"{_FEATURE_FLAG_TEST_NAME}2": True,
+                f"{_FEATURE_FLAG_TEST_NAME}2": False,
+                f"{_FEATURE_FLAG_TEST_NAME}3": True,
+                f"{_FEATURE_FLAG_TEST_NAME}3": False,
+            },
+            [f"{_FEATURE_FLAG_TEST_NAME}1", f"{_FEATURE_FLAG_TEST_NAME}2"],
+        ],
+    ],
+)
+def test__get_feature_flags__returns_filtered_flags(
+    added_flags: dict[str, bool],
+    filtered_flags: list[str],
+    feature_flag_session: Session,
+):
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
+    )
+
+    for flag_name, enabled in added_flags.items():
+        _create_feature_flag(feature_flag_session, flag_name)
+        db_feature_flag_router.set_feature_is_enabled(flag_name, enabled)
+
+    feature_flags = db_feature_flag_router.get_feature_flags(filtered_flags)
+    feature_flags_dict = {
+        feature_flag.name: feature_flag.enabled for feature_flag in feature_flags
+    }
+
+    assert isinstance(feature_flags, tuple)
+    assert len(feature_flags) == len(filtered_flags)
+
+    for filtered_flag in filtered_flags:
+        assert filtered_flag in feature_flags_dict
+        assert feature_flags_dict[filtered_flag] == added_flags[filtered_flag]
