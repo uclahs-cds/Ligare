@@ -9,6 +9,13 @@ class FeatureFlag:
     enabled: bool
 
 
+@dataclass(frozen=True)
+class FeatureFlagChange:
+    name: str
+    old_value: bool | None
+    new_value: bool | None
+
+
 TFeatureFlag = TypeVar("TFeatureFlag", bound=FeatureFlag, covariant=True)
 
 
@@ -32,12 +39,13 @@ class FeatureFlagRouter(Generic[TFeatureFlag], ABC):
         """
 
     @abstractmethod
-    def set_feature_is_enabled(self, name: str, is_enabled: bool) -> None:
+    def set_feature_is_enabled(self, name: str, is_enabled: bool) -> FeatureFlagChange:
         """
         Enable or disable a feature flag.
 
         :param str name: The name of the feature flag.
         :param bool is_enabled: If `True`, the feature is enabled. If `False`, the feature is disabled.
+        :return FeatureFlagChange: An object representing the previous and new values of the changed feature flag.
         """
 
     @abstractmethod

@@ -3,7 +3,12 @@ from typing import Generic, Sequence, cast
 
 from typing_extensions import override
 
-from .feature_flag_router import FeatureFlag, FeatureFlagRouter, TFeatureFlag
+from .feature_flag_router import (
+    FeatureFlag,
+    FeatureFlagChange,
+    FeatureFlagRouter,
+    TFeatureFlag,
+)
 
 
 class CachingFeatureFlagRouter(Generic[TFeatureFlag], FeatureFlagRouter[TFeatureFlag]):
@@ -36,7 +41,7 @@ class CachingFeatureFlagRouter(Generic[TFeatureFlag], FeatureFlagRouter[TFeature
             raise ValueError("`name` parameter is required and cannot be empty.")
 
     @override
-    def set_feature_is_enabled(self, name: str, is_enabled: bool) -> None:
+    def set_feature_is_enabled(self, name: str, is_enabled: bool) -> FeatureFlagChange:
         """
          Enables or disables a feature flag in the in-memory dictionary of feature flags.
 
@@ -44,17 +49,23 @@ class CachingFeatureFlagRouter(Generic[TFeatureFlag], FeatureFlagRouter[TFeature
 
         :param str name: The feature flag to check.
         :param bool is_enabled: Whether the feature flag is to be enabled or disabled.
+        :return FeatureFlagChange: An object representing the previous and new values of the changed feature flag.
         """
         self._validate_name(name)
 
         if type(is_enabled) != bool:
             raise TypeError("`is_enabled` must be a boolean.")
 
-        self._notify_change(name, is_enabled, self._feature_flags.get(name))
+        old_enabled_value = self._feature_flags.get(name)
+        self._notify_change(name, is_enabled, old_enabled_value)
 
         self._feature_flags[name] = is_enabled
 
-        return super().set_feature_is_enabled(name, is_enabled)
+        _ = super().set_feature_is_enabled(name, is_enabled)
+
+        return FeatureFlagChange(
+            name=name, old_value=old_enabled_value, new_value=is_enabled
+        )
 
     @override
     def feature_is_enabled(self, name: str, default: bool = False) -> bool:

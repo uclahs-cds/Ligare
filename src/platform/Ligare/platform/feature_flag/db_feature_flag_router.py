@@ -12,6 +12,7 @@ from typing_extensions import override
 
 from .caching_feature_flag_router import CachingFeatureFlagRouter
 from .feature_flag_router import FeatureFlag as FeatureFlagBaseData
+from .feature_flag_router import FeatureFlagChange
 
 
 @dataclass(frozen=True)
@@ -81,16 +82,16 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
         super().__init__(logger)
 
     @override
-    def set_feature_is_enabled(self, name: str, is_enabled: bool):
+    def set_feature_is_enabled(self, name: str, is_enabled: bool) -> FeatureFlagChange:
         """
         Enable or disable a feature flag in the database.
 
         This method caches the value of `is_enabled` for the specified feature flag
         unless saving to the database fails.
 
-        name: The feature flag to check.
-
-        is_enabled: Whether the feature flag is to be enabled or disabled.
+        :param str name: The feature flag to check.
+        :param bool is_enabled: Whether the feature flag is to be enabled or disabled.
+        :return FeatureFlagChange: An object representing the previous and new values of the changed feature flag.
         """
 
         if type(name) != str:
@@ -103,7 +104,7 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
         try:
             feature_flag = (
                 self._session.query(self._feature_flag)
-                .filter(cast(Column[Unicode], self._feature_flag.name) == name)
+                .filter(self._feature_flag.name == name)
                 .one()
             )
         except NoResultFound as e:
@@ -111,9 +112,14 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
                 f"The feature flag `{name}` does not exist. It must be created before being accessed."
             ) from e
 
+        old_enabled_value = cast(bool | None, feature_flag.enabled)
         feature_flag.enabled = is_enabled
         self._session.commit()
-        super().set_feature_is_enabled(name, is_enabled)
+        _ = super().set_feature_is_enabled(name, is_enabled)
+
+        return FeatureFlagChange(
+            name=name, old_value=old_enabled_value, new_value=is_enabled
+        )
 
     @overload
     def feature_is_enabled(self, name: str, default: bool = False) -> bool: ...
@@ -143,7 +149,7 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
 
         feature_flag = (
             self._session.query(self._feature_flag)
-            .filter(cast(Column[Unicode], self._feature_flag.name) == name)
+            .filter(self._feature_flag.name == name)
             .one_or_none()
         )
 
@@ -155,7 +161,7 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
 
         is_enabled = cast(bool, feature_flag.enabled)
 
-        super().set_feature_is_enabled(name, is_enabled)
+        _ = super().set_feature_is_enabled(name, is_enabled)
 
         return is_enabled
 
@@ -204,6 +210,6 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
 
         # cache the feature flags
         for feature_flag in feature_flags:
-            super().set_feature_is_enabled(feature_flag.name, feature_flag.enabled)
+            _ = super().set_feature_is_enabled(feature_flag.name, feature_flag.enabled)
 
         return feature_flags
