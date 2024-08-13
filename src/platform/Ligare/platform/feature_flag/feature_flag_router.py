@@ -71,4 +71,6 @@ class FeatureFlagRouter(Generic[TFeatureFlag], ABC):
         If `names` is not `None`, this only returns the enabled state of the flags in the list.
 
         :param list[str] | None names: Get only the flags contained in this list.
+        :return tuple[TFeatureFlag]: An immutable sequence (a tuple) of feature flags.
+        If `names` is `None` this sequence contains _all_ feature flags. Otherwise, the list is filtered.
         """

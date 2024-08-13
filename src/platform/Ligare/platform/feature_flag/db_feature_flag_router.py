@@ -178,22 +178,14 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
         """
         Get all feature flags and their status from the database.
         This methods updates the cache to the values retrieved from the database.
-        names: Get only the flags contained in this list.
+
+        :param list[str] | None names: Get only the flags contained in this list.
+        :return tuple[TFeatureFlag]: An immutable sequence (a tuple) of feature flags.
+        If `names` is `None` this sequence contains _all_ feature flags in the database. Otherwise, the list is filtered.
         """
+        db_feature_flags: list[FeatureFlagTableBase]
         if names is None:
-            all_feature_flags = self._session.query(self._feature_flag).all()
-
-            # needed to circumvent list comprehension scope
-            # https://docs.python.org/3/reference/datamodel.html#class-object-creation
-            _super = super()
-            [
-                _super.set_feature_is_enabled(
-                    cast(str, feature_flag.name), cast(bool, feature_flag.enabled)
-                )
-                for feature_flag in all_feature_flags
-            ]
-
-            return super().get_feature_flags()
+            db_feature_flags = self._session.query(self._feature_flag).all()
         else:
             db_feature_flags = (
                 self._session.query(self._feature_flag)
@@ -201,16 +193,17 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
                 .all()
             )
 
-            feature_flags = tuple(
-                self._create_feature_flag(
-                    name=cast(str, db_feature_flag.name),
-                    enabled=cast(bool, db_feature_flag.enabled),
-                    description=cast(str, db_feature_flag.description),
-                )
-                for db_feature_flag in db_feature_flags
+        feature_flags = tuple(
+            self._create_feature_flag(
+                name=cast(str, feature_flag.name),
+                enabled=cast(bool, feature_flag.enabled),
+                description=cast(str, feature_flag.description),
             )
+            for feature_flag in db_feature_flags
+        )
 
-            for feature_flag in feature_flags:
-                super().set_feature_is_enabled(feature_flag.name, feature_flag.enabled)
+        # cache the feature flags
+        for feature_flag in feature_flags:
+            super().set_feature_is_enabled(feature_flag.name, feature_flag.enabled)
 
-            return feature_flags
+        return feature_flags

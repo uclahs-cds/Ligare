@@ -91,7 +91,10 @@ class CachingFeatureFlagRouter(Generic[TFeatureFlag], FeatureFlagRouter[TFeature
     ) -> Sequence[TFeatureFlag]:
         """
         Get all feature flags and their status.
-        names: Get only the flags contained in this list.
+
+        :params list[str] | None names: Get only the flags contained in this list.
+        :return tuple[TFeatureFlag]: An immutable sequence (a tuple) of feature flags.
+        If `names` is `None` this sequence contains _all_ feature flags in the cache. Otherwise, the list is filtered.
         """
         if names is None:
             return tuple(
