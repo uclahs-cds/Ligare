@@ -5,7 +5,7 @@ import pytest
 from Ligare.platform.feature_flag.caching_feature_flag_router import (
     CachingFeatureFlagRouter,
 )
-from BL_Python.platform.feature_flag.feature_flag_router import FeatureFlag
+from Ligare.platform.feature_flag.feature_flag_router import FeatureFlag
 from mock import MagicMock
 from pytest import LogCaptureFixture
 

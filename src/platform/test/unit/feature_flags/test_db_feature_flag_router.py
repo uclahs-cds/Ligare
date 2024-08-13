@@ -1,11 +1,16 @@
 import logging
-from typing import Any, Tuple
+from typing import Any, Tuple, cast
 
 import pytest
 from Ligare.database.config import DatabaseConfig
 from Ligare.database.dependency_injection import ScopedSessionModule
+from Ligare.platform.feature_flag import caching_feature_flag_router
+from Ligare.platform.feature_flag.caching_feature_flag_router import (
+    CachingFeatureFlagRouter,
+)
 from Ligare.platform.feature_flag.db_feature_flag_router import (
-    DBFeatureFlagRouter,
+from Ligare.database.config import DatabaseConfig
+from LigarereFlagRouter,
     FeatureFlag,
     FeatureFlagTable,
 )
@@ -314,11 +319,11 @@ def test__get_feature_flags__returns_empty_sequence_when_no_flags_exist(
         {f"{_FEATURE_FLAG_TEST_NAME}2": False},
         {
             f"{_FEATURE_FLAG_TEST_NAME}1": True,
-            f"{_FEATURE_FLAG_TEST_NAME}1": False,
-            f"{_FEATURE_FLAG_TEST_NAME}2": True,
             f"{_FEATURE_FLAG_TEST_NAME}2": False,
             f"{_FEATURE_FLAG_TEST_NAME}3": True,
-            f"{_FEATURE_FLAG_TEST_NAME}3": False,
+            f"{_FEATURE_FLAG_TEST_NAME}4": False,
+            f"{_FEATURE_FLAG_TEST_NAME}5": True,
+            f"{_FEATURE_FLAG_TEST_NAME}6": False,
         },
     ],
 )
@@ -358,11 +363,11 @@ def test__get_feature_flags__returns_all_existing_flags(
         [
             {
                 f"{_FEATURE_FLAG_TEST_NAME}1": True,
-                f"{_FEATURE_FLAG_TEST_NAME}1": False,
-                f"{_FEATURE_FLAG_TEST_NAME}2": True,
                 f"{_FEATURE_FLAG_TEST_NAME}2": False,
                 f"{_FEATURE_FLAG_TEST_NAME}3": True,
-                f"{_FEATURE_FLAG_TEST_NAME}3": False,
+                f"{_FEATURE_FLAG_TEST_NAME}4": False,
+                f"{_FEATURE_FLAG_TEST_NAME}5": True,
+                f"{_FEATURE_FLAG_TEST_NAME}6": False,
             },
             [f"{_FEATURE_FLAG_TEST_NAME}1", f"{_FEATURE_FLAG_TEST_NAME}2"],
         ],
@@ -405,13 +410,13 @@ def test__get_feature_flags__returns_filtered_flags(
         [
             {
                 f"{_FEATURE_FLAG_TEST_NAME}1": True,
-                f"{_FEATURE_FLAG_TEST_NAME}1": False,
-                f"{_FEATURE_FLAG_TEST_NAME}2": True,
                 f"{_FEATURE_FLAG_TEST_NAME}2": False,
                 f"{_FEATURE_FLAG_TEST_NAME}3": True,
-                f"{_FEATURE_FLAG_TEST_NAME}3": False,
+                f"{_FEATURE_FLAG_TEST_NAME}4": False,
+                f"{_FEATURE_FLAG_TEST_NAME}5": True,
+                f"{_FEATURE_FLAG_TEST_NAME}6": False,
             },
-            [f"{_FEATURE_FLAG_TEST_NAME}4", f"{_FEATURE_FLAG_TEST_NAME}5"],
+            [f"{_FEATURE_FLAG_TEST_NAME}7", f"{_FEATURE_FLAG_TEST_NAME}8"],
         ],
     ],
 )
@@ -433,3 +438,48 @@ def test__get_feature_flags__returns_empty_sequence_when_flags_exist_but_filtere
 
     assert isinstance(feature_flags, tuple)
     assert len(feature_flags) == 0
+
+
+@pytest.mark.parametrize(
+    "added_flags",
+    [
+        {f"{_FEATURE_FLAG_TEST_NAME}2": True},
+        {f"{_FEATURE_FLAG_TEST_NAME}2": False},
+        {
+            f"{_FEATURE_FLAG_TEST_NAME}1": True,
+            f"{_FEATURE_FLAG_TEST_NAME}2": False,
+            f"{_FEATURE_FLAG_TEST_NAME}3": True,
+            f"{_FEATURE_FLAG_TEST_NAME}4": False,
+            f"{_FEATURE_FLAG_TEST_NAME}5": True,
+            f"{_FEATURE_FLAG_TEST_NAME}6": False,
+        },
+    ],
+)
+def test__get_feature_flags__caches_all_existing_flags_when_queried(
+    added_flags: dict[str, bool], feature_flag_session: Session, mocker: MockerFixture
+):
+    logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
+    db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
+        FeatureFlagTableBase, feature_flag_session, logger
+    )
+
+    for flag_name, enabled in added_flags.items():
+        _create_feature_flag(feature_flag_session, flag_name)
+        db_feature_flag_router.set_feature_is_enabled(flag_name, enabled)
+
+    cache_mock = mocker.patch(
+        "Ligare.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.set_feature_is_enabled",
+        autospec=True,
+    )
+
+    _ = db_feature_flag_router.get_feature_flags()
+
+    call_args_dict: dict[str, bool] = {
+        call.args[1]: call.args[2] for call in cache_mock.call_args_list
+    }
+
+    # CachingFeatureFlagRouter.set_feature_is_enabled should be called
+    # once for every feature flag retrieved from the database
+    assert cache_mock.call_count == len(added_flags)
+    for flag_name, enabled in added_flags.items():
+        assert call_args_dict[flag_name] == enabled
