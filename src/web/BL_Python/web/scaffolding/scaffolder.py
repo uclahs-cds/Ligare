@@ -95,7 +95,9 @@ class Scaffolder:
 
         self._checked_directories.add(directory)
         if overwrite_existing_files and directory.exists():
-            self._log.warn(f"Directory `{directory}` exists. Files may be overwritten.")
+            self._log.warning(
+                f"Directory `{directory}` exists. Files may be overwritten."
+            )
         else:
             self._log.debug(f"Creating directory `{directory}`.")
             # the "overwrite" check only applies in this method
@@ -177,7 +179,7 @@ class Scaffolder:
         )
 
         if overwrite_existing_files == False and template_output_path.exists():
-            self._log.warn(
+            self._log.warning(
                 f"File `{template_output_path}` exists, but refusing to overwrite."
             )
             return

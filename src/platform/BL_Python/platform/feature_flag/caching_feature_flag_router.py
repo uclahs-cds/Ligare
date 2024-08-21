@@ -17,15 +17,15 @@ class CachingFeatureFlagRouter(FeatureFlagRouter):
     ) -> None:
         if name in self._feature_flags:
             if new_value == old_value:
-                self._logger.warn(
+                self._logger.warning(
                     f"Tried to change feature flag value for '{name}' to the same value. It is already {'enabled' if new_value else 'disabled'}."
                 )
             else:
-                self._logger.warn(
+                self._logger.warning(
                     f"Changing feature flag value for '{name}' from `{old_value}` to `{new_value}`."
                 )
         else:
-            self._logger.warn(f"Setting new feature flag '{name}' to `{new_value}`.")
+            self._logger.warning(f"Setting new feature flag '{name}' to `{new_value}`.")
 
     def _validate_name(self, name: str):
         if type(name) != str:

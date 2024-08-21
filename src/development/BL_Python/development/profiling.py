@@ -26,7 +26,7 @@ def do_profile(fn: "Callable[..., Any]"):
         with cProfile.Profile() as pr:
             result = pr.runcall(fn, *args, **kwargs)
             profile_filename = f"profile.{fn.__name__}.{''.join(choice(ascii_letters) for _ in range(8))}"
-            Logger("PROFILE").warn(f"Saving profile to {profile_filename}")
+            Logger("PROFILE").warning(f"Saving profile to {profile_filename}")
             pr.dump_stats(profile_filename)
             return result
 

@@ -92,7 +92,7 @@ class UserLoader(Generic[TUserMixin]):
         self._log.debug(f'Loading user "{username}"')
 
         if not username:
-            self._log.warn("`username` is empty. Skipping load.")
+            self._log.warning("`username` is empty. Skipping load.")
             return
 
         with self._scoped_session() as session:

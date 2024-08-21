@@ -157,7 +157,7 @@ class ScaffolderCli:
                 endpoint.url_path_name: endpoint for endpoint in _args.endpoints
             }
             if APPLICATION_ENDPOINT_PATH_NAME in endpoints:
-                self._log.warn(
+                self._log.warning(
                     f'The endpoint name "{APPLICATION_ENDPOINT_PATH_NAME}" is reserved and will not be scaffolded.'
                 )
                 _args.endpoints.remove(endpoints[APPLICATION_ENDPOINT_PATH_NAME])

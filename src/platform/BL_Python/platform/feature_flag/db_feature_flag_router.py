@@ -136,7 +136,7 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter):
         )
 
         if feature_flag is None:
-            self._logger.warn(
+            self._logger.warning(
                 f'Feature flag {name} not found in database. Returning "{default}" by default.'
             )
             return default

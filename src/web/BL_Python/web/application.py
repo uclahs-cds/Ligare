@@ -123,7 +123,7 @@ def create_app(
         ssm_parameters = SSMParameters()
         full_config = ssm_parameters.load_config(config_type)
     except Exception as e:
-        logging.getLogger().warn(f"SSM parameter load failed: {e}")
+        logging.getLogger().warning(f"SSM parameter load failed: {e}")
 
     if full_config is None:
         if config_overrides:
