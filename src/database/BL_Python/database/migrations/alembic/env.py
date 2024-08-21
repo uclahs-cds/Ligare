@@ -27,7 +27,7 @@ def get_migration_config(config_filename: Path | None = None):
         ssm_parameters = SSMParameters()
         database_config = ssm_parameters.load_config(config_type)
     except Exception as e:
-        logging.getLogger().warn(f"SSM parameter load failed: {e}")
+        logging.getLogger().warning(f"SSM parameter load failed: {e}")
 
     if database_config is None:
         database_config = load_config(config_type, config_filename)
