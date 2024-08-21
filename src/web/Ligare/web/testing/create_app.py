@@ -775,6 +775,8 @@ paths:
         mock_controller = MockController(begin=begin, end=end)
 
         try:
+            # TODO can this be a context manager instead of requiring
+            # the explicit begin() call?
             yield mock_controller
         finally:
             mock_controller.end()

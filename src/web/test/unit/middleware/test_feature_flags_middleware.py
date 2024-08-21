@@ -80,3 +80,53 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         # 401 for now because no real auth is configured.
         # if SSO was broken, 500 would return
         assert response.status_code == 401
+
+    def test__FeatureFlagMiddleware__something(
+        self,
+        openapi_config: Config,
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_mock_controller: OpenAPIMockController,
+        mocker: MockerFixture,
+    ):
+        def app_init_hook(
+            application_configs: list[type[AbstractConfig]],
+            application_modules: list[Module | type[Module]],
+        ):
+            application_modules.append(
+                UserLoaderModule(
+                    loader=User,  # pyright: ignore[reportArgumentType]
+                    roles=Role,  # pyright: ignore[reportArgumentType]
+                    user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    bases=[],
+                )
+            )
+            application_modules.append(DBFeatureFlagRouterModule)
+            application_configs.append(RootFeatureFlagConfig)
+            application_modules.append(FeatureFlagMiddlewareModule())
+
+        def client_init_hook(app: OpenAPIAppResult):
+            feature_flag_config = FeatureFlagConfig(
+                access_role_name="Operator",
+                api_base_url="/server",  # the default
+            )
+            root_feature_flag_config = RootFeatureFlagConfig(
+                feature_flag=feature_flag_config
+            )
+            app.app_injector.flask_injector.injector.binder.bind(
+                FeatureFlagConfig, to=feature_flag_config
+            )
+            app.app_injector.flask_injector.injector.binder.bind(
+                RootFeatureFlagConfig, to=root_feature_flag_config
+            )
+
+        openapi_mock_controller.begin()
+        app = next(
+            openapi_client_configurable(openapi_config, client_init_hook, app_init_hook)
+        )
+
+        response = app.client.get("/server/feature_flag")
+
+        # 401 for now because no real auth is configured.
+        # if SSO was broken, 500 would return
+        assert response.status_code == 401

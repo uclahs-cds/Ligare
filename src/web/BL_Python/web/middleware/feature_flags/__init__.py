@@ -30,7 +30,7 @@
 # _FEATURE_FLAG_NOT_FOUND_PROBLEM_STATUS = 404
 ############
 from logging import Logger
-from typing import Any, Callable, Generic, Sequence
+from typing import Any, Callable, Generic, Sequence, cast
 
 from BL_Python.platform.feature_flag.caching_feature_flag_router import (
     FeatureFlag as CachingFeatureFlag,
@@ -70,6 +70,8 @@ class Config(BaseModel, AbstractConfig):
     feature_flag: FeatureFlagConfig
 
 
+# TODO consider having the DI registration log a warning if
+# an interface is being overwritten
 class FeatureFlagRouterModule(Module, Generic[TFeatureFlag]):
     def __init__(self, t_feature_flag: type[FeatureFlagRouter[TFeatureFlag]]) -> None:
         self._t_feature_flag = t_feature_flag
@@ -94,7 +96,9 @@ class DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
 
     @provider
     def _provide_db_feature_flag_router_table_base(self) -> type[FeatureFlagTableBase]:
-        return FeatureFlagTable
+        # FeatureFlagTable is a FeatureFlagTableBase provided through
+        # SQLAlchemy's declarative meta API
+        return cast(type[FeatureFlagTableBase], FeatureFlagTable)
 
 
 class CachingFeatureFlagRouterModule(FeatureFlagRouterModule[CachingFeatureFlag]):
