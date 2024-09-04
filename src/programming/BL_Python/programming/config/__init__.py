@@ -33,7 +33,9 @@ class ConfigBuilder(Generic[TConfig]):
             return self._root_config
 
         if not self._configs:
-            raise ConfigBuilderStateError("Cannot build a config without any configs.")
+            raise ConfigBuilderStateError(
+                "Cannot build a config without any base config types specified."
+            )
 
         _new_type_base = self._root_config if self._root_config else object
 
