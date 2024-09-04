@@ -11,6 +11,7 @@
 *.rd[as]
 
 # Python
+.tox
 .coverage
 coverage
 cov.xml

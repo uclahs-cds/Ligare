@@ -30,6 +30,8 @@ PYPI_REPO ?= testpypi
 REPORTS_DIR ?= reports
 BANDIT_REPORT := bandit.sarif
 PYTEST_REPORT := pytest
+PYTEST_TARGET ?= .
+TOX_DIR := .tox
 
 
 # Can be overridden. This is used to change the prereqs
@@ -195,7 +197,7 @@ test-bandit : $(VENV) $(BUILD_TARGET)
 
 test-pytest : $(VENV) $(BUILD_TARGET)
 	-$(ACTIVATE_VENV) && \
-	pytest $(PYTEST_FLAGS) && PYTEST_EXIT_CODE=0 || PYTEST_EXIT_CODE=$$?; \
+	PYTEST_TARGET=$(PYTEST_TARGET) tox && PYTEST_EXIT_CODE=0 || PYTEST_EXIT_CODE=$$?; \
 	coverage html --data-file=$(REPORTS_DIR)/$(PYTEST_REPORT)/.coverage; \
 	junit2html $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.xml $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.html; \
 	exit $$PYTEST_EXIT_CODE
@@ -230,6 +232,7 @@ clean-build :
 
 clean-test :
 	$(CMD_PREFIX)rm -rf \
+		$(TOX_DIR) \
 		$(REPORTS_DIR)/$(PYTEST_REPORT) \
 		$(REPORTS_DIR)/$(BANDIT_REPORT)
 
