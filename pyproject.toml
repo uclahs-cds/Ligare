@@ -82,14 +82,13 @@ packages = [
 #
 [project.optional-dependencies]
 dev-dependencies = [
+    "tox ~= 4.18",
     "pytest ~= 8.0",
     "pytest-mock",
     "mock",
     "pytest-cov >= 4.1,< 5.0",
     "coverage ~= 7.4",
     "junit2html >= 30.1,< 32.0",
-    # Pyright >= 1.1.367 breaks the build.
-    # Waiting for new pyright release to fix it. https://github.com/uclahs-cds/BL_Python/issues/79
     "pyright == 1.1.379",
     "isort ~= 5.13",
     "ruff ~= 0.3",
@@ -183,7 +182,6 @@ addopts = [
     # https://github.com/microsoft/vscode-python/issues/21255
     # and
     # https://github.com/microsoft/vscode-python/issues/21845
-    "--cov=.",
     "--junitxml=reports/pytest/pytest.xml",
     "-o=junit_family=xunit2",
     "--cov-report=xml:reports/pytest/cov.xml",
@@ -193,6 +191,29 @@ addopts = [
 python_files = "test_*.py"
 
 norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv .github-venv"
+
+[tool.tox]
+legacy_tox_ini = """
+    [tox]
+    envlist = py310
+
+    [testenv]
+    # these options make Tox use the existing .venv dir created by venv
+    envdir = {env:VENV:.venv}
+    recreate = false
+    skip_install = true
+
+    setenv =
+        # configure --cov here because we can't use
+        # envvars in pyproject.toml, and we want this
+        # to be configurable in order to test coverage
+        # for a subset of tests in the monorepo rather
+        # than for all tests in the repo.
+        PYTEST_ADDOPTS = --cov={env:PYTEST_TARGET:.}
+    commands =
+        # use `.` add the default --cov option if it's not specified
+        pytest {env:PYTEST_FLAGS} {env:PYTEST_ADDOPTS:--cov=.} {env:PYTEST_TARGET}
+"""
 
 [tool.coverage.report]
 include_namespace_packages = true
