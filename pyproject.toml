@@ -200,7 +200,6 @@ legacy_tox_ini = """
     [testenv]
     # these options make Tox use the existing .venv dir created by venv
     envdir = {env:VENV:.venv}
-    usedevelop = true
     recreate = false
     skip_install = true
 
