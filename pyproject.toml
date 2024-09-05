@@ -210,8 +210,6 @@ legacy_tox_ini = """
         # for a subset of tests in the monorepo rather
         # than for all tests in the repo.
         PYTEST_ADDOPTS = --cov={env:PYTEST_TARGET:.}
-        # additional pytest flags - defaults to no flags
-        PYTEST_FLAGS = {env:PYTEST_FLAGS:}
     commands =
         # use `.` add the default --cov option if it's not specified
         pytest {env:PYTEST_FLAGS} {env:PYTEST_ADDOPTS:--cov=.} {env:PYTEST_TARGET}
