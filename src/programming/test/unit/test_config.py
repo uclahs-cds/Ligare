@@ -6,6 +6,7 @@ from Ligare.programming.config.exceptions import (
 )
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
+from typing_extensions import override
 
 
 class FooConfig(BaseModel):
@@ -18,15 +19,27 @@ class BarConfig(BaseModel):
 
 
 class BazConfig(BaseModel, AbstractConfig):
+    @override
+    def post_load(self) -> None:
+        return super().post_load()
+
     value: str
 
 
 class TestConfig(BaseModel, AbstractConfig):
+    @override
+    def post_load(self) -> None:
+        return super().post_load()
+
     foo: FooConfig = FooConfig(value="xyz")
     bar: BarConfig | None = None
 
 
 class InvalidConfigClass(BaseModel, AbstractConfig):
+    @override
+    def post_load(self) -> None:
+        return super().post_load()
+
     pass
 
 

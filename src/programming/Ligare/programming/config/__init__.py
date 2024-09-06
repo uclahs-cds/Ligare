@@ -9,18 +9,21 @@ from Ligare.programming.config.exceptions import (
     NotEndsWithConfigError,
 )
 
-TConfig = TypeVar("TConfig")
-
 
 class AbstractConfig(abc.ABC):
-    pass
+    @abc.abstractmethod
+    def post_load(self) -> None:
+        pass
+
+
+TConfig = TypeVar("TConfig", bound=AbstractConfig)
 
 
 class ConfigBuilder(Generic[TConfig]):
     _root_config: type[TConfig] | None = None
     _configs: list[type[AbstractConfig]] | None = None
 
-    def with_root_config(self, config: "type[TConfig]"):
+    def with_root_config(self, config: type[TConfig]):
         self._root_config = config
         return self
 
@@ -73,4 +76,7 @@ def load_config(
         config_dict = merge(config_dict, config_overrides)
 
     config = config_type(**config_dict)
+
+    config.post_load()
+
     return config

@@ -2,8 +2,11 @@ from dataclasses import field
 from os import environ
 from typing import Literal
 
+from BL_Python.programming.config import AbstractConfig
 from flask.config import Config as FlaskAppConfig
+from Ligare.programming.config import AbstractConfig
 from pydantic import BaseModel
+from typing_extensions import override
 
 
 class LoggingConfig(BaseModel):
@@ -141,9 +144,6 @@ class FlaskConfig(BaseModel):
         flask_app_config.from_object(ConfigObject)
 
 
-from Ligare.programming.config import AbstractConfig
-
-
 class Config(BaseModel, AbstractConfig):
     logging: LoggingConfig = LoggingConfig()
     web: WebConfig = WebConfig()
@@ -158,3 +158,7 @@ class Config(BaseModel, AbstractConfig):
             self.flask._update_flask_config(  # pyright: ignore[reportPrivateUsage]
                 flask_app_config
             )
+
+    @override
+    def post_load(self) -> None:
+        self.prepare_env_for_flask()

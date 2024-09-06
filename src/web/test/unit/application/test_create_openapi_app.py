@@ -11,6 +11,7 @@ from Ligare.web.testing.create_app import CreateOpenAPIApp
 from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
+from typing_extensions import override
 
 
 class TestCreateOpenAPIApp(CreateOpenAPIApp):
@@ -76,6 +77,10 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         _ = mocker.patch("toml.load", return_value=toml_load_result)
 
         class CustomConfig(BaseModel, AbstractConfig):
+            @override
+            def post_load(self) -> None:
+                return super().post_load()
+
             foo: str = get_random_str(k=26)
 
         app = App[Flask].create(

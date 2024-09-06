@@ -67,6 +67,10 @@ class FeatureFlagConfig(BaseModel):
 
 
 class Config(BaseModel, AbstractConfig):
+    @override
+    def post_load(self) -> None:
+        return super().post_load()
+
     feature_flag: FeatureFlagConfig
 
 
