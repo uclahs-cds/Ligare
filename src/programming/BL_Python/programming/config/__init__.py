@@ -4,6 +4,10 @@ from typing import Any, Generic, TypeVar, cast
 
 import toml
 from BL_Python.programming.collections.dict import AnyDict, merge
+from BL_Python.programming.config.exceptions import (
+    ConfigBuilderStateError,
+    NotEndsWithConfigError,
+)
 
 TConfig = TypeVar("TConfig")
 
@@ -29,7 +33,9 @@ class ConfigBuilder(Generic[TConfig]):
             return self._root_config
 
         if not self._configs:
-            raise Exception("Cannot build a config without any configs.")
+            raise ConfigBuilderStateError(
+                "Cannot build a config without any base config types specified."
+            )
 
         _new_type_base = self._root_config if self._root_config else object
 
@@ -37,16 +43,14 @@ class ConfigBuilder(Generic[TConfig]):
         annotations: dict[str, Any] = {}
 
         for config in self._configs:
-            try:
-                config_name = config.__name__[
-                    : config.__name__.rindex("Config")
-                ].lower()
-                annotations[config_name] = config
-                attrs[config_name] = None
-            except ValueError as e:
-                raise ValueError(
+            if not config.__name__.endswith("Config"):
+                raise NotEndsWithConfigError(
                     f"Class name '{config.__name__}' is not a valid config class. The name must end with 'Config'"
-                ) from e
+                )
+
+            config_name = config.__name__[: config.__name__.rindex("Config")].lower()
+            annotations[config_name] = config
+            attrs[config_name] = None
 
         attrs["__annotations__"] = annotations
         # make one type that has the names of the config objects
