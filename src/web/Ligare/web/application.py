@@ -35,10 +35,11 @@ from Ligare.programming.config import (
 )
 from Ligare.programming.config.exceptions import ConfigBuilderStateError
 from Ligare.programming.dependency_injection import ConfigModule
+from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
 from typing_extensions import Self
 
-from .config import Config, FlaskConfig
+from .config import Config
 from .middleware import (
     register_api_request_handlers,
     register_api_response_handlers,
@@ -104,12 +105,12 @@ class App(Generic[T_app]):
         )
 
 
-class UseConfigurationCallback(Protocol):
+class UseConfigurationCallback(Protocol[TConfig]):
     def __call__(
         self,
         config_builder: ConfigBuilder[TConfig],
         config_overrides: dict[str, Any],
-    ) -> None: ...
+    ) -> "None | ConfigBuilder[TConfig]": ...
 
 
 @final
@@ -121,8 +122,20 @@ class ApplicationConfigBuilder(Generic[TConfig]):
         self._use_filename: bool = False
         self._use_ssm: bool = False
 
-    def use_configuration(self, builder_callback: UseConfigurationCallback) -> Self:
-        builder_callback(self._config_builder, self._config_overrides)
+    def with_config(self, config_type: type[AbstractConfig]) -> Self:
+        _ = self._config_builder.with_config(config_type)
+        return self
+
+    def use_configuration(
+        self, builder_callback: UseConfigurationCallback[TConfig]
+    ) -> Self:
+        """
+        Execute changes to the builder's `ConfigBuilder[TConfig]` instance.
+
+        `builder_callback` can return `None`, or the instance of `ConfigBuilder[TConfig]` passed to its `config_builder` argument.
+        This allowance is so lambdas can be used; `ApplicationConfigBuilder[TConfig]` does not use the return value.
+        """
+        _ = builder_callback(self._config_builder, self._config_overrides)
         return self
 
     def use_filename(self, filename: str) -> Self:
@@ -184,7 +197,11 @@ class ApplicationConfigBuilder(Generic[TConfig]):
         return full_config
 
 
-TAA = TypeVar("TAA")
+class ApplicationConfigBuilderCallback(Protocol[TAppConfig]):
+    def __call__(
+        self,
+        config_builder: ApplicationConfigBuilder[TAppConfig],
+    ) -> "None | ApplicationConfigBuilder[TAppConfig]": ...
 
 
 @final
@@ -193,22 +210,57 @@ class ApplicationBuilder(Generic[T_app, TAppConfig]):
         self._modules: list[Module | type[Module]] = []
         self._configs: list[type[AbstractConfig]] = []
         self._config_overrides: dict[str, Any] = {}
-        self._application_config_builder: ApplicationConfigBuilder[TAppConfig]
+        self._application_config_builder: ApplicationConfigBuilder[TAppConfig] = (
+            ApplicationConfigBuilder[TAppConfig]()
+        )
 
     @overload
     def with_module(self, module: Module) -> Self: ...
     @overload
     def with_module(self, module: type[Module]) -> Self: ...
     def with_module(self, module: Module | type[Module]) -> Self:
+        # FIXME something's up with this
+        if isinstance(module, ConfigurableModule):
+            _ = self._application_config_builder.with_config(module.get_config_type())
+
         self._modules.append(module)
         return self
 
+    def with_modules(self, modules: list[Module | type[Module]] | None) -> Self:
+        if modules is not None:
+            self._modules.extend(modules)
+        return self
+
+    @overload
     def use_configuration(
         self,
-        config_builder_callback: Callable[[ApplicationConfigBuilder[TAppConfig]], None],
+        __builder_callback: ApplicationConfigBuilderCallback[TAppConfig],
     ) -> Self:
-        self._application_config_builder = ApplicationConfigBuilder[TAppConfig]()
-        config_builder_callback(self._application_config_builder)
+        """
+        Execute changes to the builder's `ApplicationConfigBuilder[TAppConfig]` instance.
+
+        `__builder_callback` can return `None`, or the instance of `ApplicationConfigBuilder[TAppConfig]` passed to its `config_builder` argument.
+        This allowance is so lambdas can be used; `ApplicationBuilder[T_app, TAppConfig]` does not use the return value.
+        """
+        ...
+
+    @overload
+    def use_configuration(
+        self, __config_builder: ApplicationConfigBuilder[TAppConfig]
+    ) -> Self:
+        """Replace the builder's default `ApplicationConfigBuilder[TAppConfig]` instance, or any instance previously assigned."""
+        ...
+
+    def use_configuration(
+        self,
+        application_config_builder: ApplicationConfigBuilderCallback[TAppConfig]
+        | ApplicationConfigBuilder[TAppConfig],
+    ) -> Self:
+        if callable(application_config_builder):
+            _ = application_config_builder(self._application_config_builder)
+        else:
+            self._application_config_builder = application_config_builder
+
         return self
 
     def with_flask_app_name(self, value: str) -> Self:
@@ -221,8 +273,9 @@ class ApplicationBuilder(Generic[T_app, TAppConfig]):
 
     def build(self) -> CreateAppResult[T_app]:
         def use_configuration(
-            config_builder: ConfigBuilder[Config], config_overrides: dict[str, Any]
+            config_builder: ConfigBuilder[TConfig], config_overrides: dict[str, Any]
         ) -> None:
+            """Handle "legacy" Flask envvar values and override them in the generated config object."""
             if "flask" not in config_overrides:
                 config_overrides["flask"] = {}
 
@@ -298,83 +351,22 @@ def create_app(
     # also required to call before json_logging.config_root_logger()
     logging.basicConfig(force=True)
 
-    config_overrides = {}
-    if environ.get("FLASK_APP"):
-        config_overrides["app_name"] = environ["FLASK_APP"]
-
-    if environ.get("FLASK_ENV"):
-        config_overrides["env"] = environ["FLASK_ENV"]
-
-    config_type = Config
-    if application_configs is not None:
-        # fmt: off
-        config_type = ConfigBuilder[Config]()\
-            .with_root_config(Config)\
-            .with_configs(application_configs)\
-            .build()
-        # fmt: on
-
-    full_config: Config | None = None
-    try:
-        # requires that aws-ssm.ini exists and is correctly configured
-        ssm_parameters = SSMParameters()
-        full_config = ssm_parameters.load_config(config_type)
-    except Exception as e:
-        logging.getLogger().warning(f"SSM parameter load failed: {e}")
-
-    if full_config is None:
-        if config_overrides:
-            full_config = load_config(
-                config_type, config_filename, {"flask": config_overrides}
+    application_builder = (
+        ApplicationBuilder[TApp, Config]()
+        .with_modules(application_modules)
+        .use_configuration(
+            lambda config_builder: config_builder.use_ssm(True)
+            .use_filename(config_filename)
+            .use_configuration(
+                lambda config_builder,
+                config_overrides: config_builder.with_root_config(Config).with_configs(
+                    application_configs
+                )
             )
-        else:
-            full_config = load_config(config_type, config_filename)
-
-    full_config.prepare_env_for_flask()
-
-    if full_config.flask is None:
-        raise Exception("You must set [flask] in the application configuration.")
-
-    if not full_config.flask.app_name:
-        raise Exception(
-            "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar."
         )
-
-    app: Flask | FlaskApp
-
-    if full_config.flask.openapi is not None:
-        openapi = configure_openapi(full_config)
-        app = openapi
-    else:
-        app = configure_blueprint_routes(full_config)
-
-    register_error_handlers(app)
-    _ = register_api_request_handlers(app)
-    _ = register_api_response_handlers(app)
-    _ = register_context_middleware(app)
-    # register_app_teardown_handlers(app)
-
-    # Register every subconfig as a ConfigModule.
-    # This will allow subpackages to resolve their own config types,
-    # allow for type safety against objects of those types.
-    # Otherwise, they can resolve `AbstractConfig`, but then type
-    # safety is lost.
-    # Note that, if any `ConfigModule` is provided in `application_modules`,
-    # those will override the automatically generated `ConfigModule`s.
-    application_modules = [
-        ConfigModule(config, type(config))
-        for (_, config) in cast(
-            Generator[tuple[str, AbstractConfig], None, None], full_config
-        )
-    ] + (application_modules if application_modules else [])
-    # The `full_config` module cannot be overridden unless the application
-    # IoC container is fiddled with. `full_config` is the instance registered
-    # to `AbstractConfig`.
-    modules = application_modules + [ConfigModule(full_config, Config)]
-    flask_injector = configure_dependencies(app, application_modules=modules)
-
-    flask_app = app.app if isinstance(app, FlaskApp) else app
-    return CreateAppResult(flask_app, AppInjector(app, flask_injector))
+    )
+    app = application_builder.build()
+    return app
 
 
 def configure_openapi(config: Config, name: Optional[str] = None):
@@ -391,26 +383,10 @@ def configure_openapi(config: Config, name: Optional[str] = None):
             "OpenAPI configuration is empty. Review the `openapi` section of your application's `config.toml`."
         )
 
-    ## host configuration set up
-    ## TODO host/port setup should move into application initialization
-    ## and not be tied to connexion configuration
-    # host = "127.0.0.1"
-    # port = 5000
-    ## TODO replace SERVER_NAME with host/port in config
-    # if environ.get("SERVER_NAME") is not None:
-    #    (host, port_str) = environ["SERVER_NAME"].split(":")
-    #    port = int(port_str)
-
-    # connexion and openapi set up
-    # openapi_spec_dir: str = "app/swagger/"
-    # if environ.get("OPENAPI_SPEC_DIR"):
-    #    openapi_spec_dir = environ["OPENAPI_SPEC_DIR"]
-
     exec_dir = _get_exec_dir()
 
     connexion_app = FlaskApp(
         config.flask.app_name,
-        # TODO support relative OPENAPI_SPEC_DIR and prepend program_dir?
         specification_dir=exec_dir,
         # host=host,
         # port=port,
@@ -510,7 +486,6 @@ def _import_blueprint_modules(app: Flask, blueprint_import_subdir: str):
         # find all Flask blueprints in
         # the module and register them
         for module_name, module_var in vars(module).items():
-            # TODO why did we allow _blueprint when it's not a Blueprint?
             if module_name.endswith("_blueprint") or isinstance(module_var, Blueprint):
                 blueprint_modules.append(module_var)
 

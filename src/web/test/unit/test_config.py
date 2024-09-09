@@ -50,7 +50,7 @@ def test__Config__prepare_env_for_flask__requires_flask_secret_key_when_sessions
     with pytest.raises(
         Exception, match=r"^`flask.session.cookie.secret_key` must be set in config.$"
     ):
-        config = load_config(Config, "foo.toml")
+        _ = load_config(Config, "foo.toml")
 
 
 @pytest.mark.parametrize("mode", ["ssm", "filename"])

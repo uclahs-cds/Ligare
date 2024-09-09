@@ -2,7 +2,9 @@ from injector import Binder, CallableProvider, Injector, Module, inject, singlet
 from Ligare.database.config import Config, DatabaseConfig
 from Ligare.database.engine import DatabaseEngine
 from Ligare.database.types import MetaBase
+from Ligare.programming.config import AbstractConfig
 from Ligare.programming.dependency_injection import ConfigModule
+from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import Session
 from typing_extensions import override
@@ -10,10 +12,15 @@ from typing_extensions import override
 from .config import DatabaseConfig
 
 
-class ScopedSessionModule(Module):
+class ScopedSessionModule(ConfigurableModule):  # Module):
     """
     Configure SQLAlchemy Session depedencies for Injector.
     """
+
+    @override
+    @staticmethod
+    def get_config_type() -> type[AbstractConfig]:
+        return DatabaseConfig
 
     _bases: list[MetaBase | type[MetaBase]] | None = None
 

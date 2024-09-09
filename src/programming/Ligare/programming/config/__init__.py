@@ -8,6 +8,7 @@ from Ligare.programming.config.exceptions import (
     ConfigBuilderStateError,
     NotEndsWithConfigError,
 )
+from typing_extensions import Self
 
 
 class AbstractConfig(abc.ABC):
@@ -23,12 +24,20 @@ class ConfigBuilder(Generic[TConfig]):
     _root_config: type[TConfig] | None = None
     _configs: list[type[AbstractConfig]] | None = None
 
-    def with_root_config(self, config: type[TConfig]):
-        self._root_config = config
+    def with_root_config(self, config_type: type[TConfig]) -> Self:
+        self._root_config = config_type
         return self
 
-    def with_configs(self, configs: list[type[AbstractConfig]]):
-        self._configs = configs
+    def with_configs(self, configs: list[type[AbstractConfig]] | None) -> Self:
+        if configs is not None:
+            self._configs = configs
+        return self
+
+    def with_config(self, config_type: type[AbstractConfig]) -> Self:
+        if self._configs is None:
+            self._configs = []
+
+        self._configs.append(config_type)
         return self
 
     def build(self) -> type[TConfig]:

@@ -42,6 +42,8 @@ from Ligare.identity.config import Config, SAML2Config, SSOConfig
 from Ligare.identity.dependency_injection import SAML2Module, SSOModule
 from Ligare.identity.SAML2 import SAML2Client
 from Ligare.platform.identity.user_loader import Role, UserId, UserLoader, UserMixin
+from Ligare.programming.config import AbstractConfig
+from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from Ligare.web.config import Config
 from Ligare.web.encryption import decrypt_flask_cookie
 from saml2.validate import (
@@ -439,7 +441,12 @@ class LoginManager(FlaskLoginManager):
         raise Unauthorized(response.data, response)
 
 
-class SAML2MiddlewareModule(Module):
+class SAML2MiddlewareModule(ConfigurableModule):  # Module):
+    @override
+    @staticmethod
+    def get_config_type() -> type[AbstractConfig]:
+        return SSOConfig
+
     @override
     def configure(self, binder: Binder) -> None:
         binder.install(SAML2Module)

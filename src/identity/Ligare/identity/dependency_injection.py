@@ -10,11 +10,7 @@ from typing_extensions import override
 
 
 class SSOModule(Module):
-    def __init__(self):  # , metadata: str, settings: AnyDict) -> None:
-        """
-        metadata can be XML or a URL
-        """
-        super().__init__()
+    pass
 
 
 class SAML2Module(SSOModule):
