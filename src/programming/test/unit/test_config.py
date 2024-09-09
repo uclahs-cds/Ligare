@@ -2,7 +2,7 @@ import pytest
 from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
 from BL_Python.programming.config.exceptions import (
     ConfigBuilderStateError,
-    InvalidConfigNameError,
+    NotEndsWithConfigError,
 )
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
@@ -72,7 +72,7 @@ def test__ConfigBuilder__build__raises_error_when_no_root_config_and_no_section_
 def test__ConfigBuilder__build__raises_error_when_section_class_name_is_invalid():
     config_builder = ConfigBuilder[TestConfig]()
     _ = config_builder.with_configs([InvalidConfigClass])
-    with pytest.raises(InvalidConfigNameError):
+    with pytest.raises(NotEndsWithConfigError):
         _ = config_builder.build()
 
 

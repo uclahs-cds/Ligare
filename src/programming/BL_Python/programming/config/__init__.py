@@ -6,7 +6,7 @@ import toml
 from BL_Python.programming.collections.dict import AnyDict, merge
 from BL_Python.programming.config.exceptions import (
     ConfigBuilderStateError,
-    InvalidConfigNameError,
+    NotEndsWithConfigError,
 )
 
 TConfig = TypeVar("TConfig")
@@ -44,7 +44,7 @@ class ConfigBuilder(Generic[TConfig]):
 
         for config in self._configs:
             if not config.__name__.endswith("Config"):
-                raise InvalidConfigNameError(
+                raise NotEndsWithConfigError(
                     f"Class name '{config.__name__}' is not a valid config class. The name must end with 'Config'"
                 )
 
