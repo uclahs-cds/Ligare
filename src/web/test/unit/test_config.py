@@ -62,19 +62,14 @@ def test__ApplicationConfigBuilder__build__succeeds_with_either_ssm_or_filename(
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
     _ = mocker.patch("Ligare.AWS.ssm.SSMParameters.load_config")
 
-    def use_configuration(
-        config_builder: ConfigBuilder[Config], config_overrides: dict[str, Any]
-    ) -> None:
-        _ = config_builder.with_root_config(Config)
-
-    application_config_builder = ApplicationConfigBuilder[Config]().use_configuration(
-        use_configuration
-    )
+    application_config_builder = ApplicationConfigBuilder[
+        Config
+    ]().with_root_config_type(Config)
 
     if mode == "ssm":
-        _ = application_config_builder.use_ssm(True)
+        _ = application_config_builder.enable_ssm(True)
     else:
-        _ = application_config_builder.use_filename("foo.toml")
+        _ = application_config_builder.with_config_filename("foo.toml")
 
     _ = application_config_builder.build()
 
@@ -104,7 +99,7 @@ def test__ApplicationConfigBuilder__build__raises_BuilderBuildError_when_ssm_fai
         side_effect=Exception("Test mode failure."),
     )
 
-    application_config_builder = ApplicationConfigBuilder[Config]().use_ssm(True)
+    application_config_builder = ApplicationConfigBuilder[Config]().enable_ssm(True)
 
     with pytest.raises(BuilderBuildError):
         _ = application_config_builder.build()
@@ -121,44 +116,15 @@ def test__ApplicationConfigBuilder__build__uses_filename_when_ssm_fails(
     )
     toml_mock = mocker.patch("toml.load")
 
-    def use_configuration(
-        config_builder: ConfigBuilder[Config], config_overrides: dict[str, Any]
-    ) -> None:
-        _ = config_builder.with_root_config(Config)
-
     application_config_builder = (
         ApplicationConfigBuilder[Config]()
-        .use_configuration(use_configuration)
-        .use_filename("foo.toml")
+        .with_root_config_type(Config)
+        .with_config_filename("foo.toml")
     )
 
     _ = application_config_builder.build()
 
     assert toml_mock.called
-
-
-def test__ApplicationConfigBuilder__build__calls_configuration_callback(
-    mocker: MockerFixture,
-):
-    _ = mocker.patch("io.open")
-    _ = mocker.patch("toml.decoder.loads")
-    _ = mocker.patch("toml.load")
-
-    use_configuration_mock = MagicMock()
-
-    application_config_builder = (
-        ApplicationConfigBuilder[Config]()
-        .use_configuration(use_configuration_mock)
-        .use_filename("foo.toml")
-    )
-
-    with pytest.raises(Exception):
-        _ = application_config_builder.build()
-
-    use_configuration_mock.assert_called_once()
-    call_args = use_configuration_mock.call_args.args
-    assert isinstance(call_args[0], ConfigBuilder)
-    assert isinstance(call_args[1], dict)
 
 
 def test__ApplicationConfigBuilder__build__requires_root_config(
@@ -167,19 +133,13 @@ def test__ApplicationConfigBuilder__build__requires_root_config(
     _ = mocker.patch("io.open")
     _ = mocker.patch("toml.decoder.loads")
 
-    def use_configuration(
-        config_builder: ConfigBuilder[Config], config_overrides: dict[str, Any]
-    ) -> None:
-        pass
-
-    application_config_builder = (
-        ApplicationConfigBuilder[Config]()
-        .use_configuration(use_configuration)
-        .use_filename("foo.toml")
-    )
+    application_config_builder = ApplicationConfigBuilder[
+        Config
+    ]().with_config_filename("foo.toml")
 
     with pytest.raises(
-        BuilderBuildError, match="`use_configuration` must be called"
+        BuilderBuildError,
+        match="A root config must be specified",
     ) as e:
         _ = application_config_builder.build()
 
@@ -200,15 +160,11 @@ def test__ApplicationConfigBuilder__build__applies_additional_configs(
 
         foo: str
 
-    def use_configuration(
-        config_builder: ConfigBuilder[Config], config_overrides: dict[str, Any]
-    ) -> None:
-        _ = config_builder.with_root_config(Config).with_configs([TestConfig])
-
     application_config_builder = (
         ApplicationConfigBuilder[Config]()
-        .use_configuration(use_configuration)
-        .use_filename("foo.toml")
+        .with_root_config_type(Config)
+        .with_config_type(TestConfig)
+        .with_config_filename("foo.toml")
     )
     config = application_config_builder.build()
 
@@ -225,16 +181,11 @@ def test__ApplicationConfigBuilder__build__applies_config_overrides(
     _ = mocker.patch("io.open")
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
 
-    def use_configuration(
-        config_builder: ConfigBuilder[Config], config_overrides: dict[str, Any]
-    ) -> None:
-        _ = config_builder.with_root_config(Config)
-        config_overrides["logging"] = {"log_level": "INFO"}
-
     application_config_builder = (
         ApplicationConfigBuilder[Config]()
-        .use_configuration(use_configuration)
-        .use_filename("foo.toml")
+        .with_root_config_type(Config)
+        .with_config_value_overrides({"logging": {"log_level": "INFO"}})
+        .with_config_filename("foo.toml")
     )
     config = application_config_builder.build()
 
@@ -250,18 +201,10 @@ def test__ApplicationBuilder__build__something(mocker: MockerFixture):
     _ = mocker.patch("io.open")
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
 
-    def use_configuration(application_config_builder: ApplicationConfigBuilder[Config]):
-        def use_configuration(
-            config_builder: ConfigBuilder[Config], config_overrides: dict[str, Any]
-        ) -> None:
-            _ = config_builder.with_root_config(Config)
-
-        _ = application_config_builder.use_configuration(
-            use_configuration
-        ).use_filename("foo.toml")
-
     application_builder = ApplicationBuilder[Flask, Config]().use_configuration(
-        use_configuration
+        lambda config_builder: config_builder.with_root_config_type(
+            Config
+        ).with_config_filename("foo.toml")
     )
 
     _ = (

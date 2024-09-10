@@ -5,11 +5,11 @@ Flask entry point.
 """
 
 import logging
+from collections import defaultdict
 from dataclasses import dataclass
 from os import environ, path
 from typing import (
     Any,
-    Callable,
     Generator,
     Generic,
     Optional,
@@ -27,6 +27,7 @@ from flask_injector import FlaskInjector
 from injector import Module
 from lib_programname import get_path_executed_script
 from Ligare.AWS.ssm import SSMParameters
+from Ligare.programming.collections.dict import NestedDict
 from Ligare.programming.config import (
     AbstractConfig,
     ConfigBuilder,
@@ -116,34 +117,38 @@ class UseConfigurationCallback(Protocol[TConfig]):
 @final
 class ApplicationConfigBuilder(Generic[TConfig]):
     def __init__(self) -> None:
-        self._config_overrides: dict[str, Any] = {}
+        self._config_value_overrides: dict[str, Any] = {}
         self._config_builder: ConfigBuilder[TConfig] = ConfigBuilder[TConfig]()
         self._config_filename: str
         self._use_filename: bool = False
         self._use_ssm: bool = False
 
-    def with_config(self, config_type: type[AbstractConfig]) -> Self:
+    def with_config_builder(self, config_builder: ConfigBuilder[TConfig]) -> Self:
+        self._config_builder = config_builder
+        return self
+
+    def with_root_config_type(self, config_type: type[TConfig]) -> Self:
+        _ = self._config_builder.with_root_config(config_type)
+        return self
+
+    def with_config_types(self, configs: list[type[AbstractConfig]] | None) -> Self:
+        _ = self._config_builder.with_configs(configs)
+        return self
+
+    def with_config_type(self, config_type: type[AbstractConfig]) -> Self:
         _ = self._config_builder.with_config(config_type)
         return self
 
-    def use_configuration(
-        self, builder_callback: UseConfigurationCallback[TConfig]
-    ) -> Self:
-        """
-        Execute changes to the builder's `ConfigBuilder[TConfig]` instance.
-
-        `builder_callback` can return `None`, or the instance of `ConfigBuilder[TConfig]` passed to its `config_builder` argument.
-        This allowance is so lambdas can be used; `ApplicationConfigBuilder[TConfig]` does not use the return value.
-        """
-        _ = builder_callback(self._config_builder, self._config_overrides)
+    def with_config_value_overrides(self, values: dict[str, Any]) -> Self:
+        self._config_value_overrides = values
         return self
 
-    def use_filename(self, filename: str) -> Self:
+    def with_config_filename(self, filename: str) -> Self:
         self._config_filename = filename
         self._use_filename = True
         return self
 
-    def use_ssm(self, value: bool) -> Self:
+    def enable_ssm(self, value: bool) -> Self:
         """
         Try to load config from AWS SSM. If `use_filename` was configured,
         a failed attempt to load from SSM will instead attempt to load from
@@ -157,7 +162,7 @@ class ApplicationConfigBuilder(Generic[TConfig]):
         self._use_ssm = value
         return self
 
-    def build(self) -> TConfig | None | AbstractConfig:
+    def build(self) -> TConfig | None:
         if not (self._use_ssm or self._use_filename):
             raise InvalidBuilderStateError(
                 "Cannot build the application config without either `use_ssm` or `use_filename` having been configured."
@@ -167,7 +172,7 @@ class ApplicationConfigBuilder(Generic[TConfig]):
             config_type = self._config_builder.build()
         except ConfigBuilderStateError as e:
             raise BuilderBuildError(
-                "`use_configuration` must be called on `ApplicationConfigBuilder`, and a root config must be specified, before calling `build()`."
+                "A root config must be specified using `with_root_config` before calling `build()`."
             ) from e
 
         full_config: TConfig | None = None
@@ -187,9 +192,9 @@ class ApplicationConfigBuilder(Generic[TConfig]):
                     raise BuilderBuildError(SSM_FAIL_ERROR_MSG) from e
 
         if self._use_filename and full_config is None:
-            if self._config_overrides:
+            if self._config_value_overrides:
                 full_config = load_config(
-                    config_type, self._config_filename, self._config_overrides
+                    config_type, self._config_filename, self._config_value_overrides
                 )
             else:
                 full_config = load_config(config_type, self._config_filename)
@@ -208,7 +213,6 @@ class ApplicationConfigBuilderCallback(Protocol[TAppConfig]):
 class ApplicationBuilder(Generic[T_app, TAppConfig]):
     def __init__(self) -> None:
         self._modules: list[Module | type[Module]] = []
-        self._configs: list[type[AbstractConfig]] = []
         self._config_overrides: dict[str, Any] = {}
         self._application_config_builder: ApplicationConfigBuilder[TAppConfig] = (
             ApplicationConfigBuilder[TAppConfig]()
@@ -221,7 +225,9 @@ class ApplicationBuilder(Generic[T_app, TAppConfig]):
     def with_module(self, module: Module | type[Module]) -> Self:
         # FIXME something's up with this
         if isinstance(module, ConfigurableModule):
-            _ = self._application_config_builder.with_config(module.get_config_type())
+            _ = self._application_config_builder.with_config_type(
+                module.get_config_type()
+            )
 
         self._modules.append(module)
         return self
@@ -234,7 +240,9 @@ class ApplicationBuilder(Generic[T_app, TAppConfig]):
     @overload
     def use_configuration(
         self,
-        __builder_callback: ApplicationConfigBuilderCallback[TAppConfig],
+        __application_config_builder_callback: ApplicationConfigBuilderCallback[
+            TAppConfig
+        ],
     ) -> Self:
         """
         Execute changes to the builder's `ApplicationConfigBuilder[TAppConfig]` instance.
@@ -246,7 +254,7 @@ class ApplicationBuilder(Generic[T_app, TAppConfig]):
 
     @overload
     def use_configuration(
-        self, __config_builder: ApplicationConfigBuilder[TAppConfig]
+        self, __application_config_builder: ApplicationConfigBuilder[TAppConfig]
     ) -> Self:
         """Replace the builder's default `ApplicationConfigBuilder[TAppConfig]` instance, or any instance previously assigned."""
         ...
@@ -263,36 +271,36 @@ class ApplicationBuilder(Generic[T_app, TAppConfig]):
 
         return self
 
-    def with_flask_app_name(self, value: str) -> Self:
+    def with_flask_app_name(self, value: str | None) -> Self:
         self._config_overrides["app_name"] = value
         return self
 
-    def with_flask_env(self, value: str) -> Self:
+    def with_flask_env(self, value: str | None) -> Self:
         self._config_overrides["env"] = value
         return self
 
     def build(self) -> CreateAppResult[T_app]:
-        def use_configuration(
-            config_builder: ConfigBuilder[TConfig], config_overrides: dict[str, Any]
-        ) -> None:
-            """Handle "legacy" Flask envvar values and override them in the generated config object."""
-            if "flask" not in config_overrides:
-                config_overrides["flask"] = {}
+        config_overrides: NestedDict[str, Any] = defaultdict(dict)
 
-            if "app_name" in self._config_overrides:
-                config_overrides["flask"]["app_name"] = self._config_overrides[
-                    "app_name"
-                ]
+        if (
+            override_app_name := self._config_overrides.get("app_name", None)
+        ) is not None and override_app_name != "":
+            config_overrides["flask"]["app_name"] = override_app_name
 
-            if "env" in self._config_overrides:
-                config_overrides["flask"]["env"] = self._config_overrides["env"]
+        if (
+            override_env := self._config_overrides.get("env", None)
+        ) is not None and override_env != "":
+            config_overrides["flask"]["env"] = override_env
 
-        config = cast(
-            TAppConfig,
-            self._application_config_builder.use_configuration(
-                use_configuration
-            ).build(),
+        _ = self._application_config_builder.with_config_value_overrides(
+            config_overrides
         )
+        config = self._application_config_builder.build()
+
+        if config is None:
+            raise BuilderBuildError(
+                "Failed to load the application configuration correctly."
+            )
 
         if config.flask is None:
             raise Exception("You must set [flask] in the application configuration.")
@@ -353,16 +361,14 @@ def create_app(
 
     application_builder = (
         ApplicationBuilder[TApp, Config]()
+        .with_flask_app_name(environ.get("FLASK_APP", None))
+        .with_flask_env(environ.get("FLASK_ENV", None))
         .with_modules(application_modules)
         .use_configuration(
-            lambda config_builder: config_builder.use_ssm(True)
-            .use_filename(config_filename)
-            .use_configuration(
-                lambda config_builder,
-                config_overrides: config_builder.with_root_config(Config).with_configs(
-                    application_configs
-                )
-            )
+            lambda config_builder: config_builder.enable_ssm(True)
+            .with_config_filename(config_filename)
+            .with_root_config_type(Config)
+            .with_config_types(application_configs)
         )
     )
     app = application_builder.build()
