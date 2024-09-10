@@ -116,10 +116,12 @@ class UseConfigurationCallback(Protocol[TConfig]):
 
 @final
 class ApplicationConfigBuilder(Generic[TConfig]):
+    _DEFAULT_CONFIG_FILENAME: str = "config.toml"
+
     def __init__(self) -> None:
         self._config_value_overrides: dict[str, Any] = {}
         self._config_builder: ConfigBuilder[TConfig] = ConfigBuilder[TConfig]()
-        self._config_filename: str
+        self._config_filename: str = ApplicationConfigBuilder._DEFAULT_CONFIG_FILENAME
         self._use_filename: bool = False
         self._use_ssm: bool = False
 
@@ -223,10 +225,10 @@ class ApplicationBuilder(Generic[T_app, TAppConfig]):
     @overload
     def with_module(self, module: type[Module]) -> Self: ...
     def with_module(self, module: Module | type[Module]) -> Self:
-        # FIXME something's up with this
-        if isinstance(module, ConfigurableModule):
+        module_type = type(module) if isinstance(module, Module) else module
+        if issubclass(module_type, ConfigurableModule):
             _ = self._application_config_builder.with_config_type(
-                module.get_config_type()
+                module_type.get_config_type()
             )
 
         self._modules.append(module)
@@ -234,7 +236,8 @@ class ApplicationBuilder(Generic[T_app, TAppConfig]):
 
     def with_modules(self, modules: list[Module | type[Module]] | None) -> Self:
         if modules is not None:
-            self._modules.extend(modules)
+            for module in modules:
+                _ = self.with_module(module)
         return self
 
     @overload
@@ -346,14 +349,9 @@ def create_app(
     # FIXME should be a list of PydanticDataclass
     application_configs: list[type[AbstractConfig]] | None = None,
     application_modules: list[Module | type[Module]] | None = None,
-    # FIXME eventually should replace with builders
-    # and configurators so this list of params doesn't
-    # just grow and grow.
-    # startup_builder: IStartupBuilder,
-    # config: Config,
 ) -> CreateAppResult[TApp]:
     """
-    Do not use this method directly. Instead, use `App[T_app].create()`
+    Do not use this method directly. Instead, use `App[T_app].create()` or `ApplicationBuilder[TApp, TConfig]()`
     """
     # set up the default configuration as soon as possible
     # also required to call before json_logging.config_root_logger()

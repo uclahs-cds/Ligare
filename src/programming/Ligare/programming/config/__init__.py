@@ -29,8 +29,14 @@ class ConfigBuilder(Generic[TConfig]):
         return self
 
     def with_configs(self, configs: list[type[AbstractConfig]] | None) -> Self:
-        if configs is not None:
+        if configs is None:
+            return self
+
+        if self._configs is None:
             self._configs = configs
+        else:
+            self._configs.extend(configs)
+
         return self
 
     def with_config(self, config_type: type[AbstractConfig]) -> Self:
