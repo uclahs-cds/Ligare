@@ -201,7 +201,7 @@ def test__ApplicationBuilder__build__something(mocker: MockerFixture):
     _ = mocker.patch("io.open")
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
 
-    application_builder = ApplicationBuilder[Flask, Config]().use_configuration(
+    application_builder = ApplicationBuilder[Flask]().use_configuration(
         lambda config_builder: config_builder.with_root_config_type(
             Config
         ).with_config_filename("foo.toml")

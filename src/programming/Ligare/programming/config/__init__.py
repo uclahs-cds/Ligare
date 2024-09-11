@@ -19,10 +19,12 @@ class AbstractConfig(abc.ABC):
 
 TConfig = TypeVar("TConfig", bound=AbstractConfig)
 
+from collections import deque
+
 
 class ConfigBuilder(Generic[TConfig]):
     _root_config: type[TConfig] | None = None
-    _configs: list[type[AbstractConfig]] | None = None
+    _configs: deque[type[AbstractConfig]] | None = None
 
     def with_root_config(self, config_type: type[TConfig]) -> Self:
         self._root_config = config_type
@@ -33,7 +35,7 @@ class ConfigBuilder(Generic[TConfig]):
             return self
 
         if self._configs is None:
-            self._configs = configs
+            self._configs = deque(configs)
         else:
             self._configs.extend(configs)
 
@@ -41,7 +43,7 @@ class ConfigBuilder(Generic[TConfig]):
 
     def with_config(self, config_type: type[AbstractConfig]) -> Self:
         if self._configs is None:
-            self._configs = []
+            self._configs = deque()
 
         self._configs.append(config_type)
         return self
@@ -55,16 +57,23 @@ class ConfigBuilder(Generic[TConfig]):
                 "Cannot build a config without any base config types specified."
             )
 
-        _new_type_base = self._root_config if self._root_config else object
+        def test_type_name(config_type: type[AbstractConfig]):
+            if not config_type.__name__.endswith("Config"):
+                raise NotEndsWithConfigError(
+                    f"Class name '{config_type.__name__}' is not a valid config class. The name must end with 'Config'"
+                )
+
+        _new_type_base = (
+            self._root_config if self._root_config else self._configs.popleft()
+        )
+
+        test_type_name(_new_type_base)
 
         attrs: dict[Any, Any] = {}
         annotations: dict[str, Any] = {}
 
         for config in self._configs:
-            if not config.__name__.endswith("Config"):
-                raise NotEndsWithConfigError(
-                    f"Class name '{config.__name__}' is not a valid config class. The name must end with 'Config'"
-                )
+            test_type_name(config)
 
             config_name = config.__name__[: config.__name__.rindex("Config")].lower()
             annotations[config_name] = config

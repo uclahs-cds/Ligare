@@ -212,12 +212,29 @@ class ApplicationConfigBuilderCallback(Protocol[TAppConfig]):
 
 
 @final
-class ApplicationBuilder(Generic[T_app, TAppConfig]):
+class ApplicationBuilder(Generic[T_app]):
     def __init__(self) -> None:
         self._modules: list[Module | type[Module]] = []
         self._config_overrides: dict[str, Any] = {}
-        self._application_config_builder: ApplicationConfigBuilder[TAppConfig] = (
-            ApplicationConfigBuilder[TAppConfig]()
+
+    _APPLICATION_CONFIG_BUILDER_PROPERTY_NAME: str = "__application_config_builder"
+
+    @property
+    def _application_config_builder(self) -> ApplicationConfigBuilder[Config]:
+        builder = getattr(
+            self, ApplicationBuilder._APPLICATION_CONFIG_BUILDER_PROPERTY_NAME, None
+        )
+
+        if builder is None:
+            builder = ApplicationConfigBuilder[Config]()
+            self._application_config_builder = builder.with_root_config_type(Config)
+
+        return builder
+
+    @_application_config_builder.setter
+    def _application_config_builder(self, value: ApplicationConfigBuilder[Config]):
+        setattr(
+            self, ApplicationBuilder._APPLICATION_CONFIG_BUILDER_PROPERTY_NAME, value
         )
 
     @overload
@@ -243,9 +260,7 @@ class ApplicationBuilder(Generic[T_app, TAppConfig]):
     @overload
     def use_configuration(
         self,
-        __application_config_builder_callback: ApplicationConfigBuilderCallback[
-            TAppConfig
-        ],
+        __application_config_builder_callback: ApplicationConfigBuilderCallback[Config],
     ) -> Self:
         """
         Execute changes to the builder's `ApplicationConfigBuilder[TAppConfig]` instance.
@@ -257,15 +272,15 @@ class ApplicationBuilder(Generic[T_app, TAppConfig]):
 
     @overload
     def use_configuration(
-        self, __application_config_builder: ApplicationConfigBuilder[TAppConfig]
+        self, __application_config_builder: ApplicationConfigBuilder[Config]
     ) -> Self:
         """Replace the builder's default `ApplicationConfigBuilder[TAppConfig]` instance, or any instance previously assigned."""
         ...
 
     def use_configuration(
         self,
-        application_config_builder: ApplicationConfigBuilderCallback[TAppConfig]
-        | ApplicationConfigBuilder[TAppConfig],
+        application_config_builder: ApplicationConfigBuilderCallback[Config]
+        | ApplicationConfigBuilder[Config],
     ) -> Self:
         if callable(application_config_builder):
             _ = application_config_builder(self._application_config_builder)
@@ -358,7 +373,7 @@ def create_app(
     logging.basicConfig(force=True)
 
     application_builder = (
-        ApplicationBuilder[TApp, Config]()
+        ApplicationBuilder[TApp]()
         .with_flask_app_name(environ.get("FLASK_APP", None))
         .with_flask_env(environ.get("FLASK_ENV", None))
         .with_modules(application_modules)

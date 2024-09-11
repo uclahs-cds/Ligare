@@ -10,12 +10,12 @@ from typing_extensions import override
 
 
 class FooConfig(BaseModel):
-    value: str
-    other_value: bool = False
+    foo_value: str
+    foo_other_value: bool = False
 
 
 class BarConfig(BaseModel):
-    value: str
+    bar_value: str
 
 
 class BazConfig(BaseModel, AbstractConfig):
@@ -23,7 +23,7 @@ class BazConfig(BaseModel, AbstractConfig):
     def post_load(self) -> None:
         return super().post_load()
 
-    value: str
+    baz_value: str
 
 
 class TestConfig(BaseModel, AbstractConfig):
@@ -31,7 +31,7 @@ class TestConfig(BaseModel, AbstractConfig):
     def post_load(self) -> None:
         return super().post_load()
 
-    foo: FooConfig = FooConfig(value="xyz")
+    foo: FooConfig = FooConfig(foo_value="xyz")
     bar: BarConfig | None = None
 
 
@@ -51,29 +51,29 @@ def test__Config__load_config__reads_toml_file(mocker: MockerFixture):
 
 
 def test__Config__load_config__initializes_section_config_value(mocker: MockerFixture):
-    fake_config_dict = {"foo": {"value": "abc123"}}
+    fake_config_dict = {"foo": {"foo_value": "abc123"}}
     _ = mocker.patch("io.open")
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
     config = load_config(TestConfig, "foo.toml")
-    assert config.foo.value == "abc123"
+    assert config.foo.foo_value == "abc123"
 
 
 def test__Config__load_config__initializes_section_config(mocker: MockerFixture):
-    fake_config_dict = {"bar": {"value": "abc123"}}
+    fake_config_dict = {"bar": {"bar_value": "abc123"}}
     _ = mocker.patch("io.open")
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
     config = load_config(TestConfig, "foo.toml")
     assert config.bar is not None
-    assert config.bar.value == "abc123"
+    assert config.bar.bar_value == "abc123"
 
 
 def test__Config__load_config__applies_overrides(mocker: MockerFixture):
-    fake_config_dict = {"foo": {"value": "abc123"}}
-    override_config_dict = {"foo": {"value": "XYZ"}}
+    fake_config_dict = {"foo": {"foo_value": "abc123"}}
+    override_config_dict = {"foo": {"foo_value": "XYZ"}}
     _ = mocker.patch("io.open")
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
     config = load_config(TestConfig, "foo.toml", override_config_dict)
-    assert config.foo.value == override_config_dict["foo"]["value"]
+    assert config.foo.foo_value == override_config_dict["foo"]["foo_value"]
 
 
 def test__ConfigBuilder__build__raises_error_when_no_root_config_and_no_section_configs_specified():
@@ -83,20 +83,20 @@ def test__ConfigBuilder__build__raises_error_when_no_root_config_and_no_section_
 
 
 def test__ConfigBuilder__build__raises_error_when_section_class_name_is_invalid():
-    config_builder = ConfigBuilder[TestConfig]()
+    config_builder = ConfigBuilder[InvalidConfigClass()]()
     _ = config_builder.with_configs([InvalidConfigClass])
     with pytest.raises(NotEndsWithConfigError):
         _ = config_builder.build()
 
 
-def test__ConfigBuilder__build__uses_object_as_root_config_when_no_root_config_specified():
-    config_builder = ConfigBuilder[TestConfig]()
+def test__ConfigBuilder__build__uses_first_config_as_root_config_when_no_root_config_specified():
+    config_builder = ConfigBuilder[BazConfig]()
     _ = config_builder.with_configs([BazConfig])
     config_type = config_builder.build()
     assert TestConfig not in config_type.__mro__
-    assert BazConfig not in config_type.__mro__
-    assert hasattr(config_type, "baz")
-    assert hasattr(config_type(), "baz")
+    assert BazConfig in config_type.__mro__
+    assert "baz_value" in config_type.model_fields
+    assert hasattr(config_type(baz_value="abc"), "baz_value")
 
 
 def test__ConfigBuilder__build__uses_root_config_when_no_section_configs_specified():
@@ -110,7 +110,7 @@ def test__ConfigBuilder__build__uses_root_config_when_no_section_configs_specifi
 def test__ConfigBuilder__build__creates_config_type_when_multiple_configs_specified(
     mocker: MockerFixture,
 ):
-    fake_config_dict = {"baz": {"value": "ABC"}}
+    fake_config_dict = {"baz": {"baz_value": "ABC"}}
     _ = mocker.patch("io.open")
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
 
@@ -127,7 +127,7 @@ def test__ConfigBuilder__build__creates_config_type_when_multiple_configs_specif
 def test__ConfigBuilder__build__sets_dynamic_config_values_when_multiple_configs_specified(
     mocker: MockerFixture,
 ):
-    fake_config_dict = {"baz": {"value": "ABC"}}
+    fake_config_dict = {"baz": {"baz_value": "ABC"}}
     _ = mocker.patch("io.open")
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
 
@@ -139,5 +139,5 @@ def test__ConfigBuilder__build__sets_dynamic_config_values_when_multiple_configs
 
     assert hasattr(config, "baz")
     assert getattr(config, "baz")
-    assert getattr(getattr(config, "baz"), "value")
-    assert getattr(getattr(config, "baz"), "value") == "ABC"
+    assert getattr(getattr(config, "baz"), "baz_value")
+    assert getattr(getattr(config, "baz"), "baz_value") == "ABC"
