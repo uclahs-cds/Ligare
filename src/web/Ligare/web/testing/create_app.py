@@ -5,7 +5,6 @@ from collections import defaultdict
 from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivateUsage]
 from contextlib import ExitStack
 from dataclasses import dataclass
-from functools import lru_cache
 from types import ModuleType
 from typing import (
     Any,
@@ -22,7 +21,6 @@ from unittest.mock import AsyncMock, MagicMock, NonCallableMagicMock
 
 import json_logging
 import pytest
-import yaml
 from _pytest.fixtures import SubRequest
 from connexion import FlaskApp
 from flask import Flask, Request, Response, session
@@ -36,6 +34,7 @@ from Ligare.identity.config import SAML2Config, SSOConfig
 from Ligare.platform.dependency_injection import UserLoaderModule
 from Ligare.platform.identity import Role, User
 from Ligare.platform.identity.user_loader import TRole, UserId, UserMixin
+from Ligare.programming.collections.dict import NestedDict
 from Ligare.programming.config import AbstractConfig, ConfigBuilder
 from Ligare.programming.str import get_random_str
 from Ligare.web.application import (
@@ -693,32 +692,51 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
 
         return _flask_request_getter
 
-    @lru_cache
-    def _get_openapi_spec(self):
-        return yaml.safe_load(
-            """openapi: 3.0.3
-servers:
-  - url: http://testserver/
-    description: Test Application
-info:
-  title: "Test Application"
-  version: 3.0.3
-paths:
-  /:
-    get:
-      description: "Check whether the application is running."
-      operationId: "root.get"
-      parameters: []
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                type: string
-          description: "Application is running correctly."
-      summary: "A simple method that returns 200 as long as the application is running."
-"""
-        )
+    # this is the YAML-parsed dictionary from this OpenAPI spec
+    # openapi: 3.0.3
+    # servers:
+    # - url: http://testserver/
+    #    description: Test Application
+    # info:
+    # title: "Test Application"
+    # version: 3.0.3
+    # paths:
+    # /:
+    #    get:
+    #    description: "Check whether the application is running."
+    #    operationId: "root.get"
+    #    parameters: []
+    #    responses:
+    #        "200":
+    #        content:
+    #            application/json:
+    #            schema:
+    #                type: string
+    #        description: "Application is running correctly."
+    #    summary: "A simple method that returns 200 as long as the application is running."
+    _openapi_spec: NestedDict[str, Any] = {
+        "info": {"title": "Test Application", "version": "3.0.3"},
+        "openapi": "3.0.3",
+        "paths": {
+            "/": {
+                "get": {
+                    "description": "Check whether the application is running.",
+                    "operationId": "root.get",
+                    "parameters": [],
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {"schema": {"type": "string"}}
+                            },
+                            "description": "Application is running correctly",
+                        }
+                    },
+                    "summary": "A simple method that returns 200 as long as the application is running.",
+                }
+            }
+        },
+        "servers": [{"description": "Test Application", "url": "http://testserver/"}],
+    }
 
     @pytest.fixture()
     def openapi_mock_controller(self, request: FixtureRequest, mocker: MockerFixture):
@@ -760,7 +778,7 @@ paths:
             if spec_loader_mock is None:
                 spec_loader_mock = mocker.patch(
                     "connexion.spec.Specification._load_spec_from_file",
-                    return_value=self._get_openapi_spec(),
+                    return_value=CreateOpenAPIApp._openapi_spec,
                 )
 
         def end():
