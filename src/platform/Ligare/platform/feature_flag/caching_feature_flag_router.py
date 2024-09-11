@@ -1,14 +1,12 @@
 from logging import Logger
 from typing import Generic, Sequence, cast
 
-from attr import dataclass
 from typing_extensions import override
 
 from .feature_flag_router import FeatureFlag as FeatureFlagBaseData
 from .feature_flag_router import FeatureFlagChange, FeatureFlagRouter, TFeatureFlag
 
 
-@dataclass(frozen=True)
 class FeatureFlag(FeatureFlagBaseData):
     pass
 
