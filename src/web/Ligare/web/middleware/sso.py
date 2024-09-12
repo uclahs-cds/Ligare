@@ -80,7 +80,7 @@ R = TypeVar("R")
 
 
 def login_required(
-    roles: Sequence[Role] | Callable[P, R] | Callable[..., Any] | None = None,
+    roles: Sequence[Role | str] | Callable[P, R] | Callable[..., Any] | None = None,
     auth_check_override: AuthCheckOverrideCallable | None = None,
 ):
     """
@@ -156,7 +156,9 @@ def login_required(
                     # if roles is empty, no roles will intersect.
                     # this means an empty list means "no roles have access"
                     role_intersection = [
-                        role for role in user.roles if role in (roles or [])
+                        str(role)
+                        for role in user.roles
+                        if (str(role) in ({str(r) for r in roles}) or [])
                     ]
                     if len(role_intersection) == 0:
                         # this should end up raising a 401 exception

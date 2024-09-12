@@ -1,37 +1,9 @@
-# """
-# Server blueprint
-# Non-API specific endpoints for application management
-# """
-#
-# from typing import Any, Sequence, cast
-#
-# import flask
-# from BL_Python.platform.feature_flag import FeatureFlagChange, FeatureFlagRouter
-# from BL_Python.web.middleware.sso import login_required
-# from flask import request
-# from injector import inject
-#
-# from CAP import __version__
-# from CAP.app.models.user.role import Role as UserRole
-# from CAP.app.schemas.platform.get_request_feature_flag_schema import (
-#    GetResponseFeatureFlagSchema,
-# )
-# from CAP.app.schemas.platform.patch_request_feature_flag_schema import (
-#    PatchRequestFeatureFlag,
-#    PatchRequestFeatureFlagSchema,
-#    PatchResponseFeatureFlagSchema,
-# )
-# from CAP.app.schemas.platform.response_problem_schema import (
-#    ResponseProblem,
-#    ResponseProblemSchema,
-# )
-#
-# _FEATURE_FLAG_NOT_FOUND_PROBLEM_TITLE = "Feature Flag Not Found"
-# _FEATURE_FLAG_NOT_FOUND_PROBLEM_STATUS = 404
-############
 from logging import Logger
 from typing import Any, Callable, Generic, Sequence, cast
 
+from BL_Python.platform.feature_flag.caching_feature_flag_router import (
+    CachingFeatureFlagRouter,
+)
 from BL_Python.platform.feature_flag.caching_feature_flag_router import (
     FeatureFlag as CachingFeatureFlag,
 )
@@ -48,22 +20,21 @@ from BL_Python.platform.feature_flag.feature_flag_router import (
     FeatureFlagRouter,
     TFeatureFlag,
 )
-from BL_Python.platform.identity.user_loader import Role, UserId, UserLoader, UserMixin
+from BL_Python.platform.identity.user_loader import Role
 from BL_Python.programming.config import AbstractConfig
+from BL_Python.programming.patterns.dependency_injection import ConfigurableModule
 from BL_Python.web.middleware.sso import login_required
 from connexion import FlaskApp
 from flask import Blueprint, Flask, request
 from injector import Binder, Injector, Module, inject, provider
 from pydantic import BaseModel
-
-# from sqlalchemy.orm.scoping import ScopedSession
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import override
 
 
 class FeatureFlagConfig(BaseModel):
     api_base_url: str = "/server"
-    access_role_name: str | None = None  # "Operator"
+    access_role_name: str | bool | None = None
 
 
 class Config(BaseModel, AbstractConfig):
@@ -74,12 +45,15 @@ class Config(BaseModel, AbstractConfig):
     feature_flag: FeatureFlagConfig
 
 
-# TODO consider having the DI registration log a warning if
-# an interface is being overwritten
-class FeatureFlagRouterModule(Module, Generic[TFeatureFlag]):
+class FeatureFlagRouterModule(ConfigurableModule, Generic[TFeatureFlag]):
     def __init__(self, t_feature_flag: type[FeatureFlagRouter[TFeatureFlag]]) -> None:
         self._t_feature_flag = t_feature_flag
         super().__init__()
+
+    @override
+    @staticmethod
+    def get_config_type() -> type[AbstractConfig]:
+        return Config
 
     @provider
     def _provide_feature_flag_router(
@@ -106,6 +80,9 @@ class DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
 
 
 class CachingFeatureFlagRouterModule(FeatureFlagRouterModule[CachingFeatureFlag]):
+    def __init__(self) -> None:
+        super().__init__(CachingFeatureFlagRouter)
+
     @provider
     def _provide_caching_feature_flag_router(
         self, injector: Injector
@@ -113,29 +90,27 @@ class CachingFeatureFlagRouterModule(FeatureFlagRouterModule[CachingFeatureFlag]
         return injector.get(self._t_feature_flag)
 
 
-def get_feature_flag_blueprint(
-    config: FeatureFlagConfig, access_roles: list[Role] | bool = True
-):
+def get_feature_flag_blueprint(config: FeatureFlagConfig):
     feature_flag_blueprint = Blueprint(
         "feature_flag", __name__, url_prefix=f"{config.api_base_url}"
     )
 
-    # access_role = config.feature_flag.access_role_name
-    # convert this enum somehow
+    access_role = config.access_role_name
 
     def _login_required(fn: Callable[..., Any]):
-        if access_roles is False:
+        if access_role is False:
             return fn
 
-        if access_roles is True:
+        # None means no roles were specified, but a session is still required
+        if access_role is None or access_role is True:
             return login_required(fn)
 
-        return login_required(access_roles)(fn)
+        return login_required([access_role])(fn)
 
-    @feature_flag_blueprint.route("/feature_flag", methods=("GET",))
+    @feature_flag_blueprint.route("/feature_flag", methods=("GET",))  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
     @_login_required
     @inject
-    def feature_flag(feature_flag_router: FeatureFlagRouter[FeatureFlag]):
+    def feature_flag(feature_flag_router: FeatureFlagRouter[FeatureFlag]):  # pyright: ignore[reportUnusedFunction]
         request_query_names: list[str] | None = request.args.to_dict(flat=False).get(
             "name"
         )
@@ -153,33 +128,38 @@ def get_feature_flag_blueprint(
             raise ValueError("Unexpected type from Flask query parameters.")
 
         response: dict[str, Any] = {}
+        problems: list[Any] = []
 
-        if missing_flags:
-            # problems: list[ResponseProblem] = []
-            problems: list[Any] = []
+        if missing_flags is not None:
             for missing_flag in missing_flags:
-                problems.append(
-                    # ResponseProblem(
-                    {
-                        "title": "feature flag not found",  # _FEATURE_FLAG_NOT_FOUND_PROBLEM_TITLE,
-                        "detail": "Queried feature flag does not exist.",
-                        "instance": missing_flag,
-                        "status": 404,  # _FEATURE_FLAG_NOT_FOUND_PROBLEM_STATUS,
-                        "type": None,
-                    }
-                    # )
-                )
-            response["problems"] = (
-                problems  # ResponseProblemSchema().dump(problems, many=True)
+                problems.append({
+                    "title": "feature flag not found",
+                    "detail": "Queried feature flag does not exist.",
+                    "instance": missing_flag,
+                    "status": 404,
+                    "type": None,
+                })
+            response["problems"] = problems
+
+        elif not feature_flags:
+            problems.append(
+                # ResponseProblem(
+                {
+                    "title": "No feature flags found",
+                    "detail": "Queried feature flags do not exist.",
+                    "instance": "",
+                    "status": 404,
+                    "type": None,
+                }
+                # )
             )
+            response["problems"] = problems
 
         if feature_flags:
-            response["data"] = feature_flags  # GetResponseFeatureFlagSchema().dump(
-            #    feature_flags, many=True
-            # )
+            response["data"] = feature_flags
             return response
         else:
-            return response, 404  # _FEATURE_FLAG_NOT_FOUND_PROBLEM_STATUS
+            return response, 404
 
     #
     #

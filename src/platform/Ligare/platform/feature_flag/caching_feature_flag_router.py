@@ -1,6 +1,7 @@
 from logging import Logger
 from typing import Generic, Sequence, cast
 
+from injector import inject
 from typing_extensions import override
 
 from .feature_flag_router import FeatureFlag as FeatureFlagBaseData
@@ -12,6 +13,7 @@ class FeatureFlag(FeatureFlagBaseData):
 
 
 class CachingFeatureFlagRouter(Generic[TFeatureFlag], FeatureFlagRouter[TFeatureFlag]):
+    @inject
     def __init__(self, logger: Logger) -> None:
         self._logger: Logger = logger
         self._feature_flags: dict[str, bool] = {}
