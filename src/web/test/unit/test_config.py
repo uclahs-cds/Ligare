@@ -1,5 +1,3 @@
-from typing import Any
-
 import pytest
 from flask import Flask
 from Ligare.programming.collections.dict import AnyDict

@@ -52,6 +52,7 @@ class User(UserMixin, Generic[TRole]):
     id: UserId
     roles: Sequence[TRole]
 
+    @override
     def get_id(self):
         """
         Override the UserMixin.get_id so the username is returned instead of `id` (the dataclass)
