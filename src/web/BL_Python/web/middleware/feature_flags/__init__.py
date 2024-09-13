@@ -26,7 +26,7 @@ from BL_Python.programming.patterns.dependency_injection import ConfigurableModu
 from BL_Python.web.middleware.sso import login_required
 from connexion import FlaskApp
 from flask import Blueprint, Flask, request
-from injector import Binder, Injector, Module, inject, provider
+from injector import Binder, Injector, Module, inject, provider, singleton
 from pydantic import BaseModel
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import override
@@ -55,6 +55,7 @@ class FeatureFlagRouterModule(ConfigurableModule, Generic[TFeatureFlag]):
     def get_config_type() -> type[AbstractConfig]:
         return Config
 
+    @singleton
     @provider
     def _provide_feature_flag_router(
         self, injector: Injector
@@ -66,12 +67,14 @@ class DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
     def __init__(self) -> None:
         super().__init__(DBFeatureFlagRouter)
 
+    @singleton
     @provider
     def _provide_db_feature_flag_router(
         self, injector: Injector
     ) -> FeatureFlagRouter[DBFeatureFlag]:
         return injector.get(self._t_feature_flag)
 
+    @singleton
     @provider
     def _provide_db_feature_flag_router_table_base(self) -> type[FeatureFlagTableBase]:
         # FeatureFlagTable is a FeatureFlagTableBase provided through
@@ -83,6 +86,7 @@ class CachingFeatureFlagRouterModule(FeatureFlagRouterModule[CachingFeatureFlag]
     def __init__(self) -> None:
         super().__init__(CachingFeatureFlagRouter)
 
+    @singleton
     @provider
     def _provide_caching_feature_flag_router(
         self, injector: Injector

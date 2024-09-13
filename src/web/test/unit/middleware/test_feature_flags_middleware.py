@@ -4,9 +4,14 @@ from typing import Generic, Sequence, TypeVar
 
 import pytest
 from BL_Python.platform.dependency_injection import UserLoaderModule
+from BL_Python.platform.feature_flag import FeatureFlag, caching_feature_flag_router
+from BL_Python.platform.feature_flag.caching_feature_flag_router import (
+    CachingFeatureFlagRouter,
+)
+from BL_Python.platform.feature_flag.feature_flag_router import FeatureFlagRouter
 from BL_Python.platform.identity.user_loader import Role as LoaderRole
 from BL_Python.programming.config import AbstractConfig
-from BL_Python.web.application import OpenAPIAppResult
+from BL_Python.web.application import CreateAppResult, OpenAPIAppResult
 from BL_Python.web.config import Config
 from BL_Python.web.middleware.feature_flags import (
     CachingFeatureFlagRouterModule,
@@ -18,6 +23,7 @@ from BL_Python.web.testing.create_app import (
     OpenAPIClientInjectorConfigurable,
     OpenAPIMockController,
 )
+from connexion import FlaskApp
 from flask_login import UserMixin
 from injector import Module
 from mock import MagicMock
@@ -77,7 +83,24 @@ class User(UserMixin, Generic[TRole]):
 
 
 class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
-    def test__FeatureFlagMiddleware__feature_flag_api_get_requires_user_session(
+    def _user_session_app_init_hook(
+        self,
+        application_configs: list[type[AbstractConfig]],
+        application_modules: list[Module | type[Module]],
+    ):
+        application_modules.append(
+            UserLoaderModule(
+                loader=User,  # pyright: ignore[reportArgumentType]
+                roles=Role,
+                user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                bases=[],
+            )
+        )
+        application_modules.append(CachingFeatureFlagRouterModule)
+        application_modules.append(FeatureFlagMiddlewareModule())
+
+    def test__FeatureFlagMiddleware__feature_flag_api_GET_requires_user_session(
         self,
         openapi_config: Config,
         openapi_client_configurable: OpenAPIClientInjectorConfigurable,
@@ -101,7 +124,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         # if SSO was broken, 500 would return
         assert response.status_code == 401
 
-    def test__FeatureFlagMiddleware__feature_flag_api_gets_feature_flags_when_user_has_session(
+    def test__FeatureFlagMiddleware__feature_flag_api_GET_gets_feature_flags_when_user_has_session(
         self,
         openapi_config: Config,
         openapi_client_configurable: OpenAPIClientInjectorConfigurable,
@@ -113,25 +136,11 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
             return_value=[],
         )
 
-        def app_init_hook(
-            application_configs: list[type[AbstractConfig]],
-            application_modules: list[Module | type[Module]],
-        ):
-            application_modules.append(
-                UserLoaderModule(
-                    loader=User,  # pyright: ignore[reportArgumentType]
-                    roles=Role,
-                    user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                    role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                    bases=[],
-                )
-            )
-            application_modules.append(CachingFeatureFlagRouterModule)
-            application_modules.append(FeatureFlagMiddlewareModule())
-
         openapi_mock_controller.begin()
         app = next(
-            openapi_client_configurable(openapi_config, app_init_hook=app_init_hook)
+            openapi_client_configurable(
+                openapi_config, app_init_hook=self._user_session_app_init_hook
+            )
         )
 
         with self.get_authenticated_request_context(
@@ -145,7 +154,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         get_feature_flag_mock.assert_called_once()
 
     @pytest.mark.parametrize("has_role", [True, False])
-    def test__FeatureFlagMiddleware__feature_flag_api_requires_specified_role(
+    def test__FeatureFlagMiddleware__feature_flag_api_GET_requires_specified_role(
         self,
         has_role: bool,
         openapi_config: Config,
@@ -167,25 +176,11 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
                 FeatureFlagConfig, to=feature_flag_config
             )
 
-        def app_init_hook(
-            application_configs: list[type[AbstractConfig]],
-            application_modules: list[Module | type[Module]],
-        ):
-            application_modules.append(
-                UserLoaderModule(
-                    loader=User,  # pyright: ignore[reportArgumentType]
-                    roles=Role,
-                    user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                    role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                    bases=[],
-                )
-            )
-            application_modules.append(CachingFeatureFlagRouterModule)
-            application_modules.append(FeatureFlagMiddlewareModule())
-
         openapi_mock_controller.begin()
         app = next(
-            openapi_client_configurable(openapi_config, client_init_hook, app_init_hook)
+            openapi_client_configurable(
+                openapi_config, client_init_hook, self._user_session_app_init_hook
+            )
         )
 
         with self.get_authenticated_request_context(
@@ -203,32 +198,18 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
             assert response.status_code == 401
             get_feature_flag_mock.assert_not_called()
 
-    def test__FeatureFlagMiddleware__api_returns_no_feature_flags_when_none_exist(
+    def test__FeatureFlagMiddleware__feature_flag_api_GET_returns_no_feature_flags_when_none_exist(
         self,
         openapi_config: Config,
         openapi_client_configurable: OpenAPIClientInjectorConfigurable,
         openapi_mock_controller: OpenAPIMockController,
         mocker: MockerFixture,
     ):
-        def app_init_hook(
-            application_configs: list[type[AbstractConfig]],
-            application_modules: list[Module | type[Module]],
-        ):
-            application_modules.append(
-                UserLoaderModule(
-                    loader=User,  # pyright: ignore[reportArgumentType]
-                    roles=Role,
-                    user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                    role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                    bases=[],
-                )
-            )
-            application_modules.append(CachingFeatureFlagRouterModule)
-            application_modules.append(FeatureFlagMiddlewareModule())
-
         openapi_mock_controller.begin()
         app = next(
-            openapi_client_configurable(openapi_config, app_init_hook=app_init_hook)
+            openapi_client_configurable(
+                openapi_config, app_init_hook=self._user_session_app_init_hook
+            )
         )
 
         with self.get_authenticated_request_context(
@@ -244,3 +225,39 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         assert len(problems) == 1
         assert (title := problems[0].get("title", None)) is not None
         assert title == "No feature flags found"
+
+    def test__FeatureFlagMiddleware__feature_flag_api_GET_returns_feature_flags_when_they_exist(
+        self,
+        openapi_config: Config,
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_mock_controller: OpenAPIMockController,
+        mocker: MockerFixture,
+    ):
+        def client_init_hook(app: CreateAppResult[FlaskApp]):
+            caching_feature_flag_router = app.app_injector.flask_injector.injector.get(
+                FeatureFlagRouter[FeatureFlag]
+            )
+            _ = caching_feature_flag_router.set_feature_is_enabled("foo_feature", True)
+
+        openapi_mock_controller.begin()
+        app = next(
+            openapi_client_configurable(
+                openapi_config,
+                client_init_hook,
+                self._user_session_app_init_hook,
+            )
+        )
+
+        with self.get_authenticated_request_context(
+            app,
+            User,  # pyright: ignore[reportArgumentType]
+            mocker,
+        ):
+            response = app.client.get("/server/feature_flag")
+
+        assert response.status_code == 200
+        response_json = response.json()
+        assert (data := response_json.get("data", None)) is not None
+        assert len(data) == 1
+        assert data[0].get("enabled", None) is True
+        assert data[0].get("name", None) == "foo_feature"
