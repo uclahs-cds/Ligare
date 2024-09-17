@@ -1,5 +1,6 @@
+from dataclasses import dataclass
 from logging import Logger
-from typing import Any, Callable, Generic, Sequence, cast
+from typing import Any, Callable, Generic, Sequence, TypedDict, cast
 
 from BL_Python.platform.feature_flag.caching_feature_flag_router import (
     CachingFeatureFlagRouter,
@@ -24,8 +25,8 @@ from BL_Python.platform.identity.user_loader import Role
 from BL_Python.programming.config import AbstractConfig
 from BL_Python.programming.patterns.dependency_injection import ConfigurableModule
 from BL_Python.web.middleware.sso import login_required
-from connexion import FlaskApp
-from flask import Blueprint, Flask, request
+from connexion import FlaskApp, request
+from flask import Blueprint, Flask
 from injector import Binder, Injector, Module, inject, provider, singleton
 from pydantic import BaseModel
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -43,6 +44,17 @@ class Config(BaseModel, AbstractConfig):
         return super().post_load()
 
     feature_flag: FeatureFlagConfig
+
+
+class FeatureFlagPatchRequest(TypedDict):
+    name: str
+    enabled: bool
+
+
+@dataclass
+class FeatureFlagPatch:
+    name: str
+    enabled: bool
 
 
 class FeatureFlagRouterModule(ConfigurableModule, Generic[TFeatureFlag]):
@@ -115,9 +127,7 @@ def get_feature_flag_blueprint(config: FeatureFlagConfig):
     @_login_required
     @inject
     def feature_flag(feature_flag_router: FeatureFlagRouter[FeatureFlag]):  # pyright: ignore[reportUnusedFunction]
-        request_query_names: list[str] | None = request.args.to_dict(flat=False).get(
-            "name"
-        )
+        request_query_names: list[str] | None = request.query_params.get("name")
 
         feature_flags: Sequence[FeatureFlag]
         missing_flags: set[str] | None = None
@@ -146,17 +156,13 @@ def get_feature_flag_blueprint(config: FeatureFlagConfig):
             response["problems"] = problems
 
         elif not feature_flags:
-            problems.append(
-                # ResponseProblem(
-                {
-                    "title": "No feature flags found",
-                    "detail": "Queried feature flags do not exist.",
-                    "instance": "",
-                    "status": 404,
-                    "type": None,
-                }
-                # )
-            )
+            problems.append({
+                "title": "No feature flags found",
+                "detail": "Queried feature flags do not exist.",
+                "instance": "",
+                "status": 404,
+                "type": None,
+            })
             response["problems"] = problems
 
         if feature_flags:
@@ -165,57 +171,48 @@ def get_feature_flag_blueprint(config: FeatureFlagConfig):
         else:
             return response, 404
 
-    #
-    #
-    ## @server_blueprint.route("/server/feature_flag", methods=("PATCH",))
+    @feature_flag_blueprint.route("/feature_flag", methods=("PATCH",))  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
     # @login_required([UserRole.Operator])
-    # @inject
-    # def feature_flag_patch(feature_flag_router: FeatureFlagRouter[DBFeatureFlag]):
-    #    post_request_feature_flag_schema = PatchRequestFeatureFlagSchema()
-    #
-    #    feature_flags: list[PatchRequestFeatureFlag] = cast(
-    #        list[PatchRequestFeatureFlag],
-    #        post_request_feature_flag_schema.load(
-    #            flask.request.json,  # pyright: ignore[reportArgumentType] why is `flask.request.json` wrong here?
-    #            many=True,
-    #        ),
-    #    )
-    #
-    #    changes: list[FeatureFlagChange] = []
-    #    problems: list[ResponseProblem] = []
-    #    for flag in feature_flags:
-    #        try:
-    #            change = feature_flag_router.set_feature_is_enabled(flag.name, flag.enabled)
-    #            changes.append(change)
-    #        except LookupError:
-    #            problems.append(
-    #                ResponseProblem(
-    #                    title=_FEATURE_FLAG_NOT_FOUND_PROBLEM_TITLE,
-    #                    detail="Feature flag to PATCH does not exist. It must be created first.",
-    #                    instance=flag.name,
-    #                    status=_FEATURE_FLAG_NOT_FOUND_PROBLEM_STATUS,
-    #                    type=None,
-    #                )
-    #            )
-    #
-    #    response: dict[str, Any] = {}
-    #
-    #    if problems:
-    #        response["problems"] = ResponseProblemSchema().dump(problems, many=True)
-    #
-    #    if changes:
-    #        response["data"] = PatchResponseFeatureFlagSchema().dump(changes, many=True)
-    #        return response
-    #    else:
-    #        return response, _FEATURE_FLAG_NOT_FOUND_PROBLEM_STATUS
-    #
+    # TODO assign a specific role ?
+    @_login_required
+    @inject
+    async def feature_flag_patch(feature_flag_router: FeatureFlagRouter[FeatureFlag]):  # pyright: ignore[reportUnusedFunction]
+        feature_flags_request: list[FeatureFlagPatchRequest] = await request.json()
+
+        feature_flags = [
+            FeatureFlagPatch(name=flag["name"], enabled=flag["enabled"])
+            for flag in feature_flags_request
+        ]
+
+        changes: list[Any] = []
+        problems: list[Any] = []
+        for flag in feature_flags:
+            try:
+                change = feature_flag_router.set_feature_is_enabled(
+                    flag.name, flag.enabled
+                )
+                changes.append(change)
+            except LookupError:
+                problems.append({
+                    "title": "feature flag not found",
+                    "detail": "Feature flag to PATCH does not exist. It must be created first.",
+                    "instance": flag.name,
+                    "status": 404,
+                    "type": None,
+                })
+
+        response: dict[str, Any] = {}
+
+        if problems:
+            response["problems"] = problems
+
+        if changes:
+            response["data"] = changes
+            return response
+        else:
+            return response, 404
+
     return feature_flag_blueprint
-
-
-# class FeatureFlagModule(Module):
-#    def __init__(self):
-#        """ """
-#        super().__init__()
 
 
 class FeatureFlagMiddlewareModule(Module):

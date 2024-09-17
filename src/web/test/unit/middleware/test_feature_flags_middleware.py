@@ -4,10 +4,7 @@ from typing import Generic, Sequence, TypeVar
 
 import pytest
 from BL_Python.platform.dependency_injection import UserLoaderModule
-from BL_Python.platform.feature_flag import FeatureFlag, caching_feature_flag_router
-from BL_Python.platform.feature_flag.caching_feature_flag_router import (
-    CachingFeatureFlagRouter,
-)
+from BL_Python.platform.feature_flag import FeatureFlag
 from BL_Python.platform.feature_flag.feature_flag_router import FeatureFlagRouter
 from BL_Python.platform.identity.user_loader import Role as LoaderRole
 from BL_Python.programming.config import AbstractConfig
@@ -226,6 +223,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         assert (title := problems[0].get("title", None)) is not None
         assert title == "No feature flags found"
 
+    # TODO need test for querying for specific flag
     def test__FeatureFlagMiddleware__feature_flag_api_GET_returns_feature_flags_when_they_exist(
         self,
         openapi_config: Config,
@@ -261,3 +259,43 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         assert len(data) == 1
         assert data[0].get("enabled", None) is True
         assert data[0].get("name", None) == "foo_feature"
+
+    def test__FeatureFlagMiddleware__feature_flag_api_PATCH_modifies_something(
+        self,
+        openapi_config: Config,
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_mock_controller: OpenAPIMockController,
+        mocker: MockerFixture,
+    ):
+        def client_init_hook(app: CreateAppResult[FlaskApp]):
+            caching_feature_flag_router = app.app_injector.flask_injector.injector.get(
+                FeatureFlagRouter[FeatureFlag]
+            )
+            _ = caching_feature_flag_router.set_feature_is_enabled("foo_feature", True)
+
+        openapi_mock_controller.begin()
+        app = next(
+            openapi_client_configurable(
+                openapi_config,
+                client_init_hook,
+                self._user_session_app_init_hook,
+            )
+        )
+
+        with self.get_authenticated_request_context(
+            app,
+            User,  # pyright: ignore[reportArgumentType]
+            mocker,
+        ):
+            response = app.client.patch(
+                "/server/feature_flag",
+                json=[{"name": "foo_feature", "enabled": False}],
+            )
+
+        assert response.status_code == 200
+        response_json = response.json()
+        assert (data := response_json.get("data", None)) is not None
+        assert len(data) == 1
+        assert data[0].get("name", None) == "foo_feature"
+        assert data[0].get("new_value", None) == False
+        assert data[0].get("old_value", None) == True

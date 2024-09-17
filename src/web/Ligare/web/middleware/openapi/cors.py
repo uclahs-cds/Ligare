@@ -13,7 +13,7 @@ class CORSMiddlewareModule(Module):
         app.add_middleware(
             CORSMiddleware,
             position=MiddlewarePosition.BEFORE_EXCEPTION,
-            allow_origins=cors_config.origins,
+            allow_origins=cors_config.origins or [],
             allow_credentials=cors_config.allow_credentials,
             allow_methods=cors_config.allow_methods,
             allow_headers=cors_config.allow_headers,
