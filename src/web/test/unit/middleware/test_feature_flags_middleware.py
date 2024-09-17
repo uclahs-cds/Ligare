@@ -223,7 +223,6 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         assert (title := problems[0].get("title", None)) is not None
         assert title == "No feature flags found"
 
-    # TODO need test for querying for specific flag
     def test__FeatureFlagMiddleware__feature_flag_api_GET_returns_feature_flags_when_they_exist(
         self,
         openapi_config: Config,
@@ -259,6 +258,56 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         assert len(data) == 1
         assert data[0].get("enabled", None) is True
         assert data[0].get("name", None) == "foo_feature"
+
+    @pytest.mark.parametrize(
+        "query_flags", ["bar_feature", ["foo_feature", "baz_feature"]]
+    )
+    def test__FeatureFlagMiddleware__feature_flag_api_GET_returns_specific_feature_flags_when_they_exist(
+        self,
+        query_flags: str | list[str],
+        openapi_config: Config,
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_mock_controller: OpenAPIMockController,
+        mocker: MockerFixture,
+    ):
+        def client_init_hook(app: CreateAppResult[FlaskApp]):
+            caching_feature_flag_router = app.app_injector.flask_injector.injector.get(
+                FeatureFlagRouter[FeatureFlag]
+            )
+            _ = caching_feature_flag_router.set_feature_is_enabled("foo_feature", True)
+            _ = caching_feature_flag_router.set_feature_is_enabled("bar_feature", False)
+            _ = caching_feature_flag_router.set_feature_is_enabled("baz_feature", True)
+
+        openapi_mock_controller.begin()
+        app = next(
+            openapi_client_configurable(
+                openapi_config,
+                client_init_hook,
+                self._user_session_app_init_hook,
+            )
+        )
+
+        with self.get_authenticated_request_context(
+            app,
+            User,  # pyright: ignore[reportArgumentType]
+            mocker,
+        ):
+            response = app.client.get(
+                "/server/feature_flag", params={"name": query_flags}
+            )
+
+        assert response.status_code == 200
+        response_json = response.json()
+        assert (data := response_json.get("data", None)) is not None
+        if isinstance(query_flags, str):
+            assert len(data) == 1
+            assert data[0].get("enabled", None) is False
+            assert data[0].get("name", None) == query_flags
+        else:
+            assert len(data) == len(query_flags)
+            for i, flag in enumerate(query_flags):
+                assert data[i].get("enabled", None) is True
+                assert data[i].get("name", None) == flag
 
     def test__FeatureFlagMiddleware__feature_flag_api_PATCH_modifies_something(
         self,

@@ -127,11 +127,11 @@ def get_feature_flag_blueprint(config: FeatureFlagConfig):
     @_login_required
     @inject
     def feature_flag(feature_flag_router: FeatureFlagRouter[FeatureFlag]):  # pyright: ignore[reportUnusedFunction]
-        request_query_names: list[str] | None = request.query_params.get("name")
+        request_query_names: list[str] | None = request.query_params.getlist("name")
 
         feature_flags: Sequence[FeatureFlag]
         missing_flags: set[str] | None = None
-        if request_query_names is None:
+        if request_query_names is None or not request_query_names:
             feature_flags = feature_flag_router.get_feature_flags()
         elif isinstance(request_query_names, list):  # pyright: ignore[reportUnnecessaryIsInstance]
             feature_flags = feature_flag_router.get_feature_flags(request_query_names)
