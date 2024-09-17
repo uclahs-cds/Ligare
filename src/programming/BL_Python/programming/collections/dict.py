@@ -16,7 +16,7 @@ def merge(a: AnyDict, b: AnyDict, skip_existing: bool = False):
         a_val = a.get(key)
         b_val = b.get(key)
         if isinstance(a_val, dict) and isinstance(b_val, dict):
-            result = merge(a_val, b_val, skip_existing)
+            result = merge(a_val, b_val, skip_existing)  # pyright: ignore[reportUnknownArgumentType]
             if skip_existing and a_val:
                 continue
             a[key] = {**a_val, **result}
