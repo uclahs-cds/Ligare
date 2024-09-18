@@ -5,8 +5,8 @@ from logging import Logger
 from os import environ
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 
-from Ligare.programming.collections.dict import AnyDict
 from boto3.session import Session
+from Ligare.programming.collections.dict import AnyDict
 
 TConfig = TypeVar("TConfig")
 

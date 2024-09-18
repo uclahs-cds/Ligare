@@ -1,7 +1,7 @@
-from Ligare.web.config import Config
 from connexion import FlaskApp
 from connexion.middleware import MiddlewarePosition
 from injector import Module, inject
+from Ligare.web.config import Config
 from starlette.middleware.cors import CORSMiddleware
 
 

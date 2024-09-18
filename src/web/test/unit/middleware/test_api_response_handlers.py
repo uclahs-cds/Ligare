@@ -2,6 +2,7 @@ import logging
 from typing import Any, cast
 
 import pytest
+from flask import Flask, Response
 from Ligare.web.config import Config
 from Ligare.web.middleware import register_api_request_handlers
 from Ligare.web.middleware.consts import (
@@ -17,7 +18,6 @@ from Ligare.web.testing.create_app import (
     FlaskClientInjector,
     FlaskClientInjectorConfigurable,
 )
-from flask import Flask, Response
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 

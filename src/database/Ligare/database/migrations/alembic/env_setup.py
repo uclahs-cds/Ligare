@@ -4,11 +4,11 @@ from logging.config import fileConfig
 from typing import Any, List, Literal, Protocol, cast, final
 
 from alembic import context
+from injector import inject
 from Ligare.database.config import DatabaseConfig
 from Ligare.database.schema.postgresql import PostgreSQLDialect
 from Ligare.database.schema.sqlite import SQLiteDialect
 from Ligare.database.types import MetaBase
-from injector import inject
 
 # TODO only do this when using PostgreSQL,
 # and detect if the module is installed

@@ -2,6 +2,9 @@ import uuid
 from typing import Literal
 
 import pytest
+from connexion import FlaskApp
+from flask import Flask, abort
+from injector import Module
 from Ligare.identity.config import Config as RootSSOConfig
 from Ligare.identity.config import SSOConfig
 from Ligare.platform.dependency_injection import UserLoaderModule
@@ -21,9 +24,6 @@ from Ligare.web.testing.create_app import (
     OpenAPIMockController,
     RequestConfigurable,
 )
-from connexion import FlaskApp
-from flask import Flask, abort
-from injector import Module
 from mock import MagicMock
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized

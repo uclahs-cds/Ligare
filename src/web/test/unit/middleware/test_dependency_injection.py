@@ -1,6 +1,6 @@
-from Ligare.web.middleware.dependency_injection import AppModule
 from flask import Flask
 from injector import Injector
+from Ligare.web.middleware.dependency_injection import AppModule
 from mock import MagicMock
 
 

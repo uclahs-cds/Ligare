@@ -1,13 +1,13 @@
 from os import environ
 
 import pytest
+from connexion import FlaskApp
+from flask import Flask
 from Ligare.programming.config import AbstractConfig
 from Ligare.programming.str import get_random_str
 from Ligare.web.application import App, configure_openapi
 from Ligare.web.config import Config, FlaskConfig, FlaskOpenApiConfig
 from Ligare.web.testing.create_app import CreateOpenAPIApp
-from connexion import FlaskApp
-from flask import Flask
 from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
@@ -169,9 +169,7 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         _ = mocker.patch("Ligare.web.application.register_api_response_handlers")
         _ = mocker.patch("Ligare.web.application.configure_dependencies")
 
-        configure_method_mock = mocker.patch(
-            "Ligare.web.application.configure_openapi"
-        )
+        configure_method_mock = mocker.patch("Ligare.web.application.configure_openapi")
         config = Config(
             flask=FlaskConfig(app_name=app_name, openapi=FlaskOpenApiConfig())
         )

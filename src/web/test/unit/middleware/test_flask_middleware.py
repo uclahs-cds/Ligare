@@ -3,6 +3,7 @@ from typing import Callable, Literal
 from uuid import uuid4
 
 import pytest
+from flask import Flask, Response, abort
 from Ligare.web.config import Config
 from Ligare.web.middleware import bind_errorhandler
 from Ligare.web.middleware.consts import CORRELATION_ID_HEADER
@@ -16,7 +17,6 @@ from Ligare.web.testing.create_app import (
     FlaskClientInjectorConfigurable,
     RequestConfigurable,
 )
-from flask import Flask, Response, abort
 from mock import MagicMock
 from pytest_mock import MockerFixture
 from werkzeug.exceptions import BadRequest, HTTPException, Unauthorized

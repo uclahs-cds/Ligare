@@ -24,6 +24,13 @@ import json_logging
 import pytest
 import yaml
 from _pytest.fixtures import SubRequest
+from connexion import FlaskApp
+from flask import Flask, Request, Response, session
+from flask.ctx import RequestContext
+from flask.sessions import SecureCookieSession
+from flask.testing import FlaskClient
+from flask_injector import FlaskInjector
+from injector import Module
 from Ligare.database.migrations.alembic.env import set_up_database
 from Ligare.identity.config import SAML2Config, SSOConfig
 from Ligare.platform.dependency_injection import UserLoaderModule
@@ -47,13 +54,6 @@ from Ligare.web.config import (
 )
 from Ligare.web.encryption import encrypt_flask_cookie
 from Ligare.web.middleware.sso import SAML2MiddlewareModule
-from connexion import FlaskApp
-from flask import Flask, Request, Response, session
-from flask.ctx import RequestContext
-from flask.sessions import SecureCookieSession
-from flask.testing import FlaskClient
-from flask_injector import FlaskInjector
-from injector import Module
 from mock import MagicMock
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture

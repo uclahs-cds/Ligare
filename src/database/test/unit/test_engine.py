@@ -132,9 +132,7 @@ def test__PostgreSQLScopedSession__create__uses_correct_connection_pool_type(
 def test__PostgreSQLScopedSession__create__verifies_dependencies_installed(
     mocker: MockerFixture,
 ):
-    _ = mocker.patch(
-        "Ligare.database.engine.postgresql.find_spec", return_value=None
-    )
+    _ = mocker.patch("Ligare.database.engine.postgresql.find_spec", return_value=None)
 
     with pytest.raises(ModuleNotFoundError):
         _ = PostgreSQLScopedSession.create(POSTGRESQL_TEST_CONNECTION_STR)

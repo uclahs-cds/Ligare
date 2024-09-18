@@ -10,14 +10,14 @@ from os import environ, path
 from typing import Generator, Generic, Optional, TypeVar, cast
 
 import json_logging
-from Ligare.AWS.ssm import SSMParameters
-from Ligare.programming.config import AbstractConfig, ConfigBuilder, load_config
-from Ligare.programming.dependency_injection import ConfigModule
 from connexion import FlaskApp
 from flask import Blueprint, Flask
 from flask_injector import FlaskInjector
 from injector import Module
 from lib_programname import get_path_executed_script
+from Ligare.AWS.ssm import SSMParameters
+from Ligare.programming.config import AbstractConfig, ConfigBuilder, load_config
+from Ligare.programming.dependency_injection import ConfigModule
 
 from .config import Config
 from .middleware import (

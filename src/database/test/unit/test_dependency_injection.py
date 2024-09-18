@@ -1,7 +1,7 @@
+from injector import Injector
 from Ligare.database.config import DatabaseConfig
 from Ligare.database.dependency_injection import ScopedSessionModule
 from Ligare.programming.dependency_injection import ConfigModule
-from injector import Injector
 from sqlalchemy.orm.session import Session
 
 

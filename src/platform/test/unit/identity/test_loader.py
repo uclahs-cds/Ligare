@@ -1,5 +1,6 @@
 from typing import Sequence
 
+from injector import Injector
 from Ligare.platform.dependency_injection import UserLoaderModule
 from Ligare.platform.identity import Role as DbRole
 from Ligare.platform.identity import User as DbUser
@@ -10,7 +11,6 @@ from Ligare.platform.identity.user_loader import (
     UserLoader,
     UserMixin,
 )
-from injector import Injector
 from typing_extensions import override
 
 

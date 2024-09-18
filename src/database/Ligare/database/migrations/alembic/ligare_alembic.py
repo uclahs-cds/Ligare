@@ -215,7 +215,9 @@ class LigareAlembic:
         )
         self._copy_files([
             LigareAlembic.FileCopy(
-                Path(Path(__file__).resolve().parent, LigareAlembic.DEFAULT_CONFIG_NAME),
+                Path(
+                    Path(__file__).resolve().parent, LigareAlembic.DEFAULT_CONFIG_NAME
+                ),
                 config_file_destination,
             )
         ])

@@ -28,7 +28,9 @@ def mock_argv(mocker: MockerFixture) -> Generator[MockArgv, Any, None]:
 
 
 def mock_alembic(mocker: MockerFixture):
-    return mocker.patch("Ligare.database.migrations.alembic.ligare_alembic.alembic_main")
+    return mocker.patch(
+        "Ligare.database.migrations.alembic.ligare_alembic.alembic_main"
+    )
 
 
 def mock_config(mocker: MockerFixture):
@@ -77,10 +79,14 @@ def test__LigareAlembic__passes_through_to_alembic_with_default_config_when_not_
     ligare_alembic.run()
 
     assert alembic_main.called
-    alembic_main.assert_called_once_with(["-c", LigareAlembic.DEFAULT_CONFIG_NAME] + args)
+    alembic_main.assert_called_once_with(
+        ["-c", LigareAlembic.DEFAULT_CONFIG_NAME] + args
+    )
 
 
-def test__LigareAlembic__creates_default_config(mock_argv: MockArgv, mocker: MockerFixture):
+def test__LigareAlembic__creates_default_config(
+    mock_argv: MockArgv, mocker: MockerFixture
+):
     _ = mock_alembic(mocker)
     _ = mock_config(mocker)
     _ = mock_argv(["upgrade", "head"])

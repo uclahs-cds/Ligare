@@ -9,8 +9,8 @@ from os import sep as path_separator
 from pathlib import Path
 from typing import Any, Literal, final
 
-from Ligare.programming.collections.dict import merge
 from jinja2 import BaseLoader, Environment, PackageLoader, Template
+from Ligare.programming.collections.dict import merge
 
 # fmt: off
 from pkg_resources import IResourceProvider, ResourceManager, get_provider

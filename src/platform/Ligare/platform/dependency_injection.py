@@ -1,13 +1,13 @@
 from logging import Logger
 
+from flask import Config as Config
+from injector import Binder, Module, provider
 from Ligare.database.dependency_injection import ScopedSessionModule
 from Ligare.database.types import MetaBase
 from Ligare.platform.identity import Role as DbRole
 from Ligare.platform.identity import User as DbUser
 from Ligare.platform.identity.user_loader import Role, UserLoader, UserMixin
 from Ligare.programming.patterns.dependency_injection import LoggerModule
-from flask import Config as Config
-from injector import Binder, Module, provider
 from sqlalchemy.orm.scoping import ScopedSession
 from typing_extensions import override
 

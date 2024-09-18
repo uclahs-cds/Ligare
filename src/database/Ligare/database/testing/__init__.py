@@ -3,14 +3,12 @@ from typing import Generator, cast
 from unittest.mock import AsyncMock, MagicMock, NonCallableMagicMock
 
 import pytest
+from injector import Injector
 from Ligare.database.config import Config
 from Ligare.database.dependency_injection import get_database_ioc_container
-from Ligare.database.migrations.alembic.env import (
-    set_up_database as _set_up_database,
-)
+from Ligare.database.migrations.alembic.env import set_up_database as _set_up_database
 from Ligare.database.testing.config import inmemory_database_config
 from Ligare.database.types import MetaBase
-from injector import Injector
 from mock import MagicMock
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture

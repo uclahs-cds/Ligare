@@ -1,7 +1,6 @@
 from functools import partial
 from typing import Any, Callable, Protocol, Tuple, Type, cast
 
-from Ligare.programming.patterns.dependency_injection import LoggerModule
 from connexion import ConnexionMiddleware, FlaskApp
 from connexion.apps.flask import FlaskASGIApp, FlaskOperation
 from connexion.middleware.main import MiddlewarePosition
@@ -9,6 +8,7 @@ from flask import Config as Config
 from flask import Flask
 from flask_injector import FlaskInjector, wrap_function
 from injector import Binder, Injector, Module
+from Ligare.programming.patterns.dependency_injection import LoggerModule
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import override
 

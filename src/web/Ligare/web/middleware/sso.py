@@ -18,12 +18,6 @@ from typing import (
 from urllib.parse import urlparse
 
 import flask_login
-from Ligare.identity.config import Config, SAML2Config, SSOConfig
-from Ligare.identity.dependency_injection import SAML2Module, SSOModule
-from Ligare.identity.SAML2 import SAML2Client
-from Ligare.platform.identity.user_loader import Role, UserId, UserLoader, UserMixin
-from Ligare.web.config import Config
-from Ligare.web.encryption import decrypt_flask_cookie
 from connexion import FlaskApp
 from flask import (
     Blueprint,
@@ -44,6 +38,12 @@ from flask_login import logout_user  # pyright: ignore[reportUnknownVariableType
 from flask_login import current_user
 from flask_login import login_required as flask_login_required
 from injector import Binder, Injector, Module, inject
+from Ligare.identity.config import Config, SAML2Config, SSOConfig
+from Ligare.identity.dependency_injection import SAML2Module, SSOModule
+from Ligare.identity.SAML2 import SAML2Client
+from Ligare.platform.identity.user_loader import Role, UserId, UserLoader, UserMixin
+from Ligare.web.config import Config
+from Ligare.web.encryption import decrypt_flask_cookie
 from saml2.validate import (
     MustValueError,
     NotValid,

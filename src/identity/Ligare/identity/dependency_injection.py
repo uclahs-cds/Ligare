@@ -1,10 +1,10 @@
-from Ligare.identity.config import SAML2Config, SSOConfig
-from Ligare.identity.SAML2 import SAML2Client
-from Ligare.programming.collections.dict import AnyDict
 from flask import url_for
 
 # from flask import url_for
 from injector import Binder, CallableProvider, Module, inject, singleton
+from Ligare.identity.config import SAML2Config, SSOConfig
+from Ligare.identity.SAML2 import SAML2Client
+from Ligare.programming.collections.dict import AnyDict
 from saml2 import BINDING_HTTP_POST, BINDING_HTTP_REDIRECT
 from typing_extensions import override
 

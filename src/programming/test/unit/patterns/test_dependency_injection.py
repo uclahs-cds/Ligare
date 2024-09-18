@@ -2,12 +2,9 @@ import logging
 from dataclasses import dataclass
 from logging import Logger
 
-from Ligare.programming.patterns.dependency_injection import (
-    BatchModule,
-    LoggerModule,
-)
-from Ligare.programming.str import get_random_str
 from injector import Injector
+from Ligare.programming.patterns.dependency_injection import BatchModule, LoggerModule
+from Ligare.programming.str import get_random_str
 from pytest import LogCaptureFixture
 
 

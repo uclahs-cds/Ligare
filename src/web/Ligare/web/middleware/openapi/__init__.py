@@ -11,7 +11,6 @@ import json_logging
 import starlette
 import starlette.datastructures
 import starlette.requests
-from Ligare.programming.collections.dict import AnyDict, merge
 from connexion import ConnexionMiddleware, FlaskApp, context, utils
 from connexion.middleware import MiddlewarePosition
 from flask import Flask, Request, Response, request
@@ -21,6 +20,7 @@ from flask.globals import current_app
 from flask.typing import ResponseReturnValue
 from flask_login import AnonymousUserMixin, current_user
 from injector import inject
+from Ligare.programming.collections.dict import AnyDict, merge
 from starlette.datastructures import Address
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import TypedDict, final

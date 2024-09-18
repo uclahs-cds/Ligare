@@ -2,6 +2,9 @@ import json
 from logging import Logger
 from typing import Awaitable, Callable, TypeAlias, TypeVar
 
+from connexion import FlaskApp
+from flask import Flask, Response
+from flask.typing import ResponseReturnValue
 from Ligare.web.middleware.flask import (
     register_flask_api_request_handlers,
     register_flask_api_response_handlers,
@@ -11,9 +14,6 @@ from Ligare.web.middleware.openapi import (
     register_openapi_api_response_handlers,
     register_openapi_context_middleware,
 )
-from connexion import FlaskApp
-from flask import Flask, Response
-from flask.typing import ResponseReturnValue
 from werkzeug.exceptions import HTTPException, Unauthorized
 
 # pyright: reportUnusedFunction=false

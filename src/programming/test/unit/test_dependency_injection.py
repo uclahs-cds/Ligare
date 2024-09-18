@@ -1,6 +1,6 @@
+from injector import Injector
 from Ligare.programming.config import AbstractConfig
 from Ligare.programming.dependency_injection import ConfigModule
-from injector import Injector
 
 
 def test__ConfigModule__injector_binds_Config_module_to_AbstractConfig_by_default():

@@ -1,5 +1,5 @@
-from Ligare.programming.config import AbstractConfig
 from injector import Binder, Module
+from Ligare.programming.config import AbstractConfig
 from typing_extensions import override
 
 

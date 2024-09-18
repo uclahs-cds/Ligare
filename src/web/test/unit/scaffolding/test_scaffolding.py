@@ -322,9 +322,7 @@ def test__scaffold__sets_log_level_from_envvar_when_parameter_not_specified(
     env_log_level: str,
     mocker: MockerFixture,
 ):
-    scaffolder_cli_mock = mocker.patch(
-        "Ligare.web.scaffolding.__main__.ScaffolderCli"
-    )
+    scaffolder_cli_mock = mocker.patch("Ligare.web.scaffolding.__main__.ScaffolderCli")
     environ_mock = mocker.patch(
         "Ligare.web.scaffolding.__main__.environ.get",
         return_value=env_log_level,
@@ -364,18 +362,14 @@ def test__scaffold__fails_when_log_level_is_any_unexpected_exception(
     def fake_exception(*args: Any, **kwargs: Any):
         raise ValueError("fake exception")
 
-    _ = mocker.patch(
-        "Ligare.web.scaffolding.__main__.int", side_effect=fake_exception
-    )
+    _ = mocker.patch("Ligare.web.scaffolding.__main__.int", side_effect=fake_exception)
 
     with pytest.raises(ValueError, match=r"^fake exception$"):
         scaffold(log_level="x")
 
 
 def test__scaffold__uses_sys_argv_when_args_not_given(mocker: MockerFixture):
-    scaffolder_cli = mocker.patch(
-        "Ligare.web.scaffolding.__main__.ScaffolderCli.run"
-    )
+    scaffolder_cli = mocker.patch("Ligare.web.scaffolding.__main__.ScaffolderCli.run")
     argv_values = ["1", "2", "3"]
     argv = mocker.patch("Ligare.web.scaffolding.__main__.sys.argv")
     argv.__getitem__ = (
@@ -388,9 +382,7 @@ def test__scaffold__uses_sys_argv_when_args_not_given(mocker: MockerFixture):
 
 
 def test__scaffold__uses_argv_when_sys_argv_not_set(mocker: MockerFixture):
-    scaffolder_cli = mocker.patch(
-        "Ligare.web.scaffolding.__main__.ScaffolderCli.run"
-    )
+    scaffolder_cli = mocker.patch("Ligare.web.scaffolding.__main__.ScaffolderCli.run")
     argv_values = ["1", "2", "3"]
 
     scaffold(argv_values)
@@ -484,15 +476,9 @@ def test__scaffold__create_mode_database_module_configures_database(
     _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Environment")
     _ = mocker.patch("Ligare.web.scaffolding.scaffolder.PackageLoader")
     _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Template")
-    _ = mocker.patch(
-        "Ligare.web.scaffolding.scaffolder.Scaffolder._create_directory"
-    )
-    _ = mocker.patch(
-        "Ligare.web.scaffolding.scaffolder.Scaffolder._scaffold_directory"
-    )
-    _ = mocker.patch(
-        "Ligare.web.scaffolding.scaffolder.Scaffolder._scaffold_endpoints"
-    )
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Scaffolder._create_directory")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Scaffolder._scaffold_directory")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Scaffolder._scaffold_endpoints")
     _ = mocker.patch(
         "Ligare.web.scaffolding.scaffolder.Scaffolder._check_scaffolded_application_exists",
         return_value=False,

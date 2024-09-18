@@ -1,8 +1,8 @@
+from injector import Binder, CallableProvider, Injector, Module, inject, singleton
 from Ligare.database.config import Config, DatabaseConfig
 from Ligare.database.engine import DatabaseEngine
 from Ligare.database.types import MetaBase
 from Ligare.programming.dependency_injection import ConfigModule
-from injector import Binder, CallableProvider, Injector, Module, inject, singleton
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import Session
 from typing_extensions import override

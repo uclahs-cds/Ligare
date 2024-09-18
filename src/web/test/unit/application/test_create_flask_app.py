@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+from flask import Blueprint, Flask
 from Ligare.programming.config import AbstractConfig
 from Ligare.programming.str import get_random_str
 from Ligare.web.application import App, configure_blueprint_routes
@@ -12,7 +13,6 @@ from Ligare.web.testing.create_app import (
     CreateFlaskApp,
     FlaskClientInjectorConfigurable,
 )
-from flask import Blueprint, Flask
 from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
