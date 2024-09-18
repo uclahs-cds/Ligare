@@ -1,12 +1,12 @@
 # Changelog
 
-All notable changes to `BL_Python.web`.
+All notable changes to `Ligare.web`.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Review the `BL_Python` [CHANGELOG.md](https://github.com/uclahs-cds/BL_Python/blob/main/CHANGELOG.md) for full monorepo notes.
+Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md) for full monorepo notes.
 
 ---
 ## Unreleased
@@ -16,7 +16,7 @@ Review the `BL_Python` [CHANGELOG.md](https://github.com/uclahs-cds/BL_Python/bl
 * Update many dependencies
 
 ### Fixed
-* Resolved several type and style errors arising from Pyright and Ruff updates [6f3675bd](https://github.com/uclahs-cds/BL_Python/commit/6f3675bd5def3d6700da01869f03d39841fc8049)
+* Resolved several type and style errors arising from Pyright and Ruff updates [6f3675bd](https://github.com/uclahs-cds/Ligare/commit/6f3675bd5def3d6700da01869f03d39841fc8049)
 
 ## [0.2.4] - 2024-05-30
 ### Added

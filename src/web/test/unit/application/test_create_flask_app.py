@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from BL_Python.programming.config import AbstractConfig
-from BL_Python.programming.str import get_random_str
-from BL_Python.web.application import App, configure_blueprint_routes
-from BL_Python.web.config import Config, FlaskConfig
-from BL_Python.web.testing.create_app import (
+from Ligare.programming.config import AbstractConfig
+from Ligare.programming.str import get_random_str
+from Ligare.web.application import App, configure_blueprint_routes
+from Ligare.web.config import Config, FlaskConfig
+from Ligare.web.testing.create_app import (
     CreateFlaskApp,
     FlaskClientInjectorConfigurable,
 )
@@ -29,8 +29,8 @@ class TestCreateFlaskApp(CreateFlaskApp):
     def test__CreateFlaskApp__configure_blueprint_routes__creates_flask_app_using_config(
         self, mocker: MockerFixture
     ):
-        _ = mocker.patch("BL_Python.web.application.json_logging")
-        flask_mock = mocker.patch("BL_Python.web.application.Flask")
+        _ = mocker.patch("Ligare.web.application.json_logging")
+        flask_mock = mocker.patch("Ligare.web.application.Flask")
 
         app_name = f"{TestCreateFlaskApp.test__CreateFlaskApp__configure_blueprint_routes__creates_flask_app_using_config.__name__}-app_name"
 
@@ -43,7 +43,7 @@ class TestCreateFlaskApp(CreateFlaskApp):
         self, filename: str, mocker: MockerFixture
     ):
         mocker.stop(
-            self._automatic_mocks["BL_Python.web.application._import_blueprint_modules"]
+            self._automatic_mocks["Ligare.web.application._import_blueprint_modules"]
         )
 
         spec_lookup_mock = mocker.patch("importlib.util.spec_from_file_location")
@@ -95,7 +95,7 @@ class TestCreateFlaskApp(CreateFlaskApp):
         self, is_file: bool, filename: str, mocker: MockerFixture
     ):
         mocker.stop(
-            self._automatic_mocks["BL_Python.web.application._import_blueprint_modules"]
+            self._automatic_mocks["Ligare.web.application._import_blueprint_modules"]
         )
 
         glob_item_mock = MagicMock(
@@ -149,7 +149,7 @@ class TestCreateFlaskApp(CreateFlaskApp):
         self, is_file: bool, filename: str, mocker: MockerFixture
     ):
         mocker.stop(
-            self._automatic_mocks["BL_Python.web.application._import_blueprint_modules"]
+            self._automatic_mocks["Ligare.web.application._import_blueprint_modules"]
         )
         _ = mocker.patch("importlib.util.spec_from_file_location")
         _ = mocker.patch("flask.app.Flask.register_blueprint")
@@ -198,7 +198,7 @@ class TestCreateFlaskApp(CreateFlaskApp):
         self, mocker: MockerFixture
     ):
         mocker.stop(
-            self._automatic_mocks["BL_Python.web.application._import_blueprint_modules"]
+            self._automatic_mocks["Ligare.web.application._import_blueprint_modules"]
         )
 
         glob_item_mock = MagicMock(
@@ -250,11 +250,11 @@ class TestCreateFlaskApp(CreateFlaskApp):
         self, basic_config: Config, mocker: MockerFixture
     ):
         _ = mocker.patch(
-            "BL_Python.web.application.SSMParameters",
+            "Ligare.web.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=None)),
         )
         load_config_mock = mocker.patch(
-            "BL_Python.web.application.load_config", return_value=basic_config
+            "Ligare.web.application.load_config", return_value=basic_config
         )
 
         toml_filename = f"{TestCreateFlaskApp.test__CreateFlaskApp__create_app__loads_config_from_toml.__name__}-config.toml"
@@ -267,7 +267,7 @@ class TestCreateFlaskApp(CreateFlaskApp):
         self, mocker: MockerFixture
     ):
         _ = mocker.patch(
-            "BL_Python.web.application.SSMParameters",
+            "Ligare.web.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=None)),
         )
         toml_filename = f"{TestCreateFlaskApp.test__CreateFlaskApp__create_app__uses_custom_config_types.__name__}-config.toml"
@@ -308,14 +308,14 @@ class TestCreateFlaskApp(CreateFlaskApp):
         mocker: MockerFixture,
     ):
         _ = mocker.patch(
-            "BL_Python.web.application.SSMParameters",
+            "Ligare.web.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=None)),
         )
         object.__setattr__(basic_config.flask, config_var_name, var_value)
 
         environ.update({envvar_name: var_value})
         _ = mocker.patch(
-            "BL_Python.web.application.load_config", return_value=basic_config
+            "Ligare.web.application.load_config", return_value=basic_config
         )
         _ = App[Flask].create()
 
@@ -340,7 +340,7 @@ class TestCreateFlaskApp(CreateFlaskApp):
         mocker: MockerFixture,
     ):
         _ = mocker.patch(
-            "BL_Python.web.application.SSMParameters",
+            "Ligare.web.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=None)),
         )
         environ.update({"FLASK_APP": "", "FLASK_ENV": ""})
@@ -366,19 +366,19 @@ class TestCreateFlaskApp(CreateFlaskApp):
         toml_filename = f"{TestCreateFlaskApp.test__CreateFlaskApp__create_app__configures_appropriate_app_type_based_on_config.__name__}-config.toml"
         app_name = f"{TestCreateFlaskApp.test__CreateFlaskApp__create_app__configures_appropriate_app_type_based_on_config.__name__}-app_name"
         _ = mocker.patch(
-            "BL_Python.web.application.SSMParameters",
+            "Ligare.web.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=None)),
         )
-        _ = mocker.patch("BL_Python.web.application.register_error_handlers")
-        _ = mocker.patch("BL_Python.web.application.register_api_request_handlers")
-        _ = mocker.patch("BL_Python.web.application.register_api_response_handlers")
-        _ = mocker.patch("BL_Python.web.application.configure_dependencies")
+        _ = mocker.patch("Ligare.web.application.register_error_handlers")
+        _ = mocker.patch("Ligare.web.application.register_api_request_handlers")
+        _ = mocker.patch("Ligare.web.application.register_api_response_handlers")
+        _ = mocker.patch("Ligare.web.application.configure_dependencies")
 
         configure_method_mock = mocker.patch(
-            "BL_Python.web.application.configure_blueprint_routes"
+            "Ligare.web.application.configure_blueprint_routes"
         )
         config = Config(flask=FlaskConfig(app_name=app_name))
-        _ = mocker.patch("BL_Python.web.application.load_config", return_value=config)
+        _ = mocker.patch("Ligare.web.application.load_config", return_value=config)
         _ = App[Flask].create(config_filename=toml_filename)
 
         configure_method_mock.assert_called_once_with(config)

@@ -1,11 +1,11 @@
 from typing import ClassVar
 
 import pytest
-from BL_Python.database.schema.dialect import DialectBase
-from BL_Python.database.schema.postgresql import PostgreSQLDialect
-from BL_Python.database.schema.sqlite import SQLiteDialect
-from BL_Python.database.types import MetaBase
-from BL_Python.programming.str import get_random_str
+from Ligare.database.schema.dialect import DialectBase
+from Ligare.database.schema.postgresql import PostgreSQLDialect
+from Ligare.database.schema.sqlite import SQLiteDialect
+from Ligare.database.types import MetaBase
+from Ligare.programming.str import get_random_str
 from mock import MagicMock
 from sqlalchemy import Column, Integer
 from sqlalchemy.engine import Dialect

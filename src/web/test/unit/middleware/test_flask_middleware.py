@@ -3,14 +3,14 @@ from typing import Callable, Literal
 from uuid import uuid4
 
 import pytest
-from BL_Python.web.config import Config
-from BL_Python.web.middleware import bind_errorhandler
-from BL_Python.web.middleware.consts import CORRELATION_ID_HEADER
-from BL_Python.web.middleware.flask import (
+from Ligare.web.config import Config
+from Ligare.web.middleware import bind_errorhandler
+from Ligare.web.middleware.consts import CORRELATION_ID_HEADER
+from Ligare.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
-from BL_Python.web.middleware.flask import bind_requesthandler
-from BL_Python.web.testing.create_app import (
+from Ligare.web.middleware.flask import bind_requesthandler
+from Ligare.web.testing.create_app import (
     CreateFlaskApp,
     FlaskClientInjector,
     FlaskClientInjectorConfigurable,

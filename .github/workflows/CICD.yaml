@@ -11,9 +11,9 @@ on:
     inputs:
       rewrite_dependencies:
         description:
-          If "true" or empty CICD will rewrite BL_Python dependencies,
+          If "true" or empty CICD will rewrite Ligare dependencies,
           during the build only, to use the local filesystem checkout rather than PyPI.
-          If "false" CICD will not rewrite the BL_Python dependencies.
+          If "false" CICD will not rewrite the Ligare dependencies.
         type: choice
         options:
           - true

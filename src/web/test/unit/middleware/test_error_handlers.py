@@ -2,7 +2,7 @@ from json.decoder import JSONDecoder
 from typing import Callable
 
 import pytest
-from BL_Python.web.testing.create_app import CreateFlaskApp, FlaskClientInjector
+from Ligare.web.testing.create_app import CreateFlaskApp, FlaskClientInjector
 from flask import Response, abort
 from werkzeug.exceptions import Unauthorized
 

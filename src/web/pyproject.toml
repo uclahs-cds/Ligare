@@ -8,7 +8,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "BL_Python.web"
+name = "Ligare.web"
 requires-python = ">=3.10"
 authors = [
     {name = 'Aaron Holmes', email = 'aholmes@mednet.ucla.edu'}
@@ -28,10 +28,10 @@ classifiers = [
 ]
 
 dependencies = [
-    "BL_Python.programming",
-    "BL_Python.platform",
-    "BL_Python.identity",
-    "BL_Python.database",
+    "Ligare.programming",
+    "Ligare.platform",
+    "Ligare.identity",
+    "Ligare.database",
 
     "Flask == 3.0.3",
     "flask-injector",
@@ -53,17 +53,17 @@ dynamic = ["version", "readme"]
 include-package-data = true
 
 [project.urls]
-"Homepage" = "https://github.com/uclahs-cds/BL_Python"
-"Bug Tracker" = "https://github.com/uclahs-cds/BL_Python/issues"
-"Repository" = "https://github.com/uclahs-cds/BL_Python.git"
-"Changelog" = "https://github.com/uclahs-cds/BL_Python/blob/main/CHANGELOG.md"
+"Homepage" = "https://github.com/uclahs-cds/Ligare"
+"Bug Tracker" = "https://github.com/uclahs-cds/Ligare/issues"
+"Repository" = "https://github.com/uclahs-cds/Ligare.git"
+"Changelog" = "https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md"
 
 [tool.setuptools.dynamic]
-version = {attr = "BL_Python.web.__version__"}
+version = {attr = "Ligare.web.__version__"}
 readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools.package-dir]
-"BL_Python.web" = "BL_Python/web"
+"Ligare.web" = "Ligare/web"
 
 [tool.setuptools.packages.find]
 exclude = ["build*"]
@@ -71,11 +71,11 @@ exclude = ["build*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.j2"]
-"BL_Python.web" = ["py.typed"]
+"Ligare.web" = ["py.typed"]
 
 
 [project.scripts]
-bl-python-scaffold = "BL_Python.web.scaffolding.__main__:scaffold"
+ligare-scaffold = "Ligare.web.scaffolding.__main__:scaffold"
 
 [project.optional-dependencies]
 dev-dependencies = [

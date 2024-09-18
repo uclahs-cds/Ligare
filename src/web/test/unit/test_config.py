@@ -1,7 +1,7 @@
 import pytest
-from BL_Python.programming.collections.dict import AnyDict
-from BL_Python.programming.config import load_config
-from BL_Python.web.config import Config
+from Ligare.programming.collections.dict import AnyDict
+from Ligare.programming.config import load_config
+from Ligare.web.config import Config
 from pytest_mock import MockerFixture
 
 

@@ -2,9 +2,9 @@ import logging
 from typing import Any, cast
 
 import pytest
-from BL_Python.web.middleware import register_api_request_handlers
-from BL_Python.web.middleware.consts import INCOMING_REQUEST_MESSAGE
-from BL_Python.web.testing.create_app import CreateFlaskApp, FlaskClientInjector
+from Ligare.web.middleware import register_api_request_handlers
+from Ligare.web.middleware.consts import INCOMING_REQUEST_MESSAGE
+from Ligare.web.testing.create_app import CreateFlaskApp, FlaskClientInjector
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 

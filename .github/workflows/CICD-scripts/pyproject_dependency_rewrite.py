@@ -13,21 +13,21 @@ from typing import Any
 
 import toml
 
-# Import BL_Python.programming.cli.argparse.
+# Import Ligare.programming.cli.argparse.
 # This must be done this way as this script is not used within an
-# environment in which BL_Python has been installed, and so
+# environment in which Ligare has been installed, and so
 # the modules cannot be imported the usual way.
-programming_module_name = "BL_Python.programming.cli.argparse"
+programming_module_name = "Ligare.programming.cli.argparse"
 module_path = Path(
     Path(__file__).parent,
-    "../../../src/programming/BL_Python/programming/cli/argparse.py",
+    "../../../src/programming/Ligare/programming/cli/argparse.py",
 )
 spec = importlib.util.spec_from_file_location(programming_module_name, str(module_path))
 if spec is None or not spec.loader:
     raise Exception(f"Could not find module `{programming_module_name}`.")
-BL_Python_argparse = importlib.util.module_from_spec(spec)
-sys.modules[programming_module_name] = BL_Python_argparse
-spec.loader.exec_module(BL_Python_argparse)
+Ligare_argparse = importlib.util.module_from_spec(spec)
+sys.modules[programming_module_name] = Ligare_argparse
+spec.loader.exec_module(Ligare_argparse)
 # finish import
 
 
@@ -50,13 +50,13 @@ _ = parser.add_argument(
     "-c",
     "--config",
     type=Path,
-    action=BL_Python_argparse.PathExists,
+    action=Ligare_argparse.PathExists,
     help="The path to the pyproject.toml file to rewrite. If not specified, all pyproject.toml under src/*/pyproject.toml, and pyproject.toml will be processed.",
     required=False,
 )
 args = parser.parse_args(namespace=RewriteArgs)
 
-BL_PYTHON = "BL_Python"
+LIGARE = "Ligare"
 WORKFLOW_DISPATCH_REWRITE_DEPENDENCIES = environ.get("REWRITE_DEPENDENCIES") or "true"
 GIT_REF = environ.get("GITHUB_REF")
 
@@ -96,7 +96,7 @@ else:
 
 for pyproject_file in pyproject_files:
     print(
-        f"Rewriting BL_Python dependency specifications in {pyproject_file} for filesystem build."
+        f"Rewriting Ligare dependency specifications in {pyproject_file} for filesystem build."
     )
 
     data: dict[str, Any]
@@ -107,26 +107,26 @@ for pyproject_file in pyproject_files:
     dependencies_hash = hash(tuple(dependencies))
 
     for idx, dependency in enumerate(dependencies):
-        if not dependency.startswith(BL_PYTHON):
+        if not dependency.startswith(LIGARE):
             continue
 
-        dependency_match = re.match(r"(BL_Python\.[^=<!~\s]+)", dependency)
+        dependency_match = re.match(r"(Ligare\.[^=<!~\s]+)", dependency)
         if dependency_match is None:
-            raise ValueError(f"BL_Python dependency name '{dependency}' is invalid.")
+            raise ValueError(f"Ligare dependency name '{dependency}' is invalid.")
 
         dependency = dependency_match[0]
 
-        # e.g. "web" in "BL_Python.web"
+        # e.g. "web" in "Ligare.web"
         sub_dep = dependency[dependency.index(".") + 1 :]
         dep_path = WORKDIR + (
-            f"/{sub_dep}" if dependency == BL_PYTHON else f"/src/{sub_dep}"
+            f"/{sub_dep}" if dependency == LIGARE else f"/src/{sub_dep}"
         )
         new_dep = f"{dependency} @ file://{dep_path}"
         dependencies[idx] = new_dep
 
     # list has not changed?
     if dependencies_hash == hash(tuple(dependencies)):
-        print(f"Skipped writing {pyproject_file}. No BL_Python dependencies in file.")
+        print(f"Skipped writing {pyproject_file}. No Ligare dependencies in file.")
         continue
 
     with open(pyproject_file, "w") as f:

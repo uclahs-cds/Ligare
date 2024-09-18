@@ -4,8 +4,8 @@ from dataclasses import asdict
 from typing import Any, cast
 
 import pytest
-from BL_Python.web.scaffolding.__main__ import ScaffolderCli, scaffold
-from BL_Python.web.scaffolding.scaffolder import (
+from Ligare.web.scaffolding.__main__ import ScaffolderCli, scaffold
+from Ligare.web.scaffolding.scaffolder import (
     Operation,
     ScaffoldConfig,
     ScaffoldEndpoint,
@@ -323,10 +323,10 @@ def test__scaffold__sets_log_level_from_envvar_when_parameter_not_specified(
     mocker: MockerFixture,
 ):
     scaffolder_cli_mock = mocker.patch(
-        "BL_Python.web.scaffolding.__main__.ScaffolderCli"
+        "Ligare.web.scaffolding.__main__.ScaffolderCli"
     )
     environ_mock = mocker.patch(
-        "BL_Python.web.scaffolding.__main__.environ.get",
+        "Ligare.web.scaffolding.__main__.environ.get",
         return_value=env_log_level,
     )
 
@@ -340,10 +340,10 @@ def test__scaffold__sets_log_level_from_envvar_when_parameter_not_specified(
 def test__scaffold__sets_log_level_from_value_when_parameter_specified(
     log_level: str | int, mocker: MockerFixture
 ):
-    _ = mocker.patch("BL_Python.web.scaffolding.__main__.ScaffolderCli.run")
-    _ = mocker.patch("BL_Python.web.scaffolding.__main__.environ")
+    _ = mocker.patch("Ligare.web.scaffolding.__main__.ScaffolderCli.run")
+    _ = mocker.patch("Ligare.web.scaffolding.__main__.environ")
 
-    log_mock = mocker.patch("BL_Python.web.scaffolding.__main__.logging.basicConfig")
+    log_mock = mocker.patch("Ligare.web.scaffolding.__main__.logging.basicConfig")
 
     expected_log_level = 10
     scaffold(log_level=log_level)
@@ -359,13 +359,13 @@ def test__scaffold__sets_log_level_from_value_when_parameter_specified(
 def test__scaffold__fails_when_log_level_is_any_unexpected_exception(
     mocker: MockerFixture,
 ):
-    _ = mocker.patch("BL_Python.web.scaffolding.__main__.ScaffolderCli.run")
+    _ = mocker.patch("Ligare.web.scaffolding.__main__.ScaffolderCli.run")
 
     def fake_exception(*args: Any, **kwargs: Any):
         raise ValueError("fake exception")
 
     _ = mocker.patch(
-        "BL_Python.web.scaffolding.__main__.int", side_effect=fake_exception
+        "Ligare.web.scaffolding.__main__.int", side_effect=fake_exception
     )
 
     with pytest.raises(ValueError, match=r"^fake exception$"):
@@ -374,10 +374,10 @@ def test__scaffold__fails_when_log_level_is_any_unexpected_exception(
 
 def test__scaffold__uses_sys_argv_when_args_not_given(mocker: MockerFixture):
     scaffolder_cli = mocker.patch(
-        "BL_Python.web.scaffolding.__main__.ScaffolderCli.run"
+        "Ligare.web.scaffolding.__main__.ScaffolderCli.run"
     )
     argv_values = ["1", "2", "3"]
-    argv = mocker.patch("BL_Python.web.scaffolding.__main__.sys.argv")
+    argv = mocker.patch("Ligare.web.scaffolding.__main__.sys.argv")
     argv.__getitem__ = (
         lambda _argv, _slice: argv_values  # pyright: ignore[reportUnknownLambdaType]
     )
@@ -389,7 +389,7 @@ def test__scaffold__uses_sys_argv_when_args_not_given(mocker: MockerFixture):
 
 def test__scaffold__uses_argv_when_sys_argv_not_set(mocker: MockerFixture):
     scaffolder_cli = mocker.patch(
-        "BL_Python.web.scaffolding.__main__.ScaffolderCli.run"
+        "Ligare.web.scaffolding.__main__.ScaffolderCli.run"
     )
     argv_values = ["1", "2", "3"]
 
@@ -413,8 +413,8 @@ def test__scaffold__uses_argv_when_sys_argv_not_set(mocker: MockerFixture):
 def test__scaffold__uses_argv_for_basic_scaffold_configuration(
     mode: str, config_name: str, config_value: str, mocker: MockerFixture
 ):
-    _ = mocker.patch("BL_Python.web.scaffolding.__main__.Scaffolder")
-    config_mock = mocker.patch("BL_Python.web.scaffolding.__main__.ScaffoldConfig")
+    _ = mocker.patch("Ligare.web.scaffolding.__main__.Scaffolder")
+    config_mock = mocker.patch("Ligare.web.scaffolding.__main__.ScaffoldConfig")
 
     argv_values = [mode, "-n", "test"]
 
@@ -437,8 +437,8 @@ def test__scaffold__uses_argv_for_endpoint_configuration(
     mode: str,
     mocker: MockerFixture,
 ):
-    _ = mocker.patch("BL_Python.web.scaffolding.__main__.Scaffolder")
-    config_mock = mocker.patch("BL_Python.web.scaffolding.__main__.ScaffoldConfig")
+    _ = mocker.patch("Ligare.web.scaffolding.__main__.Scaffolder")
+    config_mock = mocker.patch("Ligare.web.scaffolding.__main__.ScaffoldConfig")
 
     argv_values = [mode, "-n", "test", "-e", "foo", "-e", "bar"]
 
@@ -458,8 +458,8 @@ def test__scaffold__uses_argv_for_endpoint_configuration(
 def test__scaffold__create_mode_uses_argv_for_module_configuration(
     mocker: MockerFixture,
 ):
-    _ = mocker.patch("BL_Python.web.scaffolding.__main__.Scaffolder")
-    config_mock = mocker.patch("BL_Python.web.scaffolding.__main__.ScaffoldConfig")
+    _ = mocker.patch("Ligare.web.scaffolding.__main__.Scaffolder")
+    config_mock = mocker.patch("Ligare.web.scaffolding.__main__.ScaffoldConfig")
 
     argv_values = ["create", "-n", "test", "-m", "database"]
 
@@ -480,25 +480,25 @@ def test__scaffold__create_mode_database_module_configures_database(
 ):
     # TODO refactor Scaffolder so all these mocks don't need to happen
     _ = mocker.patch("builtins.input", return_value="Y")
-    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.BaseLoader")
-    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.Environment")
-    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.PackageLoader")
-    _ = mocker.patch("BL_Python.web.scaffolding.scaffolder.Template")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.BaseLoader")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Environment")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.PackageLoader")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Template")
     _ = mocker.patch(
-        "BL_Python.web.scaffolding.scaffolder.Scaffolder._create_directory"
+        "Ligare.web.scaffolding.scaffolder.Scaffolder._create_directory"
     )
     _ = mocker.patch(
-        "BL_Python.web.scaffolding.scaffolder.Scaffolder._scaffold_directory"
+        "Ligare.web.scaffolding.scaffolder.Scaffolder._scaffold_directory"
     )
     _ = mocker.patch(
-        "BL_Python.web.scaffolding.scaffolder.Scaffolder._scaffold_endpoints"
+        "Ligare.web.scaffolding.scaffolder.Scaffolder._scaffold_endpoints"
     )
     _ = mocker.patch(
-        "BL_Python.web.scaffolding.scaffolder.Scaffolder._check_scaffolded_application_exists",
+        "Ligare.web.scaffolding.scaffolder.Scaffolder._check_scaffolded_application_exists",
         return_value=False,
     )
     module_hook_mock = mocker.patch(
-        "BL_Python.web.scaffolding.scaffolder.Scaffolder._execute_module_hooks"
+        "Ligare.web.scaffolding.scaffolder.Scaffolder._execute_module_hooks"
     )
 
     argv_values = ["create", "-n", "test", "-m", "database", "-o", "/dev/null"]

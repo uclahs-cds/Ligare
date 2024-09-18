@@ -1,6 +1,6 @@
 import pytest
-from BL_Python.programming.config import AbstractConfig, ConfigBuilder, load_config
-from BL_Python.programming.config.exceptions import (
+from Ligare.programming.config import AbstractConfig, ConfigBuilder, load_config
+from Ligare.programming.config.exceptions import (
     ConfigBuilderStateError,
     NotEndsWithConfigError,
 )

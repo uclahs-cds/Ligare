@@ -1,5 +1,5 @@
-from BL_Python.programming.config import AbstractConfig
-from BL_Python.programming.dependency_injection import ConfigModule
+from Ligare.programming.config import AbstractConfig
+from Ligare.programming.dependency_injection import ConfigModule
 from injector import Injector
 
 

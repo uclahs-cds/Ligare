@@ -1,5 +1,5 @@
-from BL_Python.database.config import DatabaseConfig
-from BL_Python.programming.config import load_config
+from Ligare.database.config import DatabaseConfig
+from Ligare.programming.config import load_config
 from pytest_mock import MockerFixture
 
 

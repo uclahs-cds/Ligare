@@ -1,5 +1,5 @@
 @startuml
-package "BL Python" {
+package "Ligare" {
     [AWS] as aws
     [Database] as database
     [Development] as development

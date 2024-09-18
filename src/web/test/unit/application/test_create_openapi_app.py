@@ -1,11 +1,11 @@
 from os import environ
 
 import pytest
-from BL_Python.programming.config import AbstractConfig
-from BL_Python.programming.str import get_random_str
-from BL_Python.web.application import App, configure_openapi
-from BL_Python.web.config import Config, FlaskConfig, FlaskOpenApiConfig
-from BL_Python.web.testing.create_app import CreateOpenAPIApp
+from Ligare.programming.config import AbstractConfig
+from Ligare.programming.str import get_random_str
+from Ligare.web.application import App, configure_openapi
+from Ligare.web.config import Config, FlaskConfig, FlaskOpenApiConfig
+from Ligare.web.testing.create_app import CreateOpenAPIApp
 from connexion import FlaskApp
 from flask import Flask
 from mock import MagicMock
@@ -24,8 +24,8 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
     def test__CreateOpenAPIApp__configure_openapi__creates_flask_app_using_config(
         self, mocker: MockerFixture
     ):
-        _ = mocker.patch("BL_Python.web.application.json_logging")
-        connexion_mock = mocker.patch("BL_Python.web.application.FlaskApp")
+        _ = mocker.patch("Ligare.web.application.json_logging")
+        connexion_mock = mocker.patch("Ligare.web.application.FlaskApp")
 
         app_name = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__configure_openapi__creates_flask_app_using_config.__name__}-app_name"
         spec_path = ".."
@@ -45,11 +45,11 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         self, basic_config: Config, mocker: MockerFixture
     ):
         _ = mocker.patch(
-            "BL_Python.web.application.SSMParameters",
+            "Ligare.web.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=None)),
         )
         load_config_mock = mocker.patch(
-            "BL_Python.web.application.load_config", return_value=basic_config
+            "Ligare.web.application.load_config", return_value=basic_config
         )
 
         toml_filename = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__create_app__loads_config_from_toml.__name__}-config.toml"
@@ -62,7 +62,7 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         self, mocker: MockerFixture
     ):
         _ = mocker.patch(
-            "BL_Python.web.application.SSMParameters",
+            "Ligare.web.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=None)),
         )
         toml_filename = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__create_app__uses_custom_config_types.__name__}-config.toml"
@@ -103,14 +103,14 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         mocker: MockerFixture,
     ):
         _ = mocker.patch(
-            "BL_Python.web.application.SSMParameters",
+            "Ligare.web.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=None)),
         )
         object.__setattr__(basic_config.flask, config_var_name, var_value)
 
         environ.update({envvar_name: var_value})
         _ = mocker.patch(
-            "BL_Python.web.application.load_config", return_value=basic_config
+            "Ligare.web.application.load_config", return_value=basic_config
         )
         _ = App[Flask].create()
 
@@ -135,7 +135,7 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         mocker: MockerFixture,
     ):
         _ = mocker.patch(
-            "BL_Python.web.application.SSMParameters",
+            "Ligare.web.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=None)),
         )
         environ.update({"FLASK_APP": "", "FLASK_ENV": ""})
@@ -161,21 +161,21 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         toml_filename = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__create_app__configures_appropriate_app_type_based_on_config.__name__}-config.toml"
         app_name = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__create_app__configures_appropriate_app_type_based_on_config.__name__}-app_name"
         _ = mocker.patch(
-            "BL_Python.web.application.SSMParameters",
+            "Ligare.web.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=None)),
         )
-        _ = mocker.patch("BL_Python.web.application.register_error_handlers")
-        _ = mocker.patch("BL_Python.web.application.register_api_request_handlers")
-        _ = mocker.patch("BL_Python.web.application.register_api_response_handlers")
-        _ = mocker.patch("BL_Python.web.application.configure_dependencies")
+        _ = mocker.patch("Ligare.web.application.register_error_handlers")
+        _ = mocker.patch("Ligare.web.application.register_api_request_handlers")
+        _ = mocker.patch("Ligare.web.application.register_api_response_handlers")
+        _ = mocker.patch("Ligare.web.application.configure_dependencies")
 
         configure_method_mock = mocker.patch(
-            "BL_Python.web.application.configure_openapi"
+            "Ligare.web.application.configure_openapi"
         )
         config = Config(
             flask=FlaskConfig(app_name=app_name, openapi=FlaskOpenApiConfig())
         )
-        _ = mocker.patch("BL_Python.web.application.load_config", return_value=config)
+        _ = mocker.patch("Ligare.web.application.load_config", return_value=config)
         _ = App[FlaskApp].create(config_filename=toml_filename)
 
         configure_method_mock.assert_called_once_with(config)

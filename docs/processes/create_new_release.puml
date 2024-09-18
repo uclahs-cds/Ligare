@@ -28,7 +28,7 @@
         :Determine package version;
         note right
         Current version is in
-        `src/<package name>/BL_Python/<package name>/~__init__.py`.
+        `src/<package name>/Ligare/<package name>/~__init__.py`.
         end note
         :Update the version number accordingly;
         :Update the package CHANGELOG;
@@ -43,7 +43,7 @@
     :Create new Git tags;
 
 |Root package|
-    :Name is `BL_Python.all-v1.0.0`;
+    :Name is `Ligare.all-v1.0.0`;
     note
     Replace `v1.0.0` with actual version.
     end note
@@ -52,7 +52,7 @@
     while (Any other package releases?) is (<b>yes)
         ' this may be automated in the future
         'if (Determine tag name from package and version) is (Root package) then
-        :Name is `BL_Python.web-v1.0.0`;
+        :Name is `Ligare.web-v1.0.0`;
         note
         Replace `web` with actual package name
         and `v1.0.0` with actual version.

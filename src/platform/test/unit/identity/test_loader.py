@@ -1,9 +1,9 @@
 from typing import Sequence
 
-from BL_Python.platform.dependency_injection import UserLoaderModule
-from BL_Python.platform.identity import Role as DbRole
-from BL_Python.platform.identity import User as DbUser
-from BL_Python.platform.identity.user_loader import (
+from Ligare.platform.dependency_injection import UserLoaderModule
+from Ligare.platform.identity import Role as DbRole
+from Ligare.platform.identity import User as DbUser
+from Ligare.platform.identity.user_loader import (
     Role,
     TRole,
     UserId,

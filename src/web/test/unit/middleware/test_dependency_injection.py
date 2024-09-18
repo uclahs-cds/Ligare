@@ -1,4 +1,4 @@
-from BL_Python.web.middleware.dependency_injection import AppModule
+from Ligare.web.middleware.dependency_injection import AppModule
 from flask import Flask
 from injector import Injector
 from mock import MagicMock

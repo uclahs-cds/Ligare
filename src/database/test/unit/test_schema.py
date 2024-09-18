@@ -1,8 +1,8 @@
 import pytest
 from alembic.operations.base import Operations
-from BL_Python.database.schema import get_type_from_dialect, get_type_from_op
-from BL_Python.database.schema.postgresql import PostgreSQLDialect
-from BL_Python.database.schema.sqlite import SQLiteDialect
+from Ligare.database.schema import get_type_from_dialect, get_type_from_op
+from Ligare.database.schema.postgresql import PostgreSQLDialect
+from Ligare.database.schema.sqlite import SQLiteDialect
 from mock import MagicMock
 from sqlalchemy.engine import Dialect
 

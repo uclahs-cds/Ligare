@@ -1,3 +1,3 @@
-graft BL_Python/database/migrations/alembic/
+graft Ligare/database/migrations/alembic/
 global-include *.pyi
 global-include py.typed

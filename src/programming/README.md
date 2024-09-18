@@ -1,3 +1,3 @@
-# `BL_Python.programming`
+# `Ligare.programming`
 
 Libraries for writing software in Boutros Lab.

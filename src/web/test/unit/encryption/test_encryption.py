@@ -1,10 +1,10 @@
 import pytest
-from BL_Python.programming.str import get_random_str
-from BL_Python.web.encryption import (
+from Ligare.programming.str import get_random_str
+from Ligare.web.encryption import (
     _EMPTY_SECRET_KEY_MESSAGE,  # pyright:ignore[reportPrivateUsage]
 )
-from BL_Python.web.encryption import decrypt_flask_cookie, encrypt_flask_cookie
-from BL_Python.web.middleware.dependency_injection import AppModule
+from Ligare.web.encryption import decrypt_flask_cookie, encrypt_flask_cookie
+from Ligare.web.middleware.dependency_injection import AppModule
 from flask import Flask
 from injector import Injector
 from mock import MagicMock
