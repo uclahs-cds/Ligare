@@ -12,7 +12,7 @@ from typing_extensions import override
 from .config import DatabaseConfig
 
 
-class ScopedSessionModule(ConfigurableModule):  # Module):
+class ScopedSessionModule(ConfigurableModule):
     """
     Configure SQLAlchemy Session depedencies for Injector.
     """
