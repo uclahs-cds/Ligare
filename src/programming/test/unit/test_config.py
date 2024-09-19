@@ -40,8 +40,6 @@ class InvalidConfigClass(BaseModel, AbstractConfig):
     def post_load(self) -> None:
         return super().post_load()
 
-    pass
-
 
 def test__Config__load_config__reads_toml_file(mocker: MockerFixture):
     fake_config_dict = {}
