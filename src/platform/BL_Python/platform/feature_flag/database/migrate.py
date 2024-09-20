@@ -16,12 +16,12 @@ def upgrade(op: Operations):
     get_dialect_schema = dialect.get_dialect_schema
     timestamp_sql = dialect.timestamp_sql
 
-    base_schema_name = get_dialect_schema(FeatureFlagTable)
+    base_schema_name = get_dialect_schema(FeatureFlagTable) # pyright: ignore[reportArgumentType]
     if dialect_supports_schemas:
         if base_schema_name:
             op.execute(f'CREATE SCHEMA IF NOT EXISTS {base_schema_name}')
 
-    full_table_name = get_full_table_name('feature_flag', FeatureFlagTable)
+    full_table_name = get_full_table_name('feature_flag', FeatureFlagTable) # pyright: ignore[reportArgumentType]
     _ = op.create_table(full_table_name,
     sa.Column('ctime', sa.DateTime(), server_default=sa.text(timestamp_sql), nullable=False),
     sa.Column('mtime', sa.DateTime(), server_default=sa.text(timestamp_sql), nullable=False),
@@ -66,8 +66,8 @@ def downgrade(op: Operations):
     get_full_table_name = dialect.get_full_table_name
     get_dialect_schema = dialect.get_dialect_schema
 
-    base_schema_name = get_dialect_schema(FeatureFlagTable)
-    full_table_name = get_full_table_name('feature_flag', FeatureFlagTable)
+    base_schema_name = get_dialect_schema(FeatureFlagTable) # pyright: ignore[reportArgumentType]
+    full_table_name = get_full_table_name('feature_flag', FeatureFlagTable) # pyright: ignore[reportArgumentType]
 
     if dialect.DIALECT_NAME == 'postgresql':
         op.execute(f'DROP SCHEMA {base_schema_name} CASCADE;')
