@@ -172,7 +172,7 @@ class AlembicEnvSetup:
             try:
                 if connection.engine.name == "postgresql":
                     _ = connection.execute(
-                        f"SET search_path TO {','.join(schemas)},public;"
+                        f"SET search_path TO {','.join(schemas + ['public'])};"
                     )
                 context.run_migrations()
             except ProgrammingError as error:

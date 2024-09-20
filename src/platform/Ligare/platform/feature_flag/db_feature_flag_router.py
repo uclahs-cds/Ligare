@@ -42,6 +42,8 @@ class FeatureFlagTableBase(ABC):
 
 
 class FeatureFlagTable:
+    __table_args__ = {"schema": "platform"}
+
     def __new__(cls, base: Type[DeclarativeMeta]) -> type[FeatureFlagTableBase]:
         class _FeatureFlag(base):
             """

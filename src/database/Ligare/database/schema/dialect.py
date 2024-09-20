@@ -8,7 +8,7 @@ class DialectBase(ABC):
     supports_schemas: bool = False
 
     @staticmethod
-    def get_schema(meta: MetaBase):
+    def get_schema(meta: MetaBase) -> str | None:
         table_args = hasattr(meta, "__table_args__") and meta.__table_args__ or None
 
         if isinstance(table_args, dict):
@@ -21,7 +21,7 @@ class DialectBase(ABC):
         dialect: "DialectBase",
         schema_tables: dict[MetaBase, list[str]],
         table_name_callback: TableNameCallback,
-    ):
+    ) -> None:
         """
         Call `table_name_callback` once for every table in every Base.
 
@@ -40,13 +40,13 @@ class DialectBase(ABC):
                     dialect_schema, full_table_name, base_table, meta_base
                 )
 
-    def get_dialect_schema(self, meta: MetaBase):
+    def get_dialect_schema(self, meta: MetaBase) -> str | None:
         if self.supports_schemas:
             return DialectBase.get_schema(meta)
 
         return None
 
-    def get_full_table_name(self, table_name: str, meta: MetaBase):
+    def get_full_table_name(self, table_name: str, meta: MetaBase) -> str:
         """
         If the dialect supports schemas, then the table name does not have the schema prepended.
         In dialects that don't support schemas, e.g., SQLite, the table name has the schema prepended.
