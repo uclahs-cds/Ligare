@@ -34,7 +34,7 @@ from typing_extensions import override
 
 
 class FeatureFlagConfig(BaseModel):
-    api_base_url: str = "/server"
+    api_base_url: str = "/platform"
     access_role_name: str | bool | None = None
 
 

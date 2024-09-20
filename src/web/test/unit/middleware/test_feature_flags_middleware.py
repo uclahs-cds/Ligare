@@ -115,7 +115,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
             openapi_client_configurable(openapi_config, app_init_hook=app_init_hook)
         )
 
-        response = app.client.get("/server/feature_flag")
+        response = app.client.get("/platform/feature_flag")
 
         # 401 for now because no real auth is configured.
         # if SSO was broken, 500 would return
@@ -145,7 +145,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
             User,  # pyright: ignore[reportArgumentType]
             mocker,
         ):
-            response = app.client.get("/server/feature_flag")
+            response = app.client.get("/platform/feature_flag")
 
         assert response.status_code == 404
         get_feature_flag_mock.assert_called_once()
@@ -167,7 +167,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         def client_init_hook(app: OpenAPIAppResult):
             feature_flag_config = FeatureFlagConfig(
                 access_role_name="Operator",
-                api_base_url="/server",  # the default
+                api_base_url="/platform",  # the default
             )
             app.app_injector.flask_injector.injector.binder.bind(
                 FeatureFlagConfig, to=feature_flag_config
@@ -186,7 +186,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
             mocker,
             [Role.Operator] if has_role else [],
         ):
-            response = app.client.get("/server/feature_flag")
+            response = app.client.get("/platform/feature_flag")
 
         if has_role:
             assert response.status_code == 404
@@ -214,7 +214,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
             User,  # pyright: ignore[reportArgumentType]
             mocker,
         ):
-            response = app.client.get("/server/feature_flag")
+            response = app.client.get("/platform/feature_flag")
 
         assert response.status_code == 404
         response_json = response.json()
@@ -250,7 +250,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
             User,  # pyright: ignore[reportArgumentType]
             mocker,
         ):
-            response = app.client.get("/server/feature_flag")
+            response = app.client.get("/platform/feature_flag")
 
         assert response.status_code == 200
         response_json = response.json()
@@ -293,7 +293,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
             mocker,
         ):
             response = app.client.get(
-                "/server/feature_flag", params={"name": query_flags}
+                "/platform/feature_flag", params={"name": query_flags}
             )
 
         assert response.status_code == 200
@@ -337,7 +337,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
             mocker,
         ):
             response = app.client.patch(
-                "/server/feature_flag",
+                "/platform/feature_flag",
                 json=[{"name": "foo_feature", "enabled": False}],
             )
 
