@@ -417,7 +417,6 @@ class CreateFlaskApp(CreateApp[Flask]):
             application_configs = []
         if application_modules is None:
             application_modules = []
-        application_configs.append(SSOConfig)
         application_modules.append(SAML2MiddlewareModule)
         app = App[Flask].create("config.toml", application_configs, application_modules)
         yield app
@@ -538,7 +537,6 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
             application_configs = []
         if application_modules is None:
             application_modules = []
-        application_configs.append(SSOConfig)
         application_modules.append(SAML2MiddlewareModule)
         application_modules.append(
             UserLoaderModule(

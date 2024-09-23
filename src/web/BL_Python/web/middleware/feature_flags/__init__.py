@@ -106,25 +106,52 @@ class CachingFeatureFlagRouterModule(FeatureFlagRouterModule[CachingFeatureFlag]
         return injector.get(self._t_feature_flag)
 
 
-def get_feature_flag_blueprint(config: FeatureFlagConfig):
+@inject
+def get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logger):
     feature_flag_blueprint = Blueprint(
         "feature_flag", __name__, url_prefix=f"{config.api_base_url}"
     )
 
     access_role = config.access_role_name
 
-    def _login_required(fn: Callable[..., Any]):
-        if access_role is False:
-            return fn
+    def _login_required(require_flask_login: bool):
+        """
+        Decorate an API endpoint with the correct flask_login authentication
+        method given the requirements of the API endpoint.
 
-        # None means no roles were specified, but a session is still required
-        if access_role is None or access_role is True:
-            return login_required(fn)
+        require_flask_login is ignored if flask_login has been configured.
 
-        return login_required([access_role])(fn)
+        If flask_login has _not_ been configured:
+            * If require_flask_login is True, a warning is logged and a method returning False is returned, rather than returning the endpoint function
+            * If require_flask_login is False, the endpoint function is returned
+
+        :param bool require_flask_login: Determine whether flask_login must be configured for this endpoint to function
+        :return _type_: _description_
+        """
+        if not hasattr(app, "login_manager"):
+            if require_flask_login:
+                log.warning(
+                    "The Feature Flag module expects flask_login to be configured in order to control access to feature flag modifications. flask_login has not been configured, so the Feature Flag modification API is disabled."
+                )
+                return lambda *args, **kwargs: False
+            else:
+                return lambda fn: fn
+
+        def _login_required(fn: Callable[..., Any]):
+            if access_role is False:
+                return fn
+
+            # None means no roles were specified, but a session is still required
+            if access_role is None or access_role is True:
+                # FIXME feature flags needs a login_manager assigned to Flask
+                return login_required(fn)
+
+            return login_required([access_role])(fn)
+
+        return _login_required
 
     @feature_flag_blueprint.route("/feature_flag", methods=("GET",))  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
-    @_login_required
+    @_login_required(False)
     @inject
     def feature_flag(feature_flag_router: FeatureFlagRouter[FeatureFlag]):  # pyright: ignore[reportUnusedFunction]
         request_query_names: list[str] | None = request.query_params.getlist("name")
@@ -174,7 +201,7 @@ def get_feature_flag_blueprint(config: FeatureFlagConfig):
     @feature_flag_blueprint.route("/feature_flag", methods=("PATCH",))  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
     # @login_required([UserRole.Operator])
     # TODO assign a specific role ?
-    @_login_required
+    @_login_required(True)
     @inject
     async def feature_flag_patch(feature_flag_router: FeatureFlagRouter[FeatureFlag]):  # pyright: ignore[reportUnusedFunction]
         feature_flags_request: list[FeatureFlagPatchRequest] = await request.json()
@@ -256,7 +283,7 @@ class FeatureFlagMiddlewareModule(Module):
 
                 log.debug("Registering FeatureFlag blueprint.")
                 app.register_blueprint(
-                    get_feature_flag_blueprint(injector.get(FeatureFlagConfig))
+                    injector.call_with_injection(get_feature_flag_blueprint)
                 )
                 log.debug("FeatureFlag blueprint registered.")
 

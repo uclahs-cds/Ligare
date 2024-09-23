@@ -15,6 +15,7 @@ from BL_Python.web.middleware.feature_flags import (
     FeatureFlagConfig,
     FeatureFlagMiddlewareModule,
 )
+from BL_Python.web.middleware.sso import SAML2MiddlewareModule
 from BL_Python.web.testing.create_app import (
     CreateOpenAPIApp,
     OpenAPIClientInjectorConfigurable,
@@ -97,7 +98,7 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         application_modules.append(CachingFeatureFlagRouterModule)
         application_modules.append(FeatureFlagMiddlewareModule())
 
-    def test__FeatureFlagMiddleware__feature_flag_api_GET_requires_user_session(
+    def test__FeatureFlagMiddleware__feature_flag_api_GET_requires_user_session_when_flask_login_is_configured(
         self,
         openapi_config: Config,
         openapi_client_configurable: OpenAPIClientInjectorConfigurable,
@@ -120,6 +121,41 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         # 401 for now because no real auth is configured.
         # if SSO was broken, 500 would return
         assert response.status_code == 401
+
+    def test__FeatureFlagMiddleware__feature_flag_api_GET_does_not_require_user_session_when_flask_login_is_not_configured(
+        self,
+        openapi_config: Config,
+        openapi_client_configurable: OpenAPIClientInjectorConfigurable,
+        openapi_mock_controller: OpenAPIMockController,
+    ):
+        def app_init_hook(
+            application_configs: list[type[AbstractConfig]],
+            application_modules: list[Module | type[Module]],
+        ):
+            # application_modules.remove(SAML2MiddlewareModule)
+            # application_modules.remove(UserLoaderModule)
+            application_modules.append(CachingFeatureFlagRouterModule)
+            application_modules.append(FeatureFlagMiddlewareModule())
+
+        def client_init_hook(app: CreateAppResult[FlaskApp]):
+            pass
+
+        openapi_mock_controller.begin()
+        app = next(
+            openapi_client_configurable(
+                openapi_config,
+                client_init_hook=client_init_hook,
+                app_init_hook=app_init_hook,
+            )
+        )
+
+        # del app.client.app.app.login_manager
+
+        response = app.client.get("/platform/feature_flag")
+
+        # 401 for now because no real auth is configured.
+        # if SSO was broken, 500 would return
+        assert response.status_code == 200
 
     def test__FeatureFlagMiddleware__feature_flag_api_GET_gets_feature_flags_when_user_has_session(
         self,
