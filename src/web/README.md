@@ -1,6 +1,6 @@
 # `Ligare.web`
 
-Libraries for building web applications in Boutros Lab.
+Libraries for building web applications.
 
 # Quick Start
 

@@ -1,3 +1,3 @@
 # `Ligare.programming`
 
-Libraries for writing software in Boutros Lab.
+Libraries for writing software.

@@ -1,6 +1,6 @@
 # `Ligare.database`
 
-Libraries for working with databases in Boutros Lab.
+Libraries for working with databases.
 
 # SQLite Support
 

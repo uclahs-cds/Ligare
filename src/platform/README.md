@@ -1,6 +1,6 @@
 # `Ligare.platform`
 
-Libraries for developing PaaS software in Boutros Lab.
+Libraries for developing PaaS software.
 
 # `Ligare` Development Dependencies
 
