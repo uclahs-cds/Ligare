@@ -1,6 +1,6 @@
 ---
 Category: 'project'
-Description: 'A collection of reusable Python libraries developed in Boutros Lab'
+Description: 'A framework for quickly developing new Python applications.'
 Maintainers: ['aholmes@mednet.ucla.edu']
 Contributors: 'Aaron Holmes'
 Languages: ['python']

@@ -1,6 +1,8 @@
-# Boutros Lab Python Libraries [ `Ligare` ]
+# `Ligare`
 
-A collection of Python libraries for creating web applications, working with databases, writing tests, and supporting utilities.
+A collection of Python libraries for creating Python applications quickly.
+
+The word "ligare" (pronounced "lee - gah - reh") means "to bind" or "to tie" - and that is the overall intent of the Ligare framework. Ligare "ties together" many disparate Python functionalities into a single framework from which a variety of applications can be developed. The name is inspired by the Connexion framework, whose own names stems from the word "connection." Ligare supports web applications, console applications, database connectivity, development libraries and tools, and more - all with a common core architecture.
 
 # Quick Starts
 
