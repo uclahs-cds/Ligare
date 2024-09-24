@@ -48,8 +48,10 @@ jobs:
       - build
     runs-on: ubuntu-latest
     environment:
-      name: pypi
-      url: https://pypi.org/p/Ligare.${{ needs.build.outputs.package_name }}
+      #name: pypi
+      name: test-pypi
+      #url: https://pypi.org/p/Ligare.${{ needs.build.outputs.package_name }}
+      url: https://test.pypi.org/p/Ligare.${{ needs.build.outputs.package_name }}
     permissions:
       id-token: write
 
@@ -62,7 +64,8 @@ jobs:
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1.8
         with:
-          repository-url: https://upload.pypi.org/legacy/
+          #repository-url: https://upload.pypi.org/legacy/
+          repository-url: https://test.pypi.org/legacy/
 
   github-release:
     name: >-
