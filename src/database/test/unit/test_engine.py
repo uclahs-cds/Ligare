@@ -2,15 +2,15 @@ import re
 from unittest.mock import patch
 
 import pytest
-from BL_Python.database.engine import DatabaseEngine
-from BL_Python.database.engine.postgresql import PostgreSQLScopedSession
-from BL_Python.database.engine.sqlite import SQLiteScopedSession
+from Ligare.database.engine import DatabaseEngine
+from Ligare.database.engine.postgresql import PostgreSQLScopedSession
+from Ligare.database.engine.sqlite import SQLiteScopedSession
 
 # importing the fixtures makes pytest load them
-from BL_Python.database.testing import (
+from Ligare.database.testing import (
     mock_postgresql_connection,  # pyright: ignore[reportUnusedImport]
 )
-from BL_Python.database.testing import MockPostgreSQLConnection
+from Ligare.database.testing import MockPostgreSQLConnection
 from mock import MagicMock
 from pytest_mock import MockerFixture
 from sqlalchemy import Column, Integer, MetaData
@@ -36,15 +36,15 @@ def test__DatabaseEngine__get_session_from_connection_string__returns_correct_se
     session_type: type[SQLiteScopedSession | PostgreSQLScopedSession],
     mocker: MockerFixture,
 ):
-    _ = mocker.patch("BL_Python.database.engine.sqlite.event")
-    _ = mocker.patch("BL_Python.database.engine.sqlite.create_engine")
-    _ = mocker.patch("BL_Python.database.engine.postgresql.create_engine")
+    _ = mocker.patch("Ligare.database.engine.sqlite.event")
+    _ = mocker.patch("Ligare.database.engine.sqlite.create_engine")
+    _ = mocker.patch("Ligare.database.engine.postgresql.create_engine")
     session = DatabaseEngine.get_session_from_connection_string(connection_string)
     assert isinstance(session, session_type)
 
 
 def test__DatabaseEngine__get_session_from_connection_string__raises_exception_with_unknown_connection_string():
-    # use a legitimate but unsupported (by BL_Python.database) connection string
+    # use a legitimate but unsupported (by Ligare.database) connection string
     connection_string = "mssql+pyodbc://localhost/noop"
     connection_string_serialized = f"{connection_string=}"
     with pytest.raises(
@@ -79,9 +79,9 @@ def test__ScopedSession__create__creates_correct_engine_type(
     connection_string: str,
     mocker: MockerFixture,
 ):
-    _ = mocker.patch("BL_Python.database.engine.sqlite.event")
+    _ = mocker.patch("Ligare.database.engine.sqlite.event")
     create_engine_mock = mocker.patch(
-        f"BL_Python.database.engine.{module_name}.create_engine"
+        f"Ligare.database.engine.{module_name}.create_engine"
     )
     connection_string = "sqlite:///:memory:"
     session = session_type.create(connection_string)
@@ -102,7 +102,7 @@ def test__SQLiteScopedSession__create__uses_correct_connection_pool_type(
     connection_pool_type: type[Pool],
     mocker: MockerFixture,
 ):
-    _ = mocker.patch("BL_Python.database.engine.sqlite.event")
+    _ = mocker.patch("Ligare.database.engine.sqlite.event")
     session = SQLiteScopedSession.create(connection_string)
     assert isinstance(session.bind.pool, connection_pool_type)  # type: ignore[reportUnknownMemberType,reportAttributeAccessIssue,reportOptionalMemberAccess]
 
@@ -132,9 +132,7 @@ def test__PostgreSQLScopedSession__create__uses_correct_connection_pool_type(
 def test__PostgreSQLScopedSession__create__verifies_dependencies_installed(
     mocker: MockerFixture,
 ):
-    _ = mocker.patch(
-        "BL_Python.database.engine.postgresql.find_spec", return_value=None
-    )
+    _ = mocker.patch("Ligare.database.engine.postgresql.find_spec", return_value=None)
 
     with pytest.raises(ModuleNotFoundError):
         _ = PostgreSQLScopedSession.create(POSTGRESQL_TEST_CONNECTION_STR)

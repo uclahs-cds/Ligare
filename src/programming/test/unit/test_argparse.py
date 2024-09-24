@@ -1,7 +1,7 @@
 from argparse import ArgumentError, ArgumentParser, ArgumentTypeError, Namespace
 
 import pytest
-from BL_Python.programming.cli.argparse import (
+from Ligare.programming.cli.argparse import (
     DisallowDuplicateValues,
     associate_disallow_duplicate_values,
     disallow,

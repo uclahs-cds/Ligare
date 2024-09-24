@@ -2,22 +2,22 @@ import logging
 from typing import Any, cast
 
 import pytest
-from BL_Python.web.config import Config
-from BL_Python.web.middleware import register_api_request_handlers
-from BL_Python.web.middleware.consts import (
+from flask import Flask, Response
+from Ligare.web.config import Config
+from Ligare.web.middleware import register_api_request_handlers
+from Ligare.web.middleware.consts import (
     CONTENT_SECURITY_POLICY_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER,
     OUTGOING_RESPONSE_MESSAGE,
 )
-from BL_Python.web.middleware.flask import bind_requesthandler
-from BL_Python.web.testing.create_app import (
+from Ligare.web.middleware.flask import bind_requesthandler
+from Ligare.web.testing.create_app import (
     CreateFlaskApp,
     FlaskClientInjector,
     FlaskClientInjectorConfigurable,
 )
-from flask import Flask, Response
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 

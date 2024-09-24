@@ -12,23 +12,23 @@ application -down[hidden]-> config
 
 note right of middleware
     Hooks into Flask
-    and other BL_Python systems
+    and other Ligare systems
 endnote
 
 note left of scaffolding
     Tooling to help create
-    new BL_Python web applications
+    new Ligare web applications
 endnote
 
 note left of application
     Bootstrapping and configuration
-    of a BL_Python web application
+    of a Ligare web application
     during runtime
 endnote
 
 note left of config
     Pydantic configuration classes
-    for a BL_Python web application
+    for a Ligare web application
     during runtime
 endnote
 

@@ -1,0 +1,42 @@
+# Application Configuration
+
+Detailed here are the supported options for configuring the application in the scaffolded [config.toml](../{{application.module_name}}/config.toml) file.
+
+The default values configured in the scaffolded [config.toml](../{{application.module_name}}/config.toml) likely do not need to be changed.
+
+| Section | Option | Explanation | Allowed values |
+| --- | --- | --- | --- |
+{% if module.database %}
+| **`database`** | | | | |
+| | `connection_string` | The connection string to use to connect to a database. Currently only SQLite connection strings are supported. By default, this value is `sqlite:///:memory:?check_same_thread=false`. **This value creates a new in-memory database every time the application is started; no data is saved with this connection string.** | A permanent file can be saved with such a connection string. An example is `sqlite:///{{application.module_name}}.sqlite3`.<br />Review SQLAlchemy's [Engine Configuration](https://docs.sqlalchemy.org/en/14/core/engines.html) for more information. |
+| | `sqlalchemy_echo` | Whether to log SQL statements as they are executed. Defaults to false. | `true`, `false`<br />Review SQLAlchemy's [echo](https://docs.sqlalchemy.org/en/14/core/engines.html#sqlalchemy.create_engine.params.echo) documentation for more information. |
+{% endif %}
+| **`flask`** | | | |
+| | `app_name` | The value used for the Flask application name. This is used primarily for application discovery. | Read the Flask [Application Discovery](https://flask.palletsprojects.com/en/1.1.x/cli/#application-discovery) documentation for more information. |
+| | `env` | The "environment" name used to set the development or production mode of the applicaion. Read the Flask [Environment and Debug Features](https://flask.palletsprojects.com/en/1.1.x/config/#environment-and-debug-features) for more information. | `development`, `testing`, `production` |
+| | `host` | The server hostname used for binding and URL generation. This sets the hostname portion of the [SERVER_NAME](https://flask.palletsprojects.com/en/1.1.x/config/#SERVER_NAME) environment variable. | Review Flask's [SERVER_NAME](https://flask.palletsprojects.com/en/1.1.x/config/#SERVER_NAME) documentation for more information. |
+| | `port` | The network port used for binding and URL generation. This sets the port portion of the [SERVER_NAME](https://flask.palletsprojects.com/en/1.1.x/config/#SERVER_NAME) environment variable. | Review Flask's [SERVER_NAME](https://flask.palletsprojects.com/en/1.1.x/config/#SERVER_NAME) documentation for more information. |
+{% if template_type == "openapi" %}
+| **`flask.openapi`** | | | |
+| | `spec_path` | The filename path where the `openapi.yaml` file can be found. This path is relative to the `Ligare.web` application directory. By default, you can find the file at [openapi.yaml]({{application.module_name}}/openapi.yaml) | Review Connexion's [add_api](https://connexion.readthedocs.io/en/2.14.2/autoapi/connexion/index.html#connexion.AbstractApp) documentation for more information. |
+| | `validate_responses` | During runtime, whether to validate the generated HTTP responses against the `openapi.yaml` specification. | Review Connexion's [add_api](https://connexion.readthedocs.io/en/2.14.2/autoapi/connexion/apps/flask_app/index.html#connexion.apps.flask_app.FlaskApp.add_api) documentation for more information. |
+| | `use_swagger` | Whether to set up the Swagger UI. To use this option, you must install `connexion[swagger-ui]` with `pip`. | `true`, `false`, or can be unset.<br />Review Connexion's [Swagger UI Console](https://connexion.readthedocs.io/en/2.14.2/quickstart.html#the-swagger-ui-console) documentation for more information. |
+| | `swagger_url` | The absolute path at which the Swagger UI can be accessed via the browser. By default, this is `/`. | Review Connexion's [Swagger UI Path](https://connexion.readthedocs.io/en/2.14.2/routing.html#swagger-ui-path) documentation for more information. |
+{% endif %}
+| **`flask.session`** | | | |
+| | `permanent` | Use session permanence. | `true`, `false`<br />Review Flask's [permanent](https://flask.palletsprojects.com/en/1.1.x/api/?highlight=permanent#flask.session.permanent) documentation for more information. |
+| | `lifetime` | A length of time, in seconds, for a session to remain valid. This only applies if `permanent` is `true`. This defaults to `86400`, or 1 day. | An int representing number of seconds, or unset.<br />Review Flask's [permanent_session_lifetime](https://flask.palletsprojects.com/en/1.1.x/api/?highlight=permanent#flask.Flask.permanent_session_lifetime) documentation for more information. |
+| | `refresh_each_request` | Whether to send the session cookies with every response. This only applies if `permanent` is `true`. Defaults to `true`. | `true`, `false`<br />Review Flask's [SESSION_REFRESH_EACH_REQUEST](https://flask.palletsprojects.com/en/1.1.x/config/?highlight=refresh_each_request#SESSION_REFRESH_EACH_REQUEST) documentation for more information. |
+| **`flask.session.cookie`** | | | |
+| | `httponly` | Whether cookies are HTTP-only. Defaults to `true`. | `true`, `false`<br />Review Flask's [SESSION_COOKIE_HTTPONLY](https://flask.palletsprojects.com/en/1.1.x/config/?highlight=httponly#SESSION_COOKIE_HTTPONLY) and OWASP's [HttpOnly](https://owasp.org/www-community/HttpOnly) documentation for more information. |
+| | `secure` | Whether cookies are only sent over HTTPS. Defaults to `true`. | Review Flask's [SESSION_COOKIE_SECURE](https://flask.palletsprojects.com/en/1.1.x/config/?highlight=httponly#SESSION_COOKIE_SECURE) and OWASP's [Secure Cookie Attribute](https://owasp.org/www-community/controls/SecureCookieAttribute) documentation for more information. |
+| | `samesite` | Whether cookies can send with cross-site requests. | `none`, `lax`, `strict`<br />Review flask's [SESSION_COOKIE_SAMESITE](https://flask.palletsprojects.com/en/1.1.x/config/?highlight=samesite#SESSION_COOKIE_SAMESITE) and OWASP's [SameSite](https://owasp.org/www-community/SameSite) documentation for more information. |
+| | `secret_key` | A random string used for signing cookies. This value should be kept secret and a mechanism other than this file, such as AWS SSM, should be considered instead for configuring this value. | Review Flask's [SECRET_KEY](https://flask.palletsprojects.com/en/1.1.x/config/?highlight=samesite#SECRET_KEY) documentation for more informaion. |
+| **`logging`** | | | |
+| | `log_level` | The level of detail to log from the applicaion. See the Python [logging documentation](https://docs.python.org/3/library/logging.html#logging-levels) for details. | `NOTSET`, `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+| **`web.security`** | | | |
+| | `csp` | A valid Content Security Policy string that is applied to all responses when appropriate. | Review the MDN [documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) for more information. |
+| **`web.security.cors`** | | | |
+| | `origin` | The Cross-Origin Resource Sharing `Origin` header value that is applied to all responses. | Review the MDN [documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Origin) for more information. |
+| | `allow_credentails` | The Cross-Origin Resource Sharing `Access-Control-Allow-Credentials` header value that is applied to all responses. | Review the MDN [documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials) for more information. |
+| | `allow_methods` | The Cross-Origin Resource Sharing `Access-Control-Allow-Methods` header value that is applied to all responses. | Review the MDN [documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Methods) for more information. |

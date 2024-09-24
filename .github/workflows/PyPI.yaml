@@ -6,7 +6,7 @@ name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 on:
   push:
     tags:
-      - "BL_Python.*-v*"
+      - "Ligare.*-v*"
 jobs:
   build:
     name: Build distribution 📦
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/BL_Python.${{ needs.build.outputs.package_name }}
+      url: https://pypi.org/p/Ligare.${{ needs.build.outputs.package_name }}
     permissions:
       id-token: write
 

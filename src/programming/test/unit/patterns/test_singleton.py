@@ -3,7 +3,7 @@
 from typing import Any
 
 import pytest
-from BL_Python.programming.patterns.singleton import Singleton
+from Ligare.programming.patterns.singleton import Singleton
 
 
 def test__multiple_instantiation_returns_same_instance():

@@ -8,7 +8,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "BL_Python.identity"
+name = "Ligare.identity"
 requires-python = ">=3.10"
 authors = [
     {name = 'Aaron Holmes', email = 'aholmes@mednet.ucla.edu'}
@@ -37,20 +37,20 @@ dynamic = ["version", "readme"]
 include-package-data = true
 
 [project.urls]
-"Homepage" = "https://github.com/uclahs-cds/BL_Python"
-"Bug Tracker" = "https://github.com/uclahs-cds/BL_Python/issues"
-"Repository" = "https://github.com/uclahs-cds/BL_Python.git"
-"Changelog" = "https://github.com/uclahs-cds/BL_Python/blob/main/CHANGELOG.md"
+"Homepage" = "https://github.com/uclahs-cds/Ligare"
+"Bug Tracker" = "https://github.com/uclahs-cds/Ligare/issues"
+"Repository" = "https://github.com/uclahs-cds/Ligare.git"
+"Changelog" = "https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md"
 
 [tool.setuptools.dynamic]
-version = {attr = "BL_Python.identity.__version__"}
+version = {attr = "Ligare.identity.__version__"}
 readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools.package-dir]
-"BL_Python.identity" = "BL_Python/identity"
+"Ligare.identity" = "Ligare/identity"
 
 [tool.setuptools.packages.find]
 exclude = ["build*"]
 
 [tool.setuptools.package-data]
-"BL_Python.identity" = ["py.typed"]
+"Ligare.identity" = ["py.typed"]

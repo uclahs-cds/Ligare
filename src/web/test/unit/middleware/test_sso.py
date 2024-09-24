@@ -1,6 +1,6 @@
 from typing import Any
 
-from BL_Python.web.testing.create_app import CreateOpenAPIApp
+from Ligare.web.testing.create_app import CreateOpenAPIApp
 
 
 class TestSSO(CreateOpenAPIApp):

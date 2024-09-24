@@ -2,13 +2,13 @@ import logging
 from typing import Any, Tuple
 
 import pytest
-from BL_Python.database.config import DatabaseConfig
-from BL_Python.database.dependency_injection import ScopedSessionModule
-from BL_Python.platform.feature_flag.db_feature_flag_router import (
+from Ligare.database.config import DatabaseConfig
+from Ligare.database.dependency_injection import ScopedSessionModule
+from Ligare.platform.feature_flag.db_feature_flag_router import (
     DBFeatureFlagRouter,
     FeatureFlagTable,
 )
-from BL_Python.programming.dependency_injection import ConfigModule
+from Ligare.programming.dependency_injection import ConfigModule
 from pytest_mock import MockerFixture
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.orm.session import Session
@@ -25,7 +25,7 @@ class PlatformBase(object):
     pass
 
 
-from BL_Python.database.testing.config import inmemory_database_config
+from Ligare.database.testing.config import inmemory_database_config
 
 PlatformBase = declarative_base(cls=PlatformBase, metaclass=PlatformMetaBase)
 FeatureFlag = FeatureFlagTable(PlatformBase)
@@ -181,10 +181,10 @@ def test__feature_is_enabled__checks_cache(
 ):
     session_mock = mocker.patch("sqlalchemy.orm.session.Session")
     feature_is_enabled_mock = mocker.patch(
-        "BL_Python.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.feature_is_cached"
+        "Ligare.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.feature_is_cached"
     )
     _ = mocker.patch(
-        "BL_Python.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.set_feature_is_enabled"
+        "Ligare.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.set_feature_is_enabled"
     )
 
     logger = logging.getLogger("FeatureFlagLogger")
@@ -203,10 +203,10 @@ def test__feature_is_enabled__sets_cache(
 ):
     session_mock = mocker.patch("sqlalchemy.orm.session.Session")
     feature_is_enabled_mock = mocker.patch(
-        "BL_Python.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.feature_is_cached"
+        "Ligare.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.feature_is_cached"
     )
     set_feature_is_enabled_mock = mocker.patch(
-        "BL_Python.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.set_feature_is_enabled"
+        "Ligare.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.set_feature_is_enabled"
     )
     feature_is_enabled_mock.return_value = True
 

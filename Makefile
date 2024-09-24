@@ -54,14 +54,14 @@ endif
 ACTIVATE_VENV := . $(VENV)/bin/activate
 REPORT_VENV_USAGE := echo '\nActivate your venv with `. $(VENV)/bin/activate`'
 
-PACKAGE_INSTALL_DIR := $(VENV)/lib/python*/site-packages/BL_Python
+PACKAGE_INSTALL_DIR := $(VENV)/lib/python*/site-packages/Ligare
 
 # used to suppress outputs of targets (see `test` and `clean-test`)
 CMD_PREFIX=
 
 PYPROJECT_FILES=./pyproject.toml $(wildcard src/*/pyproject.toml)
 PACKAGE_PATHS=$(subst /pyproject.toml,,$(PYPROJECT_FILES))
-PACKAGES=$(subst /pyproject.toml,,$(subst src/,BL_Python.,$(wildcard src/*/pyproject.toml)))
+PACKAGES=$(subst /pyproject.toml,,$(subst src/,Ligare.,$(wildcard src/*/pyproject.toml)))
 
 
 MAKE_ARTIFACT_DIRECTORY = .make
@@ -85,8 +85,8 @@ dev :
 $(SETUP_DEV_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES_SENTINEL) | $(MAKE_ARTIFACT_DIRECTORY)
 # `pip list` is multiple seconds faster than `pip show` ...
 	$(ACTIVATE_VENV) && \
-	if pip list -l --no-index | grep '^BL_Python\.all\s'; then \
-		echo "Package BL_Python.all is already built, skipping..."; \
+	if pip list -l --no-index | grep '^Ligare\.all\s'; then \
+		echo "Package Ligare.all is already built, skipping..."; \
 	else \
 		pip install -e .[dev-dependencies] && \
 		pip install -e src/database[postgres-binary] && \
@@ -101,8 +101,8 @@ cicd :
 $(SETUP_CICD_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES_SENTINEL) | $(MAKE_ARTIFACT_DIRECTORY)
 # `pip list` is multiple seconds faster than `pip show` ...
 	$(ACTIVATE_VENV) && \
-	if pip list -l --no-index | grep '^BL_Python\.all\s'; then \
-		echo "Package BL_Python.all is already built, skipping..."; \
+	if pip list -l --no-index | grep '^Ligare\.all\s'; then \
+		echo "Package Ligare.all is already built, skipping..."; \
 	else \
 		pip install .[dev-dependencies] && \
 		pip install src/database[postgres-binary]; \
@@ -110,15 +110,15 @@ $(SETUP_CICD_SENTINEL): $(VENV) $(SETUP_DEPENDENCIES_SENTINEL) $(PYPROJECT_FILES
 	touch $@
 	@$(REPORT_VENV_USAGE)
 
-.PHONY: BL_Python.all $(PACKAGES)
-BL_Python.all: $(DEFAULT_TARGET)
-$(PACKAGES) : BL_Python.%: src/%/pyproject.toml $(VENV) $(PYPROJECT_FILES_SENTINEL) | $(MAKE_ARTIFACT_DIRECTORY)
+.PHONY: Ligare.all $(PACKAGES)
+Ligare.all: $(DEFAULT_TARGET)
+$(PACKAGES) : Ligare.%: src/%/pyproject.toml $(VENV) $(PYPROJECT_FILES_SENTINEL) | $(MAKE_ARTIFACT_DIRECTORY)
 # `pip list` is multiple seconds faster than `pip show` ...
 	$(ACTIVATE_VENV) && \
-	if pip list -l --no-index | grep '^BL_Python\.$*\s'; then \
+	if pip list -l --no-index | grep '^Ligare\.$*\s'; then \
 		echo "Package $* is already built, skipping..."; \
 	else \
-		if [ "$@" = "BL_Python.database" ]; then \
+		if [ "$@" = "Ligare.database" ]; then \
 			pip install -e $(dir $<)[postgres-binary]; \
 		else \
 			pip install -e $(dir $<); \

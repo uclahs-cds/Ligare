@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 import pytest
-from BL_Python.platform.feature_flag.caching_feature_flag_router import (
+from Ligare.platform.feature_flag.caching_feature_flag_router import (
     CachingFeatureFlagRouter,
 )
 from mock import MagicMock

@@ -1,7 +1,7 @@
 import ast
 import inspect
 
-from BL_Python.platform.feature_flag.feature_flag_router import FeatureFlagRouter
+from Ligare.platform.feature_flag.feature_flag_router import FeatureFlagRouter
 from typing_extensions import override
 
 _FEATURE_FLAG_TEST_NAME = "foo_feature"

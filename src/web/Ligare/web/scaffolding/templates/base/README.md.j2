@@ -1,0 +1,54 @@
+# Welcome to your application "{{application.raw_name}}!"
+
+## Usage
+
+1. Create a virtual environment `python3 -m venv .venv`
+2. Activate the virtual environment `. .venv/bin/activate`
+3. Install dependencies `pip install .`
+4. Run the application `python3 {{application.module_name}}`
+
+You can now access your endpoints in your browser, or with `curl`, using the address [http://127.0.0.1:5000/](http://127.0.0.1:5000/).
+
+By default, when running in debug mode, accessing [http://127.0.0.1:5000/](http://127.0.0.1:5000/) will display a table of available API endpoint URLs.
+
+{% if template_type == "basic" %}
+## Adding API endpoints
+
+After scaffolding, you will find at least one example Blueprint in the directory.
+
+For the most part, Blueprints in `Ligare.web` are equivalent to [`flask.Blueprint`](https://flask.palletsprojects.com/en/1.1.x/api/?highlight=blueprint#flask.Blueprint), so Flask's documentation should be referenced for details about how to work with Blueprints.
+
+#### Adding a New Blueprint
+
+New Blueprints should be added to a new file in the `{{application.module_name}}/endpoints/` directory. The contents contained within must contain one variable whose suffix is `_blueprint` and whose value is a `Blueprint` instance.
+
+To make it easy to get started, a new Blueprint can be added with the scaffolder using the modify mode. Run `ligare-scaffold modify -h` to see how.
+
+#### Using an Existing Blueprint
+
+Existing Blueprints can be freely changed. Endpoints can be added, removed, and altered in any way necessary. The only requirement is that one variable with the suffix `_blueprint` whose value is a `Blueprint` instance must exist.
+{% elif template_type == "openapi" %}
+### Using OpenAPI and Connexion
+
+After scaffolding, you will find at least one example endpoint in the directory `{{application.module_name}}/endpoints/`.
+
+For the most part, endpoints in `Ligare.web` are equivalent to Connexion's [endpoint routing](https://connexion.readthedocs.io/en/2.14.2/routing.html#endpoint-routing-to-your-python-views), so Connexion's documentation should be referenced for details about how to work with OpenAPI and Connexion.
+
+#### Adding a New Endpoint
+
+New endpoints should be added to a new file in the `{{application.module_name}}/endpoints/` directory. The contents contained within must contain matching methods for the `operationId`s defined in [openapi.yaml]({{application.module_name}}/openapi.yaml). Reference Connexion's documentation for more information on this.
+
+To make it easy to get started, a new endpoint can be added with the scaffolder using the modify mode. Run `ligare-scaffold modify -h` to see how.
+
+#### Using an Existing Endpoint
+
+Existing endpoints can be freely changed provided the methods comply with the configuration in [openapi.yaml]({{application.module_name}}/openapi.yaml). Added methods must have a corresponding `operationId` added to [openapi.yaml]({{application.module_name}}/openapi.yaml).
+{% endif %}
+
+## Configuration
+
+Read more about configuring this application in [CONFIGURATION](docs/CONFIGURATION.md).
+
+## Further information
+
+For detailed information on, or assistance with, `Ligare` please visit [uclahs-cds/Ligare](https://github.com/uclahs-cds/Ligare).

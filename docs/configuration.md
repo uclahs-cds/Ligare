@@ -1,6 +1,6 @@
 # Application Configuration
 
-Detailed here are the supported options for configuring a `BL_Python.web` application in an application's `config.toml` file.
+Detailed here are the supported options for configuring a `Ligare.web` application in an application's `config.toml` file.
 
 | Section | Option | Explanation | Allowed values |
 | --- | --- | --- | --- |
@@ -13,7 +13,7 @@ Detailed here are the supported options for configuring a `BL_Python.web` applic
 | | `host` | The server hostname used for binding and URL generation. This sets the hostname portion of the [SERVER_NAME](https://flask.palletsprojects.com/en/1.1.x/config/#SERVER_NAME) environment variable. | Review Flask's [SERVER_NAME](https://flask.palletsprojects.com/en/1.1.x/config/#SERVER_NAME) documentation for more information. |
 | | `port` | The network port used for binding and URL generation. This sets the port portion of the [SERVER_NAME](https://flask.palletsprojects.com/en/1.1.x/config/#SERVER_NAME) environment variable. | Review Flask's [SERVER_NAME](https://flask.palletsprojects.com/en/1.1.x/config/#SERVER_NAME) documentation for more information. |
 | **`flask.openapi`** | | | |
-| | `spec_path` | The filename path where the `openapi.yaml` file can be found. This path is relative to the `BL_Python.web` application directory. | Review Connexion's [add_api](https://connexion.readthedocs.io/en/2.14.2/autoapi/connexion/index.html#connexion.AbstractApp) documentation for more information. |
+| | `spec_path` | The filename path where the `openapi.yaml` file can be found. This path is relative to the `Ligare.web` application directory. | Review Connexion's [add_api](https://connexion.readthedocs.io/en/2.14.2/autoapi/connexion/index.html#connexion.AbstractApp) documentation for more information. |
 | | `validate_responses` | During runtime, whether to validate the generated HTTP responses against the `openapi.yaml` specification. | Review Connexion's [add_api](https://connexion.readthedocs.io/en/2.14.2/autoapi/connexion/apps/flask_app/index.html#connexion.apps.flask_app.FlaskApp.add_api) documentation for more information. |
 | | `use_swagger` | Whether to set up the Swagger UI. To use this option, you must install `connexion[swagger-ui]` with `pip`. | `true`, `false`, or can be unset.<br />Review Connexion's [Swagger UI Console](https://connexion.readthedocs.io/en/2.14.2/quickstart.html#the-swagger-ui-console) documentation for more information. |
 | | `swagger_url` | The absolute path at which the Swagger UI can be accessed via the browser. By default, this is `/`. | Review Connexion's [Swagger UI Path](https://connexion.readthedocs.io/en/2.14.2/routing.html#swagger-ui-path) documentation for more information. |
