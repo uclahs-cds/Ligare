@@ -43,7 +43,12 @@ def decrypt_flask_cookie(secret_key: str, cookie_str: str) -> Dict[str, Any]:
 
     serializer = _get_serializer(secret_key)
     data: Any = serializer.loads(cookie_str)
-    assert type(data) is dict
+
+    if type(data) is not dict:
+        raise AssertionError(
+            f"Deserialized session data is not a dictionary. It is a `{type(data)}`."
+        )
+
     return data  # pyright: ignore[reportUnknownVariableType]
 
 
@@ -56,5 +61,10 @@ def encrypt_flask_cookie(secret_key: str, data: Dict[str, Any] | SessionMixin) -
 
     serializer = _get_serializer(secret_key)
     cookie_str = serializer.dumps(data)
-    assert type(cookie_str) is str
+
+    if type(cookie_str) is not str:
+        raise AssertionError(
+            f"Serialized cookie data is not a str. It is a `{type(cookie_str)}`."
+        )
+
     return cookie_str
