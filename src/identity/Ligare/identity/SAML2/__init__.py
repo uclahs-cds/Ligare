@@ -11,6 +11,8 @@ from saml2 import BINDING_HTTP_POST
 from saml2.client import Saml2Client as PySaml2Client
 from saml2.config import Config as PySaml2Config
 
+_SAML2_REQUESTS_TIMEOUT = 10
+
 
 class SAML2Client:
     """
@@ -38,7 +40,10 @@ class SAML2Client:
         override_settings = loads(serialized_settings)
 
         if not self._metadata and self._metadata_url:
-            rv: Response = cast(Response, requests.get(self._metadata_url))  # pyright: ignore[reportUnnecessaryCast] - pyright cli reports this is unnecessary, but vscode extension says otherwise
+            rv: Response = cast(
+                Response,
+                requests.get(self._metadata_url, timeout=_SAML2_REQUESTS_TIMEOUT),
+            )  # pyright: ignore[reportUnnecessaryCast]
             self._metadata = rv.text
 
         if not self._metadata:
