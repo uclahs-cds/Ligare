@@ -41,16 +41,6 @@ TOX_DIR := .tox
 DEFAULT_TARGET ?= dev
 .DEFAULT_GOAL := $(DEFAULT_TARGET)
 
-
-ifeq ($(DEFAULT_TARGET),dev)
-    BUILD_TARGET := $(SETUP_DEV_SENTINEL)
-else ifeq ($(DEFAULT_TARGET),cicd)
-    BUILD_TARGET := $(SETUP_CICD_SENTINEL) 
-else
-    $(error DEFAULT_TARGET must be one of "dev" or "cicd")
-endif
-
-
 ACTIVATE_VENV := . $(VENV)/bin/activate
 REPORT_VENV_USAGE := echo '\nActivate your venv with `. $(VENV)/bin/activate`'
 
@@ -72,6 +62,15 @@ SETUP_DEPENDENCIES_SENTINEL = $(MAKE_ARTIFACT_DIRECTORY)/dependencies_sentinel
 SETUP_DEV_SENTINEL = $(MAKE_ARTIFACT_DIRECTORY)/setup_dev_sentinel
 SETUP_CICD_SENTINEL = $(MAKE_ARTIFACT_DIRECTORY)/setup_cicd_sentinel
 PYPROJECT_FILES_SENTINEL = $(MAKE_ARTIFACT_DIRECTORY)/pyproject_sentinel
+
+ifeq ($(DEFAULT_TARGET),dev)
+    BUILD_TARGET := $(SETUP_DEV_SENTINEL)
+else ifeq ($(DEFAULT_TARGET),cicd)
+    BUILD_TARGET := $(SETUP_CICD_SENTINEL)
+else
+    $(error DEFAULT_TARGET must be one of "dev" or "cicd")
+endif
+
 
 $(PYPROJECT_FILES_SENTINEL): $(VENV)
 	$(MAKE) $(PYPROJECT_FILES)
@@ -196,10 +195,10 @@ test-bandit : $(VENV) $(BUILD_TARGET)
 		-r .
 
 test-pytest : $(VENV) $(BUILD_TARGET)
-	-$(ACTIVATE_VENV) && \
+	$(ACTIVATE_VENV) && \
 	PYTEST_TARGET=$(PYTEST_TARGET) tox && PYTEST_EXIT_CODE=0 || PYTEST_EXIT_CODE=$$?; \
 	coverage html --data-file=$(REPORTS_DIR)/$(PYTEST_REPORT)/.coverage; \
-	junit2html $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.xml $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.html; \
+	junit2html $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.xml $(REPORTS_DIR)/$(PYTEST_REPORT)/pytest.html && \
 	exit $$PYTEST_EXIT_CODE
 
 .PHONY: test test-pytest test-bandit test-pyright test-ruff test-isort
