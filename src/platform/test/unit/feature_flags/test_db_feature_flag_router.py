@@ -4,10 +4,6 @@ from typing import Any, Tuple
 import pytest
 from Ligare.database.config import DatabaseConfig
 from Ligare.database.dependency_injection import ScopedSessionModule
-from Ligare.platform.feature_flag import caching_feature_flag_router
-from Ligare.platform.feature_flag.caching_feature_flag_router import (
-    CachingFeatureFlagRouter,
-)
 from Ligare.platform.feature_flag.db_feature_flag_router import (
     DBFeatureFlagRouter,
     FeatureFlag,

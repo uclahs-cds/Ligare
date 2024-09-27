@@ -2,7 +2,6 @@ from dataclasses import field
 from os import environ
 from typing import Literal
 
-from BL_Python.programming.config import AbstractConfig
 from flask.config import Config as FlaskAppConfig
 from Ligare.programming.config import AbstractConfig
 from pydantic import BaseModel

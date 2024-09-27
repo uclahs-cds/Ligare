@@ -1,12 +1,11 @@
 import pytest
 from flask import Flask
 from Ligare.programming.collections.dict import AnyDict
-from Ligare.programming.config import AbstractConfig, ConfigBuilder, load_config
+from Ligare.programming.config import AbstractConfig, load_config
 from Ligare.programming.config.exceptions import ConfigBuilderStateError
 from Ligare.web.application import ApplicationBuilder, ApplicationConfigBuilder
 from Ligare.web.config import Config
 from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
-from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
 from typing_extensions import override

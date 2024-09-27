@@ -37,7 +37,7 @@ from flask_login import login_user  # pyright: ignore[reportUnknownVariableType]
 from flask_login import logout_user  # pyright: ignore[reportUnknownVariableType]
 from flask_login import current_user
 from flask_login import login_required as flask_login_required
-from injector import Binder, Injector, Module, inject
+from injector import Binder, Injector, inject
 from Ligare.identity.config import Config, SAML2Config, SSOConfig
 from Ligare.identity.dependency_injection import SAML2Module, SSOModule
 from Ligare.identity.SAML2 import SAML2Client

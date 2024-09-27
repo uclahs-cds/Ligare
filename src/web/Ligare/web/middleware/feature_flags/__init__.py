@@ -2,32 +2,32 @@ from dataclasses import dataclass
 from logging import Logger
 from typing import Any, Callable, Generic, Sequence, TypedDict, cast
 
-from BL_Python.platform.feature_flag.caching_feature_flag_router import (
+from connexion import FlaskApp, request
+from flask import Blueprint, Flask
+from injector import Binder, Injector, Module, inject, provider, singleton
+from Ligare.platform.feature_flag.caching_feature_flag_router import (
     CachingFeatureFlagRouter,
 )
-from BL_Python.platform.feature_flag.caching_feature_flag_router import (
+from Ligare.platform.feature_flag.caching_feature_flag_router import (
     FeatureFlag as CachingFeatureFlag,
 )
-from BL_Python.platform.feature_flag.db_feature_flag_router import DBFeatureFlagRouter
-from BL_Python.platform.feature_flag.db_feature_flag_router import (
+from Ligare.platform.feature_flag.db_feature_flag_router import DBFeatureFlagRouter
+from Ligare.platform.feature_flag.db_feature_flag_router import (
     FeatureFlag as DBFeatureFlag,
 )
-from BL_Python.platform.feature_flag.db_feature_flag_router import (
+from Ligare.platform.feature_flag.db_feature_flag_router import (
     FeatureFlagTable,
     FeatureFlagTableBase,
 )
-from BL_Python.platform.feature_flag.feature_flag_router import (
+from Ligare.platform.feature_flag.feature_flag_router import (
     FeatureFlag,
     FeatureFlagRouter,
     TFeatureFlag,
 )
-from BL_Python.platform.identity.user_loader import Role
-from BL_Python.programming.config import AbstractConfig
-from BL_Python.programming.patterns.dependency_injection import ConfigurableModule
-from BL_Python.web.middleware.sso import login_required
-from connexion import FlaskApp, request
-from flask import Blueprint, Flask
-from injector import Binder, Injector, Module, inject, provider, singleton
+from Ligare.platform.identity.user_loader import Role
+from Ligare.programming.config import AbstractConfig
+from Ligare.programming.patterns.dependency_injection import ConfigurableModule
+from Ligare.web.middleware.sso import login_required
 from pydantic import BaseModel
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import override

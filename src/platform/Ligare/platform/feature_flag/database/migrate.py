@@ -2,7 +2,7 @@
 
 import sqlalchemy as sa
 from alembic.operations.base import Operations
-from BL_Python.database.schema import get_type_from_op
+from Ligare.database.schema import get_type_from_op
 from sqlalchemy import false
 
 from ..db_feature_flag_router import FeatureFlagTable

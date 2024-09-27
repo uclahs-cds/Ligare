@@ -1,52 +1,36 @@
 [build-system]
-
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
-
+requires = [ "setuptools>=42", "wheel",]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "Ligare.platform"
 requires-python = ">=3.10"
-authors = [
-    {name = 'Aaron Holmes', email = 'aholmes@mednet.ucla.edu'}
-]
-description = 'Libraries for developing PaaS software.'
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU General Public License (GPL)",
-    "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering",
-    "Topic :: Software Development :: Libraries",
-    "Topic :: Software Development :: Libraries :: Application Frameworks",
-    "Intended Audience :: Science/Research",
-    "Intended Audience :: Developers",
-    "Development Status :: 4 - Beta",
-    "Natural Language :: English"
-]
-
-dependencies = [
-    "Ligare.database"
-]
-
-dynamic = ["version", "readme"]
-[tool.setuptools.dynamic]
-version = {attr = "Ligare.platform.__version__"}
-readme = {file = ["README.md"], content-type = "text/markdown"}
+description = "Libraries for developing PaaS software."
+classifiers = [ "Programming Language :: Python :: 3", "License :: OSI Approved :: GNU General Public License (GPL)", "Operating System :: OS Independent", "Topic :: Scientific/Engineering", "Topic :: Software Development :: Libraries", "Topic :: Software Development :: Libraries :: Application Frameworks", "Intended Audience :: Science/Research", "Intended Audience :: Developers", "Development Status :: 4 - Beta", "Natural Language :: English",]
+dependencies = [ "Ligare.database @ file:///home/aholmes/repos/Ligare/src/database",]
+dynamic = [ "version", "readme",]
+[[project.authors]]
+name = "Aaron Holmes"
+email = "aholmes@mednet.ucla.edu"
 
 [project.urls]
-"Homepage" = "https://github.com/uclahs-cds/Ligare"
+Homepage = "https://github.com/uclahs-cds/Ligare"
 "Bug Tracker" = "https://github.com/uclahs-cds/Ligare/issues"
-"Repository" = "https://github.com/uclahs-cds/Ligare.git"
-"Changelog" = "https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md"
+Repository = "https://github.com/uclahs-cds/Ligare.git"
+Changelog = "https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md"
 
 [tool.setuptools.package-dir]
 "Ligare.platform" = "Ligare/platform"
 
-[tool.setuptools.packages.find]
-exclude = ["build*"]
-
 [tool.setuptools.package-data]
-"Ligare.platform" = ["py.typed"]
+"Ligare.platform" = [ "py.typed",]
+
+[tool.setuptools.dynamic.version]
+attr = "Ligare.platform.__version__"
+
+[tool.setuptools.dynamic.readme]
+file = [ "README.md",]
+content-type = "text/markdown"
+
+[tool.setuptools.packages.find]
+exclude = [ "build*",]

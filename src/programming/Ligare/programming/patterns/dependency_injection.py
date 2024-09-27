@@ -2,8 +2,8 @@ import logging
 import sys
 from typing import Callable, TypeVar
 
-from BL_Python.programming.config import AbstractConfig
 from injector import Binder, Module, Provider
+from Ligare.programming.config import AbstractConfig
 from typing_extensions import override
 
 

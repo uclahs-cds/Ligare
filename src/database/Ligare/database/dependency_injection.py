@@ -1,4 +1,4 @@
-from injector import Binder, CallableProvider, Injector, Module, inject, singleton
+from injector import Binder, CallableProvider, Injector, inject, singleton
 from Ligare.database.config import Config, DatabaseConfig
 from Ligare.database.engine import DatabaseEngine
 from Ligare.database.types import MetaBase
