@@ -1,46 +1,86 @@
 [build-system]
-requires = [ "setuptools>=42", "wheel",]
+
+requires = [
+    "setuptools>=42",
+    "wheel"
+]
+
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "Ligare.web"
 requires-python = ">=3.10"
-description = "Libraries for building web applications."
-classifiers = [ "Programming Language :: Python :: 3", "License :: OSI Approved :: GNU General Public License (GPL)", "Operating System :: OS Independent", "Topic :: Scientific/Engineering", "Topic :: Software Development :: Libraries", "Topic :: Software Development :: Libraries :: Application Frameworks", "Intended Audience :: Science/Research", "Intended Audience :: Developers", "Development Status :: 4 - Beta", "Natural Language :: English",]
-dependencies = [ "Ligare.programming @ file:///home/aholmes/repos/Ligare/src/programming", "Ligare.platform @ file:///home/aholmes/repos/Ligare/src/platform", "Ligare.identity @ file:///home/aholmes/repos/Ligare/src/identity", "Ligare.database @ file:///home/aholmes/repos/Ligare/src/database", "Flask == 3.0.3", "flask-injector", "flask-login", "connexion == 3.1.0", "connexion[uvicorn]", "uvicorn-worker", "swagger_ui_bundle", "python-dotenv", "json-logging", "lib_programname", "toml", "pydantic", "a2wsgi",]
-dynamic = [ "version", "readme",]
-[[project.authors]]
-name = "Aaron Holmes"
-email = "aholmes@mednet.ucla.edu"
+authors = [
+    {name = 'Aaron Holmes', email = 'aholmes@mednet.ucla.edu'}
+]
+description = 'Libraries for building web applications.'
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License (GPL)",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Development Status :: 4 - Beta",
+    "Natural Language :: English"
+]
+
+dependencies = [
+    "Ligare.programming",
+    "Ligare.platform",
+    "Ligare.identity",
+    "Ligare.database",
+
+    "Flask == 3.0.3",
+    "flask-injector",
+    "flask-login",
+    "connexion == 3.1.0",
+    "connexion[uvicorn]",
+    "uvicorn-worker",
+    "swagger_ui_bundle",
+    "python-dotenv",
+    "json-logging",
+    "lib_programname",
+    "toml",
+    "pydantic",
+    "a2wsgi"
+]
+
+dynamic = ["version", "readme"]
+[tool.setuptools]
+include-package-data = true
 
 [project.urls]
-Homepage = "https://github.com/uclahs-cds/Ligare"
+"Homepage" = "https://github.com/uclahs-cds/Ligare"
 "Bug Tracker" = "https://github.com/uclahs-cds/Ligare/issues"
-Repository = "https://github.com/uclahs-cds/Ligare.git"
-Changelog = "https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md"
+"Repository" = "https://github.com/uclahs-cds/Ligare.git"
+"Changelog" = "https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md"
+
+[tool.setuptools.dynamic]
+version = {attr = "Ligare.web.__version__"}
+readme = {file = ["README.md"], content-type = "text/markdown"}
+
+[tool.setuptools.package-dir]
+"Ligare.web" = "Ligare/web"
+
+[tool.setuptools.packages.find]
+exclude = ["build*"]
+
+
+[tool.setuptools.package-data]
+"*" = ["*.j2"]
+"Ligare.web" = ["py.typed"]
+
 
 [project.scripts]
 ligare-scaffold = "Ligare.web.scaffolding.__main__:scaffold"
 
 [project.optional-dependencies]
-dev-dependencies = [ "pytest", "pytest-mock", "mock", "pytest-cov",]
-
-[tool.setuptools]
-include-package-data = true
-
-[tool.setuptools.package-dir]
-"Ligare.web" = "Ligare/web"
-
-[tool.setuptools.package-data]
-"*" = [ "*.j2",]
-"Ligare.web" = [ "py.typed",]
-
-[tool.setuptools.dynamic.version]
-attr = "Ligare.web.__version__"
-
-[tool.setuptools.dynamic.readme]
-file = [ "README.md",]
-content-type = "text/markdown"
-
-[tool.setuptools.packages.find]
-exclude = [ "build*",]
+dev-dependencies = [
+    "pytest",
+    "pytest-mock",
+    "mock",
+    "pytest-cov"
+]

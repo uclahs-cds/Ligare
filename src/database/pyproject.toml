@@ -1,43 +1,70 @@
 [build-system]
-requires = [ "setuptools>=42", "wheel",]
+
+requires = [
+    "setuptools>=42",
+    "wheel"
+]
+
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "Ligare.database"
 requires-python = ">=3.10"
-description = "Libraries for working with databases."
-classifiers = [ "Programming Language :: Python :: 3", "License :: OSI Approved :: GNU General Public License (GPL)", "Operating System :: OS Independent", "Topic :: Scientific/Engineering", "Topic :: Software Development :: Libraries", "Topic :: Software Development :: Libraries :: Application Frameworks", "Intended Audience :: Science/Research", "Intended Audience :: Developers", "Development Status :: 4 - Beta", "Natural Language :: English",]
-dependencies = [ "Ligare.programming @ file:///home/aholmes/repos/Ligare/src/programming", "sqlalchemy >= 1.4,< 2.0", "alembic ~= 1.8", "sqlalchemy2-stubs ~= 0.0.2a34", "injector", "pydantic",]
-dynamic = [ "version", "readme",]
-[[project.authors]]
-name = "Aaron Holmes"
-email = "aholmes@mednet.ucla.edu"
+authors = [
+    {name = 'Aaron Holmes', email = 'aholmes@mednet.ucla.edu'}
+]
+description = 'Libraries for working with databases.'
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License (GPL)",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Development Status :: 4 - Beta",
+    "Natural Language :: English"
+]
+
+dependencies = [
+    "Ligare.programming",
+
+    "sqlalchemy >= 1.4,< 2.0",
+    "alembic ~= 1.8",
+    "sqlalchemy2-stubs ~= 0.0.2a34",
+    "injector",
+    "pydantic"
+]
+
+dynamic = ["version", "readme"]
+[tool.setuptools.dynamic]
+version = {attr = "Ligare.database.__version__"}
+readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [project.urls]
-Homepage = "https://github.com/uclahs-cds/Ligare"
+"Homepage" = "https://github.com/uclahs-cds/Ligare"
 "Bug Tracker" = "https://github.com/uclahs-cds/Ligare/issues"
-Repository = "https://github.com/uclahs-cds/Ligare.git"
-Changelog = "https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md"
+"Repository" = "https://github.com/uclahs-cds/Ligare.git"
+"Changelog" = "https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md"
+
+[tool.setuptools.package-dir]
+"Ligare.database" = "Ligare/database"
+
+[tool.setuptools.packages.find]
+exclude = ["build*"]
+
+[tool.setuptools.package-data]
+"Ligare.database" = ["py.typed"]
 
 [project.scripts]
 ligare-alembic = "Ligare.database.migrations.alembic.__main__:ligare_alembic"
 
 [project.optional-dependencies]
-postgres = [ "psycopg2 ~= 2.9",]
-postgres-binary = [ "psycopg2-binary ~= 2.9",]
+postgres = [
+    "psycopg2 ~= 2.9"
+]
 
-[tool.setuptools.package-dir]
-"Ligare.database" = "Ligare/database"
-
-[tool.setuptools.package-data]
-"Ligare.database" = [ "py.typed",]
-
-[tool.setuptools.dynamic.version]
-attr = "Ligare.database.__version__"
-
-[tool.setuptools.dynamic.readme]
-file = [ "README.md",]
-content-type = "text/markdown"
-
-[tool.setuptools.packages.find]
-exclude = [ "build*",]
+postgres-binary = [
+    "psycopg2-binary ~= 2.9"
+]
