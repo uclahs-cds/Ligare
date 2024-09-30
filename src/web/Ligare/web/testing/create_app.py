@@ -302,12 +302,7 @@ class CreateApp(Generic[T_app]):
         self,
         mocker: MockerFixture,
         app_getter: Callable[
-            [
-                Config,
-                MockerFixture,
-                list[type[AbstractConfig]] | None,
-                list[Module | type[Module]] | None,
-            ],
+            [Config, MockerFixture, TAppInitHook | None],
             Generator[CreateAppResult[T_app], Any, None],
         ],
         client_getter: Callable[
@@ -320,16 +315,7 @@ class CreateApp(Generic[T_app]):
             client_init_hook: TClientInitHook[T_app] | None = None,
             app_init_hook: TAppInitHook | None = None,
         ) -> Generator[ClientInjector[T_flask_client], Any, None]:
-            application_configs: list[type[AbstractConfig]] | None = None
-            application_modules: list[Module | type[Module]] | None = None
-            if app_init_hook is not None:
-                application_configs = []
-                application_modules = []
-                app_init_hook(application_configs, application_modules)
-
-            application_result = next(
-                app_getter(config, mocker, application_configs, application_modules)
-            )
+            application_result = next(app_getter(config, mocker, app_init_hook))
 
             if client_init_hook is not None:
                 client_init_hook(application_result)
@@ -396,8 +382,7 @@ class CreateFlaskApp(CreateApp[Flask]):
         self,
         config: Config,
         mocker: MockerFixture,
-        application_configs: list[type[AbstractConfig]] | None = None,
-        application_modules: list[Module | type[Module]] | None = None,
+        app_init_hook: TAppInitHook | None = None,
     ) -> Generator[FlaskAppResult, Any, None]:
         # prevents the creation of a Connexion application
         if config.flask is not None:
@@ -413,10 +398,12 @@ class CreateFlaskApp(CreateApp[Flask]):
             return_value=MagicMock(load_config=MagicMock(return_value=config)),
         )
 
-        if application_configs is None:
-            application_configs = []
-        if application_modules is None:
-            application_modules = []
+        application_configs: list[type[AbstractConfig]] | None = []
+        application_modules: list[Module | type[Module]] | None = []
+
+        if app_init_hook is not None:
+            app_init_hook(application_configs, application_modules)
+
         application_modules.append(SAML2MiddlewareModule)
         app = App[Flask].create("config.toml", application_configs, application_modules)
         yield app
@@ -518,8 +505,7 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         self,
         config: Config,
         mocker: MockerFixture,
-        application_configs: list[type[AbstractConfig]] | None = None,
-        application_modules: list[Module | type[Module]] | None = None,
+        app_init_hook: TAppInitHook | None = None,
     ) -> Generator[OpenAPIAppResult, Any, None]:
         # prevents the creation of a Connexion application
         if config.flask is None or config.flask.openapi is None:
@@ -533,22 +519,26 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
             return_value=MagicMock(load_config=MagicMock(return_value=config)),
         )
 
-        if application_configs is None:
-            application_configs = []
-        if application_modules is None:
-            application_modules = []
-        application_modules.append(SAML2MiddlewareModule)
-        application_modules.append(
-            UserLoaderModule(
-                loader=User,  # pyright: ignore[reportArgumentType]
-                roles=Role,  # pyright: ignore[reportArgumentType]
-                user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                bases=[],
-            )
+        _application_configs: list[type[AbstractConfig]] = []
+        _application_modules = cast(
+            list[Module | type[Module]],
+            [
+                SAML2MiddlewareModule,
+                UserLoaderModule(
+                    loader=User,  # pyright: ignore[reportArgumentType]
+                    roles=Role,  # pyright: ignore[reportArgumentType]
+                    user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    bases=[],
+                ),
+            ],
         )
+
+        if app_init_hook is not None:
+            app_init_hook(_application_configs, _application_modules)
+
         app = App[FlaskApp].create(
-            "config.toml", application_configs, application_modules
+            "config.toml", _application_configs, _application_modules
         )
         yield app
 
