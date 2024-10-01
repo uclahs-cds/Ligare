@@ -76,13 +76,47 @@ class AuthCheckOverrideCallable(Protocol):
 
 
 P = ParamSpec("P")
-R = TypeVar("R")
+R = TypeVar("R", bound=Response)
+
+
+from typing import TypeVar, overload
+
+TWrappedFunc = TypeVar("TWrappedFunc", bound=Callable[..., Callable[..., Any]])
+
+
+@overload
+def login_required() -> Callable[[TWrappedFunc], TWrappedFunc]: ...
+
+
+@overload
+def login_required(
+    roles: Callable[P, R],
+) -> Callable[P, R]: ...
+
+
+@overload
+def login_required(
+    roles: Callable[..., Any],
+) -> Callable[..., Any]: ...
+
+
+@overload
+def login_required(
+    roles: Sequence[Role | str],
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+
+
+@overload
+def login_required(
+    roles: Sequence[Role | str],
+    auth_check_override: AuthCheckOverrideCallable,
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
 def login_required(
     roles: Sequence[Role | str] | Callable[P, R] | Callable[..., Any] | None = None,
     auth_check_override: AuthCheckOverrideCallable | None = None,
-):
+) -> Callable[[TWrappedFunc], TWrappedFunc] | Callable[P, R] | Callable[..., Any]:
     """
     Require a valid Flask session before calling the decorated function.
 

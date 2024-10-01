@@ -1,9 +1,10 @@
 from dataclasses import dataclass
+from functools import wraps
 from logging import Logger
 from typing import Any, Callable, Generic, Sequence, TypedDict, cast
 
 from connexion import FlaskApp, request
-from flask import Blueprint, Flask
+from flask import Blueprint, Flask, abort
 from injector import Binder, Injector, Module, inject, provider, singleton
 from Ligare.platform.feature_flag.caching_feature_flag_router import (
     CachingFeatureFlagRouter,
@@ -128,27 +129,34 @@ def get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logge
         :param bool require_flask_login: Determine whether flask_login must be configured for this endpoint to function
         :return _type_: _description_
         """
-        if not hasattr(app, "login_manager"):
-            if require_flask_login:
-                log.warning(
-                    "The Feature Flag module expects flask_login to be configured in order to control access to feature flag modifications. flask_login has not been configured, so the Feature Flag modification API is disabled."
-                )
-                return lambda *args, **kwargs: False
-            else:
-                return lambda fn: fn
 
-        def _login_required(fn: Callable[..., Any]):
+        def __login_required(fn: Callable[..., Any]):
+            authorization_implementation: Callable[..., Any]
+
             if access_role is False:
-                return fn
-
+                authorization_implementation = fn
             # None means no roles were specified, but a session is still required
-            if access_role is None or access_role is True:
-                # FIXME feature flags needs a login_manager assigned to Flask
-                return login_required(fn)
+            elif access_role is None or access_role is True:
+                authorization_implementation = login_required(fn)
+            else:
+                authorization_implementation = login_required([access_role])(fn)
 
-            return login_required([access_role])(fn)
+            @wraps(fn)
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
+                if not hasattr(app, "login_manager"):
+                    if require_flask_login:
+                        log.warning(
+                            "The Feature Flag module expects flask_login to be configured in order to control access to feature flag modifications. flask_login has not been configured, so the Feature Flag modification API is disabled."
+                        )
 
-        return _login_required
+                        return abort(405)
+                    else:
+                        return fn(*args, **kwargs)
+                return authorization_implementation(*args, **kwargs)
+
+            return wrapper
+
+        return __login_required
 
     @feature_flag_blueprint.route("/feature_flag", methods=("GET",))  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
     @_login_required(False)
