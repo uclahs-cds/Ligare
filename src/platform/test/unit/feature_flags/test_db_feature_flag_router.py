@@ -503,7 +503,7 @@ def test__get_feature_flags__caches_all_existing_flags_when_queried(
 
     for flag_name, enabled in added_flags.items():
         _create_feature_flag(feature_flag_session, flag_name)
-        db_feature_flag_router.set_feature_is_enabled(flag_name, enabled)
+        _ = db_feature_flag_router.set_feature_is_enabled(flag_name, enabled)
 
     cache_mock = mocker.patch(
         "Ligare.platform.feature_flag.caching_feature_flag_router.CachingFeatureFlagRouter.set_feature_is_enabled",
