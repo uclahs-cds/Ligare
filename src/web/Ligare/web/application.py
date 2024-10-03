@@ -1,9 +1,3 @@
-"""
-Compound Assay Platform Flask application.
-
-Flask entry point.
-"""
-
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
@@ -38,7 +32,7 @@ from Ligare.programming.config.exceptions import ConfigBuilderStateError
 from Ligare.programming.dependency_injection import ConfigModule
 from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
-from typing_extensions import Self
+from typing_extensions import Self, deprecated
 
 from .config import Config
 from .middleware import (
@@ -60,12 +54,29 @@ TAppConfig = TypeVar("TAppConfig", bound=Config)
 
 @dataclass
 class AppInjector(Generic[T_app]):
+    """
+    Contains an instantiated `T_app` application in `app`,
+    and its associated `FlaskInjector` IoC container.
+
+    :param T_app Generic: An instance of Flask or FlaskApp.
+    :param flask_inject FlaskInject: The applications IoC container.
+    """
+
     app: T_app
     flask_injector: FlaskInjector
 
 
 @dataclass
 class CreateAppResult(Generic[T_app]):
+    """
+    Contains an instantiated Flask application and its
+    associated application "container." This is either
+    the same Flask instance, or an OpenAPI application.
+
+    :param flask_app Generic: The Flask application.
+    :param app_injector AppInjector[T_app]: The application's wrapper and IoC container.
+    """
+
     flask_app: Flask
     app_injector: AppInjector[T_app]
 
@@ -77,6 +88,7 @@ OpenAPIAppResult = CreateAppResult[FlaskApp]
 # In Python 3.12 we can use generics in functions,
 # but we target >= Python 3.10. This is one way
 # around that limitation.
+@deprecated("`App` is deprecated. Use `ApplicationBuilder`.")
 class App(Generic[T_app]):
     """
     Create a new generic type for the application instance.
@@ -85,6 +97,7 @@ class App(Generic[T_app]):
         T_app: Either `Flask` or `FlaskApp`
     """
 
+    @deprecated("`App.create` is deprecated. Use `ApplicationBuilder`.")
     @staticmethod
     def create(
         config_filename: str = "config.toml",
@@ -102,16 +115,32 @@ class App(Generic[T_app]):
         """
         return cast(
             CreateAppResult[T_app],
-            create_app(config_filename, application_configs, application_modules),
+            _create_app(config_filename, application_configs, application_modules),
         )
 
 
 class UseConfigurationCallback(Protocol[TConfig]):
+    """
+    The callback for configuring an application's configuration.
+
+    :param TConfig Protocol: The AbstractConfig type to be configured.
+    """
+
     def __call__(
         self,
         config_builder: ConfigBuilder[TConfig],
         config_overrides: dict[str, Any],
-    ) -> "None | ConfigBuilder[TConfig]": ...
+    ) -> "None | ConfigBuilder[TConfig]":
+        """
+        Set up parameters for the application's configuration.
+
+        :param ConfigBuilder[TConfig] config_builder: The ConfigBuilder instance.
+        :param dict[str, Any] config_overrides: A dictionary of key/values that are applied over all keys that might exist in an instantiated config.
+        :raises InvalidBuilderStateError: Upon a call to `build()`, the builder is misconfigured.
+        :raises BuilderBuildError: Upon a call to `build()`, a failure occurred during the instantiation of the configuration.
+        :raises Exception: Upon a call to `build()`, an unknown error occurred.
+        :return None | ConfigBuilder[TConfig]: The callback may return `None` or the received `ConfigBuilder` instance so as to support the use of lambdas. This return value is not used.
+        """
 
 
 @final
@@ -359,6 +388,7 @@ class ApplicationBuilder(Generic[T_app]):
         )
 
 
+@deprecated("`create_app` is deprecated. Use `ApplicationBuilder`.")
 def create_app(
     config_filename: str = "config.toml",
     # FIXME should be a list of PydanticDataclass
@@ -368,6 +398,15 @@ def create_app(
     """
     Do not use this method directly. Instead, use `App[T_app].create()` or `ApplicationBuilder[TApp, TConfig]()`
     """
+    return _create_app(config_filename, application_configs, application_modules)
+
+
+def _create_app(
+    config_filename: str = "config.toml",
+    # FIXME should be a list of PydanticDataclass
+    application_configs: list[type[AbstractConfig]] | None = None,
+    application_modules: list[Module | type[Module]] | None = None,
+) -> CreateAppResult[TApp]:
     # set up the default configuration as soon as possible
     # also required to call before json_logging.config_root_logger()
     logging.basicConfig(force=True)
