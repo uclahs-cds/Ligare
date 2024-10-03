@@ -38,7 +38,7 @@ from Ligare.programming.collections.dict import NestedDict
 from Ligare.programming.config import AbstractConfig, ConfigBuilder
 from Ligare.programming.str import get_random_str
 from Ligare.web.application import (
-    App,
+    ApplicationBuilder,
     CreateAppResult,
     FlaskAppResult,
     OpenAPIAppResult,
@@ -405,7 +405,20 @@ class CreateFlaskApp(CreateApp[Flask]):
             app_init_hook(application_configs, application_modules)
 
         application_modules.append(SAML2MiddlewareModule)
-        app = App[Flask].create("config.toml", application_configs, application_modules)
+
+        logging.basicConfig(force=True)
+
+        application_builder = (
+            ApplicationBuilder[Flask]()
+            .with_modules(application_modules)
+            .use_configuration(
+                lambda config_builder: config_builder.enable_ssm(True)
+                .with_config_filename("config.toml")
+                .with_root_config_type(Config)
+                .with_config_types(application_configs)
+            )
+        )
+        app = application_builder.build()
         yield app
 
     @pytest.fixture()
@@ -537,9 +550,17 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         if app_init_hook is not None:
             app_init_hook(_application_configs, _application_modules)
 
-        app = App[FlaskApp].create(
-            "config.toml", _application_configs, _application_modules
+        application_builder = (
+            ApplicationBuilder[FlaskApp]()
+            .with_modules(_application_modules)
+            .use_configuration(
+                lambda config_builder: config_builder.enable_ssm(True)
+                .with_config_filename("config.toml")
+                .with_root_config_type(Config)
+                .with_config_types(_application_configs)
+            )
         )
+        app = application_builder.build()
         yield app
 
     @pytest.fixture()
@@ -642,6 +663,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
     def openapi_client_configurable(
         self, mocker: MockerFixture
     ) -> OpenAPIClientInjectorConfigurable:
+        # FIXME some day json_logging needs to be fixed
         _ = mocker.patch("Ligare.web.application.json_logging")
         return self._client_configurable(
             mocker, self._get_real_openapi_app, self._openapi_client
