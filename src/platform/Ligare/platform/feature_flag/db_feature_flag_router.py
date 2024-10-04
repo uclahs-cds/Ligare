@@ -1,18 +1,29 @@
 from abc import ABC
+from dataclasses import dataclass
 from logging import Logger
-from typing import Type, cast, overload
+from typing import Sequence, Type, TypeVar, cast, overload
 
 from injector import inject
-from sqlalchemy import Boolean, Column, Unicode
+from sqlalchemy import Boolean, Column, String, Unicode
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm.session import Session
 from typing_extensions import override
 
 from .caching_feature_flag_router import CachingFeatureFlagRouter
+from .feature_flag_router import FeatureFlag as FeatureFlagBaseData
+from .feature_flag_router import FeatureFlagChange
 
 
-class FeatureFlag(ABC):
+@dataclass(frozen=True)
+class FeatureFlag(FeatureFlagBaseData):
+    description: str | None
+
+
+TFeatureFlag = TypeVar("TFeatureFlag", bound=FeatureFlag, covariant=True)
+
+
+class FeatureFlagTableBase(ABC):
     def __init__(  # pyright: ignore[reportMissingSuperCall]
         self,
         /,
@@ -21,7 +32,7 @@ class FeatureFlag(ABC):
         enabled: bool | None = False,
     ) -> None:
         raise NotImplementedError(
-            f"`{FeatureFlag.__class__.__name__}` should only be used for type checking."
+            f"`{FeatureFlagTableBase.__class__.__name__}` should only be used for type checking."
         )
 
     __tablename__: str
@@ -31,7 +42,9 @@ class FeatureFlag(ABC):
 
 
 class FeatureFlagTable:
-    def __new__(cls, base: Type[DeclarativeMeta]) -> type[FeatureFlag]:
+    __table_args__ = {"schema": "platform"}
+
+    def __new__(cls, base: Type[DeclarativeMeta]) -> type[FeatureFlagTableBase]:
         class _FeatureFlag(base):
             """
             A feature flag.
@@ -53,32 +66,34 @@ class FeatureFlagTable:
             def __repr__(self) -> str:
                 return "<FeatureFlag %s>" % (self.name)
 
-        return cast(type[FeatureFlag], _FeatureFlag)
+        return cast(type[FeatureFlagTableBase], _FeatureFlag)
 
 
-class DBFeatureFlagRouter(CachingFeatureFlagRouter):
-    _feature_flag: type[FeatureFlag]
+class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
+    # The SQLAlchemy table type used for querying from the type[FeatureFlag] database table
+    _feature_flag: type[FeatureFlagTableBase]
+    # The SQLAlchemy session used for connecting to and querying the database
     _session: Session
 
     @inject
     def __init__(
-        self, feature_flag: type[FeatureFlag], session: Session, logger: Logger
+        self, feature_flag: type[FeatureFlagTableBase], session: Session, logger: Logger
     ) -> None:
         self._feature_flag = feature_flag
         self._session = session
         super().__init__(logger)
 
     @override
-    def set_feature_is_enabled(self, name: str, is_enabled: bool):
+    def set_feature_is_enabled(self, name: str, is_enabled: bool) -> FeatureFlagChange:
         """
         Enable or disable a feature flag in the database.
 
         This method caches the value of `is_enabled` for the specified feature flag
         unless saving to the database fails.
 
-        name: The feature flag to check.
-
-        is_enabled: Whether the feature flag is to be enabled or disabled.
+        :param str name: The feature flag to check.
+        :param bool is_enabled: Whether the feature flag is to be enabled or disabled.
+        :return FeatureFlagChange: An object representing the previous and new values of the changed feature flag.
         """
 
         if type(name) != str:
@@ -87,11 +102,11 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter):
         if not name:
             raise ValueError("`name` parameter is required and cannot be empty.")
 
-        feature_flag: FeatureFlag
+        feature_flag: FeatureFlagTableBase
         try:
             feature_flag = (
                 self._session.query(self._feature_flag)
-                .filter(cast(Column[Unicode], self._feature_flag.name) == name)
+                .filter(self._feature_flag.name == name)
                 .one()
             )
         except NoResultFound as e:
@@ -99,9 +114,14 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter):
                 f"The feature flag `{name}` does not exist. It must be created before being accessed."
             ) from e
 
+        old_enabled_value = cast(bool | None, feature_flag.enabled)
         feature_flag.enabled = is_enabled
         self._session.commit()
-        super().set_feature_is_enabled(name, is_enabled)
+        _ = super().set_feature_is_enabled(name, is_enabled)
+
+        return FeatureFlagChange(
+            name=name, old_value=old_enabled_value, new_value=is_enabled
+        )
 
     @overload
     def feature_is_enabled(self, name: str, default: bool = False) -> bool: ...
@@ -131,7 +151,7 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter):
 
         feature_flag = (
             self._session.query(self._feature_flag)
-            .filter(cast(Column[Unicode], self._feature_flag.name) == name)
+            .filter(self._feature_flag.name == name)
             .one_or_none()
         )
 
@@ -143,6 +163,55 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter):
 
         is_enabled = cast(bool, feature_flag.enabled)
 
-        super().set_feature_is_enabled(name, is_enabled)
+        _ = super().set_feature_is_enabled(name, is_enabled)
 
         return is_enabled
+
+    @override
+    def _create_feature_flag(
+        self, name: str, enabled: bool, description: str | None = None
+    ) -> TFeatureFlag:
+        parent_feature_flag = super()._create_feature_flag(name, enabled)
+        return cast(
+            TFeatureFlag,
+            FeatureFlag(
+                parent_feature_flag.name, parent_feature_flag.enabled, description
+            ),
+        )
+
+    @override
+    def get_feature_flags(
+        self, names: list[str] | None = None
+    ) -> Sequence[TFeatureFlag]:
+        """
+        Get all feature flags and their status from the database.
+        This methods updates the cache to the values retrieved from the database.
+
+        :param list[str] | None names: Get only the flags contained in this list.
+        :return tuple[TFeatureFlag]: An immutable sequence (a tuple) of feature flags.
+        If `names` is `None` this sequence contains _all_ feature flags in the database. Otherwise, the list is filtered.
+        """
+        db_feature_flags: list[FeatureFlagTableBase]
+        if names is None:
+            db_feature_flags = self._session.query(self._feature_flag).all()
+        else:
+            db_feature_flags = (
+                self._session.query(self._feature_flag)
+                .filter(cast(Column[String], self._feature_flag.name).in_(names))
+                .all()
+            )
+
+        feature_flags = tuple(
+            self._create_feature_flag(
+                name=cast(str, feature_flag.name),
+                enabled=cast(bool, feature_flag.enabled),
+                description=cast(str, feature_flag.description),
+            )
+            for feature_flag in db_feature_flags
+        )
+
+        # cache the feature flags
+        for feature_flag in feature_flags:
+            _ = super().set_feature_is_enabled(feature_flag.name, feature_flag.enabled)
+
+        return feature_flags

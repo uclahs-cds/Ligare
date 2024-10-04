@@ -3,6 +3,7 @@ from typing import Any
 from Ligare.programming.config import AbstractConfig
 from pydantic import BaseModel
 from pydantic.config import ConfigDict
+from typing_extensions import override
 
 
 class SSOSettingsConfig(BaseModel):
@@ -33,6 +34,10 @@ class SSOConfig(BaseModel, AbstractConfig):
         if self.protocol == "SAML2":
             self.settings = SAML2Config(**model_data)
 
+    @override
+    def post_load(self) -> None:
+        return super().post_load()
+
     protocol: str = "SAML2"
     # the static field allows Pydantic to store
     # values from a dictionary
@@ -40,4 +45,8 @@ class SSOConfig(BaseModel, AbstractConfig):
 
 
 class Config(BaseModel, AbstractConfig):
+    @override
+    def post_load(self) -> None:
+        return super().post_load()
+
     sso: SSOConfig

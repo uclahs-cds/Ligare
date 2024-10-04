@@ -187,6 +187,7 @@ def _headers_as_dict(
 def _log_all_api_requests(
     request: MiddlewareRequestDict,
     response: MiddlewareResponseDict,
+    app: Flask,
     config: Config,
     log: Logger,
 ):
@@ -216,7 +217,10 @@ def _log_all_api_requests(
         f"{server.host}:{server.port}",
         f"{client.host}:{client.port}",
         "Anonymous"
-        if isinstance(current_user, AnonymousUserMixin)
+        if (
+            isinstance(current_user, AnonymousUserMixin)
+            or not hasattr(app, "login_manager")
+        )
         else current_user.get_id(),
         extra={
             "props": {
@@ -318,7 +322,13 @@ class RequestLoggerMiddleware:
 
     @inject
     async def __call__(
-        self, scope: Scope, receive: Receive, send: Send, config: Config, log: Logger
+        self,
+        scope: Scope,
+        receive: Receive,
+        send: Send,
+        config: Config,
+        log: Logger,
+        app: Flask,
     ) -> None:
         async def wrapped_send(message: Any) -> None:
             nonlocal scope
@@ -331,7 +341,7 @@ class RequestLoggerMiddleware:
             response = cast(MiddlewareResponseDict, scope)
             request = cast(MiddlewareRequestDict, scope)
 
-            _log_all_api_requests(request, response, config, log)
+            _log_all_api_requests(request, response, app, config, log)
 
             return await send(message)
 

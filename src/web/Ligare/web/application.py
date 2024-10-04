@@ -1,13 +1,18 @@
-"""
-Compound Assay Platform Flask application.
-
-Flask entry point.
-"""
-
 import logging
+from collections import defaultdict
 from dataclasses import dataclass
 from os import environ, path
-from typing import Generator, Generic, Optional, TypeVar, cast
+from typing import (
+    Any,
+    Generator,
+    Generic,
+    Optional,
+    Protocol,
+    TypeVar,
+    cast,
+    final,
+    overload,
+)
 
 import json_logging
 from connexion import FlaskApp
@@ -16,8 +21,18 @@ from flask_injector import FlaskInjector
 from injector import Module
 from lib_programname import get_path_executed_script
 from Ligare.AWS.ssm import SSMParameters
-from Ligare.programming.config import AbstractConfig, ConfigBuilder, load_config
+from Ligare.programming.collections.dict import NestedDict
+from Ligare.programming.config import (
+    AbstractConfig,
+    ConfigBuilder,
+    TConfig,
+    load_config,
+)
+from Ligare.programming.config.exceptions import ConfigBuilderStateError
 from Ligare.programming.dependency_injection import ConfigModule
+from Ligare.programming.patterns.dependency_injection import ConfigurableModule
+from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
+from typing_extensions import Self, deprecated
 
 from .config import Config
 from .middleware import (
@@ -34,15 +49,34 @@ _get_exec_dir = lambda: path.abspath(".")
 TApp = Flask | FlaskApp
 T_app = TypeVar("T_app", bound=TApp)
 
+TAppConfig = TypeVar("TAppConfig", bound=Config)
+
 
 @dataclass
 class AppInjector(Generic[T_app]):
+    """
+    Contains an instantiated `T_app` application in `app`,
+    and its associated `FlaskInjector` IoC container.
+
+    :param T_app Generic: An instance of Flask or FlaskApp.
+    :param flask_inject FlaskInject: The applications IoC container.
+    """
+
     app: T_app
     flask_injector: FlaskInjector
 
 
 @dataclass
 class CreateAppResult(Generic[T_app]):
+    """
+    Contains an instantiated Flask application and its
+    associated application "container." This is either
+    the same Flask instance, or an OpenAPI application.
+
+    :param flask_app Generic: The Flask application.
+    :param app_injector AppInjector[T_app]: The application's wrapper and IoC container.
+    """
+
     flask_app: Flask
     app_injector: AppInjector[T_app]
 
@@ -54,6 +88,7 @@ OpenAPIAppResult = CreateAppResult[FlaskApp]
 # In Python 3.12 we can use generics in functions,
 # but we target >= Python 3.10. This is one way
 # around that limitation.
+@deprecated("`App` is deprecated. Use `ApplicationBuilder`.")
 class App(Generic[T_app]):
     """
     Create a new generic type for the application instance.
@@ -62,6 +97,7 @@ class App(Generic[T_app]):
         T_app: Either `Flask` or `FlaskApp`
     """
 
+    @deprecated("`App.create` is deprecated. Use `ApplicationBuilder`.")
     @staticmethod
     def create(
         config_filename: str = "config.toml",
@@ -79,105 +115,316 @@ class App(Generic[T_app]):
         """
         return cast(
             CreateAppResult[T_app],
-            create_app(config_filename, application_configs, application_modules),
+            _create_app(config_filename, application_configs, application_modules),
         )
 
 
+class UseConfigurationCallback(Protocol[TConfig]):
+    """
+    The callback for configuring an application's configuration.
+
+    :param TConfig Protocol: The AbstractConfig type to be configured.
+    """
+
+    def __call__(
+        self,
+        config_builder: ConfigBuilder[TConfig],
+        config_overrides: dict[str, Any],
+    ) -> "None | ConfigBuilder[TConfig]":
+        """
+        Set up parameters for the application's configuration.
+
+        :param ConfigBuilder[TConfig] config_builder: The ConfigBuilder instance.
+        :param dict[str, Any] config_overrides: A dictionary of key/values that are applied over all keys that might exist in an instantiated config.
+        :raises InvalidBuilderStateError: Upon a call to `build()`, the builder is misconfigured.
+        :raises BuilderBuildError: Upon a call to `build()`, a failure occurred during the instantiation of the configuration.
+        :raises Exception: Upon a call to `build()`, an unknown error occurred.
+        :return None | ConfigBuilder[TConfig]: The callback may return `None` or the received `ConfigBuilder` instance so as to support the use of lambdas. This return value is not used.
+        """
+
+
+@final
+class ApplicationConfigBuilder(Generic[TConfig]):
+    _DEFAULT_CONFIG_FILENAME: str = "config.toml"
+
+    def __init__(self) -> None:
+        self._config_value_overrides: dict[str, Any] = {}
+        self._config_builder: ConfigBuilder[TConfig] = ConfigBuilder[TConfig]()
+        self._config_filename: str = ApplicationConfigBuilder._DEFAULT_CONFIG_FILENAME
+        self._use_filename: bool = False
+        self._use_ssm: bool = False
+
+    def with_config_builder(self, config_builder: ConfigBuilder[TConfig]) -> Self:
+        self._config_builder = config_builder
+        return self
+
+    def with_root_config_type(self, config_type: type[TConfig]) -> Self:
+        _ = self._config_builder.with_root_config(config_type)
+        return self
+
+    def with_config_types(self, configs: list[type[AbstractConfig]] | None) -> Self:
+        _ = self._config_builder.with_configs(configs)
+        return self
+
+    def with_config_type(self, config_type: type[AbstractConfig]) -> Self:
+        _ = self._config_builder.with_config(config_type)
+        return self
+
+    def with_config_value_overrides(self, values: dict[str, Any]) -> Self:
+        self._config_value_overrides = values
+        return self
+
+    def with_config_filename(self, filename: str) -> Self:
+        self._config_filename = filename
+        self._use_filename = True
+        return self
+
+    def enable_ssm(self, value: bool) -> Self:
+        """
+        Try to load config from AWS SSM. If `use_filename` was configured,
+        a failed attempt to load from SSM will instead attempt to load from
+        the configured filename. If `use_filename` is not configured and SSM
+        fails, an exception is raised. If SSM succeeds, `build` will not
+        load from the configured filename.
+
+        :param bool value: Whether to use SSM
+        :return Self:
+        """
+        self._use_ssm = value
+        return self
+
+    def build(self) -> TConfig | None:
+        if not (self._use_ssm or self._use_filename):
+            raise InvalidBuilderStateError(
+                "Cannot build the application config without either `use_ssm` or `use_filename` having been configured."
+            )
+
+        try:
+            config_type = self._config_builder.build()
+        except ConfigBuilderStateError as e:
+            raise BuilderBuildError(
+                "A root config must be specified using `with_root_config` before calling `build()`."
+            ) from e
+
+        full_config: TConfig | None = None
+        SSM_FAIL_ERROR_MSG = "Unable to load configuration. SSM parameter load failed and the builder is configured not to load from a file."
+        if self._use_ssm:
+            try:
+                # requires that aws-ssm.ini exists and is correctly configured
+                ssm_parameters = SSMParameters()
+                full_config = ssm_parameters.load_config(config_type)
+
+                if not self._use_filename and full_config is None:
+                    raise BuilderBuildError(SSM_FAIL_ERROR_MSG)
+            except Exception as e:
+                if self._use_filename:
+                    logging.getLogger().info("SSM parameter load failed.", exc_info=e)
+                else:
+                    raise BuilderBuildError(SSM_FAIL_ERROR_MSG) from e
+
+        if self._use_filename and full_config is None:
+            if self._config_value_overrides:
+                full_config = load_config(
+                    config_type, self._config_filename, self._config_value_overrides
+                )
+            else:
+                full_config = load_config(config_type, self._config_filename)
+
+        return full_config
+
+
+class ApplicationConfigBuilderCallback(Protocol[TAppConfig]):
+    def __call__(
+        self,
+        config_builder: ApplicationConfigBuilder[TAppConfig],
+    ) -> "None | ApplicationConfigBuilder[TAppConfig]": ...
+
+
+@final
+class ApplicationBuilder(Generic[T_app]):
+    def __init__(self) -> None:
+        self._modules: list[Module | type[Module]] = []
+        self._config_overrides: dict[str, Any] = {}
+
+    _APPLICATION_CONFIG_BUILDER_PROPERTY_NAME: str = "__application_config_builder"
+
+    @property
+    def _application_config_builder(self) -> ApplicationConfigBuilder[Config]:
+        builder = getattr(
+            self, ApplicationBuilder._APPLICATION_CONFIG_BUILDER_PROPERTY_NAME, None
+        )
+
+        if builder is None:
+            builder = ApplicationConfigBuilder[Config]()
+            self._application_config_builder = builder.with_root_config_type(Config)
+
+        return builder
+
+    @_application_config_builder.setter
+    def _application_config_builder(self, value: ApplicationConfigBuilder[Config]):
+        setattr(
+            self, ApplicationBuilder._APPLICATION_CONFIG_BUILDER_PROPERTY_NAME, value
+        )
+
+    @overload
+    def with_module(self, module: Module) -> Self: ...
+    @overload
+    def with_module(self, module: type[Module]) -> Self: ...
+    def with_module(self, module: Module | type[Module]) -> Self:
+        module_type = type(module) if isinstance(module, Module) else module
+        if issubclass(module_type, ConfigurableModule):
+            _ = self._application_config_builder.with_config_type(
+                module_type.get_config_type()
+            )
+
+        self._modules.append(module)
+        return self
+
+    def with_modules(self, modules: list[Module | type[Module]] | None) -> Self:
+        if modules is not None:
+            for module in modules:
+                _ = self.with_module(module)
+        return self
+
+    @overload
+    def use_configuration(
+        self,
+        __application_config_builder_callback: ApplicationConfigBuilderCallback[Config],
+    ) -> Self:
+        """
+        Execute changes to the builder's `ApplicationConfigBuilder[TAppConfig]` instance.
+
+        `__builder_callback` can return `None`, or the instance of `ApplicationConfigBuilder[TAppConfig]` passed to its `config_builder` argument.
+        This allowance is so lambdas can be used; `ApplicationBuilder[T_app, TAppConfig]` does not use the return value.
+        """
+        ...
+
+    @overload
+    def use_configuration(
+        self, __application_config_builder: ApplicationConfigBuilder[Config]
+    ) -> Self:
+        """Replace the builder's default `ApplicationConfigBuilder[TAppConfig]` instance, or any instance previously assigned."""
+        ...
+
+    def use_configuration(
+        self,
+        application_config_builder: ApplicationConfigBuilderCallback[Config]
+        | ApplicationConfigBuilder[Config],
+    ) -> Self:
+        if callable(application_config_builder):
+            _ = application_config_builder(self._application_config_builder)
+        else:
+            self._application_config_builder = application_config_builder
+
+        return self
+
+    def with_flask_app_name(self, value: str | None) -> Self:
+        self._config_overrides["app_name"] = value
+        return self
+
+    def with_flask_env(self, value: str | None) -> Self:
+        self._config_overrides["env"] = value
+        return self
+
+    def build(self) -> CreateAppResult[T_app]:
+        config_overrides: NestedDict[str, Any] = defaultdict(dict)
+
+        if (
+            override_app_name := self._config_overrides.get("app_name", None)
+        ) is not None and override_app_name != "":
+            config_overrides["flask"]["app_name"] = override_app_name
+
+        if (
+            override_env := self._config_overrides.get("env", None)
+        ) is not None and override_env != "":
+            config_overrides["flask"]["env"] = override_env
+
+        _ = self._application_config_builder.with_config_value_overrides(
+            config_overrides
+        )
+        config = self._application_config_builder.build()
+
+        if config is None:
+            raise BuilderBuildError(
+                "Failed to load the application configuration correctly."
+            )
+
+        if config.flask is None:
+            raise Exception("You must set [flask] in the application configuration.")
+
+        if not config.flask.app_name:
+            raise Exception(
+                "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar."
+            )
+
+        app: T_app
+
+        if config.flask.openapi is not None:
+            openapi = configure_openapi(config)
+            app = cast(T_app, openapi)
+        else:
+            app = cast(T_app, configure_blueprint_routes(config))
+
+        register_error_handlers(app)
+        _ = register_api_request_handlers(app)
+        _ = register_api_response_handlers(app)
+        _ = register_context_middleware(app)
+
+        application_modules = [
+            ConfigModule(config, type(config))
+            for (_, config) in cast(
+                Generator[tuple[str, AbstractConfig], None, None], config
+            )
+        ] + (self._modules if self._modules else [])
+        # The `config` module cannot be overridden unless the application
+        # IoC container is fiddled with. `config` is the instance registered
+        # to `AbstractConfig`.
+        modules = application_modules + [ConfigModule(config, Config)]
+        flask_injector = configure_dependencies(app, application_modules=modules)
+
+        flask_app = app.app if isinstance(app, FlaskApp) else app
+        return CreateAppResult[T_app](
+            flask_app, AppInjector[T_app](app, flask_injector)
+        )
+
+
+@deprecated("`create_app` is deprecated. Use `ApplicationBuilder`.")
 def create_app(
     config_filename: str = "config.toml",
     # FIXME should be a list of PydanticDataclass
     application_configs: list[type[AbstractConfig]] | None = None,
     application_modules: list[Module | type[Module]] | None = None,
-    # FIXME eventually should replace with builders
-    # and configurators so this list of params doesn't
-    # just grow and grow.
-    # startup_builder: IStartupBuilder,
-    # config: Config,
 ) -> CreateAppResult[TApp]:
     """
-    Do not use this method directly. Instead, use `App[T_app].create()`
+    Do not use this method directly. Instead, use `App[T_app].create()` or `ApplicationBuilder[TApp, TConfig]()`
     """
+    return _create_app(config_filename, application_configs, application_modules)
+
+
+def _create_app(
+    config_filename: str = "config.toml",
+    # FIXME should be a list of PydanticDataclass
+    application_configs: list[type[AbstractConfig]] | None = None,
+    application_modules: list[Module | type[Module]] | None = None,
+) -> CreateAppResult[TApp]:
     # set up the default configuration as soon as possible
     # also required to call before json_logging.config_root_logger()
     logging.basicConfig(force=True)
 
-    config_overrides = {}
-    if environ.get("FLASK_APP"):
-        config_overrides["app_name"] = environ["FLASK_APP"]
-
-    if environ.get("FLASK_ENV"):
-        config_overrides["env"] = environ["FLASK_ENV"]
-
-    config_type = Config
-    if application_configs is not None:
-        # fmt: off
-        config_type = ConfigBuilder[Config]()\
-            .with_root_config(Config)\
-            .with_configs(application_configs)\
-            .build()
-        # fmt: on
-
-    full_config: Config | None = None
-    try:
-        # requires that aws-ssm.ini exists and is correctly configured
-        ssm_parameters = SSMParameters()
-        full_config = ssm_parameters.load_config(config_type)
-    except Exception as e:
-        logging.getLogger().warning(f"SSM parameter load failed: {e}")
-
-    if full_config is None:
-        if config_overrides:
-            full_config = load_config(
-                config_type, config_filename, {"flask": config_overrides}
-            )
-        else:
-            full_config = load_config(config_type, config_filename)
-
-    full_config.prepare_env_for_flask()
-
-    if full_config.flask is None:
-        raise Exception("You must set [flask] in the application configuration.")
-
-    if not full_config.flask.app_name:
-        raise Exception(
-            "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar."
+    application_builder = (
+        ApplicationBuilder[TApp]()
+        .with_flask_app_name(environ.get("FLASK_APP", None))
+        .with_flask_env(environ.get("FLASK_ENV", None))
+        .with_modules(application_modules)
+        .use_configuration(
+            lambda config_builder: config_builder.enable_ssm(True)
+            .with_config_filename(config_filename)
+            .with_root_config_type(Config)
+            .with_config_types(application_configs)
         )
-
-    app: Flask | FlaskApp
-
-    if full_config.flask.openapi is not None:
-        openapi = configure_openapi(full_config)
-        app = openapi
-    else:
-        app = configure_blueprint_routes(full_config)
-
-    register_error_handlers(app)
-    _ = register_api_request_handlers(app)
-    _ = register_api_response_handlers(app)
-    _ = register_context_middleware(app)
-    # register_app_teardown_handlers(app)
-
-    # Register every subconfig as a ConfigModule.
-    # This will allow subpackages to resolve their own config types,
-    # allow for type safety against objects of those types.
-    # Otherwise, they can resolve `AbstractConfig`, but then type
-    # safety is lost.
-    # Note that, if any `ConfigModule` is provided in `application_modules`,
-    # those will override the automatically generated `ConfigModule`s.
-    application_modules = [
-        ConfigModule(config, type(config))
-        for (_, config) in cast(
-            Generator[tuple[str, AbstractConfig], None, None], full_config
-        )
-    ] + (application_modules if application_modules else [])
-    # The `full_config` module cannot be overridden unless the application
-    # IoC container is fiddled with. `full_config` is the instance registered
-    # to `AbstractConfig`.
-    modules = application_modules + [ConfigModule(full_config, Config)]
-    flask_injector = configure_dependencies(app, application_modules=modules)
-
-    flask_app = app.app if isinstance(app, FlaskApp) else app
-    return CreateAppResult(flask_app, AppInjector(app, flask_injector))
+    )
+    app = application_builder.build()
+    return app
 
 
 def configure_openapi(config: Config, name: Optional[str] = None):
@@ -194,26 +441,10 @@ def configure_openapi(config: Config, name: Optional[str] = None):
             "OpenAPI configuration is empty. Review the `openapi` section of your application's `config.toml`."
         )
 
-    ## host configuration set up
-    ## TODO host/port setup should move into application initialization
-    ## and not be tied to connexion configuration
-    # host = "127.0.0.1"
-    # port = 5000
-    ## TODO replace SERVER_NAME with host/port in config
-    # if environ.get("SERVER_NAME") is not None:
-    #    (host, port_str) = environ["SERVER_NAME"].split(":")
-    #    port = int(port_str)
-
-    # connexion and openapi set up
-    # openapi_spec_dir: str = "app/swagger/"
-    # if environ.get("OPENAPI_SPEC_DIR"):
-    #    openapi_spec_dir = environ["OPENAPI_SPEC_DIR"]
-
     exec_dir = _get_exec_dir()
 
     connexion_app = FlaskApp(
         config.flask.app_name,
-        # TODO support relative OPENAPI_SPEC_DIR and prepend program_dir?
         specification_dir=exec_dir,
         # host=host,
         # port=port,
@@ -313,7 +544,6 @@ def _import_blueprint_modules(app: Flask, blueprint_import_subdir: str):
         # find all Flask blueprints in
         # the module and register them
         for module_name, module_var in vars(module).items():
-            # TODO why did we allow _blueprint when it's not a Blueprint?
             if module_name.endswith("_blueprint") or isinstance(module_var, Blueprint):
                 blueprint_modules.append(module_var)
 

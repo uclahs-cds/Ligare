@@ -3,6 +3,7 @@ from typing import Any
 from Ligare.programming.config import AbstractConfig
 from pydantic import BaseModel
 from pydantic.config import ConfigDict
+from typing_extensions import override
 
 
 class DatabaseConnectArgsConfig(BaseModel):
@@ -36,6 +37,10 @@ class DatabaseConfig(BaseModel, AbstractConfig):
         elif self.connection_string.startswith("postgresql://"):
             self.connect_args = PostgreSQLDatabaseConnectArgsConfig(**model_data)
 
+    @override
+    def post_load(self) -> None:
+        return super().post_load()
+
     connection_string: str = "sqlite:///:memory:"
     sqlalchemy_echo: bool = False
     # the static field allows Pydantic to store
@@ -44,4 +49,8 @@ class DatabaseConfig(BaseModel, AbstractConfig):
 
 
 class Config(BaseModel, AbstractConfig):
+    @override
+    def post_load(self) -> None:
+        return super().post_load()
+
     database: DatabaseConfig

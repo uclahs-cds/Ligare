@@ -14,6 +14,7 @@ from typing import (
     TypedDict,
     TypeVar,
     cast,
+    overload,
 )
 from urllib.parse import urlparse
 
@@ -37,11 +38,13 @@ from flask_login import login_user  # pyright: ignore[reportUnknownVariableType]
 from flask_login import logout_user  # pyright: ignore[reportUnknownVariableType]
 from flask_login import current_user
 from flask_login import login_required as flask_login_required
-from injector import Binder, Injector, Module, inject
+from injector import Binder, Injector, inject
 from Ligare.identity.config import Config, SAML2Config, SSOConfig
 from Ligare.identity.dependency_injection import SAML2Module, SSOModule
 from Ligare.identity.SAML2 import SAML2Client
 from Ligare.platform.identity.user_loader import Role, UserId, UserLoader, UserMixin
+from Ligare.programming.config import AbstractConfig
+from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from Ligare.web.config import Config
 from Ligare.web.encryption import decrypt_flask_cookie
 from saml2.validate import (
@@ -77,15 +80,80 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
+@overload
+def login_required() -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """
+    Require a user session for the decorated API. No further requirements are applied.
+    In effect, this uses `flask_login.login_required` and is used in its usual way.
+
+    This is meant to be used as a decorator with `@login_required`. It is the the equivalent
+    of using the decorator `@flask_login.login_required`.
+
+    :return Callable[[Callable[P, R]], Callable[P, R]]: Returns the `flask_login.login_required` decorated function.
+    """
+
+
+@overload
+def login_required(function: Callable[P, R], /) -> Callable[P, R]:
+    """
+    Require a user session for the decorated API. No further requirements are applied.
+    In effect, this passes along `flask_login.login_required` without modification.
+
+    This can be used as a decorator with `@login_required()`, not `@login_required`, though
+    its use case is to wrap a function without using the decorator form, e.g., `wrapped_func = login_required(my_func)`.
+    This is the equivalent of `wrapped_func = flask_login.login_required(my_func)`.
+
+    :return Callable[P, R]: Returns the `flask_login.login_required` wrapped function.
+    """
+
+
+@overload
 def login_required(
-    roles: Sequence[Role] | Callable[P, R] | Callable[..., Any] | None = None,
+    roles: Sequence[Role | str], /
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """
+    Require a user session, and require that the user has at least one of the specified roles.
+
+    :param Sequence[Role  |  str] roles: The list of roles the user can have that will allow them to access the decorated API.
+    :return Callable[[Callable[P, R]], Callable[P, R]]: Returns the decorated function.
+    """
+
+
+@overload
+def login_required(
+    roles: Sequence[Role | str], auth_check_override: AuthCheckOverrideCallable, /
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """
+    Require a user session, and require that the user has at least one of the specified roles.
+
+    `auth_check_override` is called to override authorization. If it returns True, the user is considered to have access to the API.
+    If it returns False, the roles are checked instead, and the user will have access to the API if they have one of the specified roles.
+
+    :param Sequence[Role  |  str] roles: The list of roles the user can have that will allow them to access the decorated API.
+    :param AuthCheckOverrideCallable auth_check_override: The method that is called to override authorization. It receives the following parameters:
+
+        * `user` is the current session user
+
+        * `*args` will be any arguments passed without argument keywords. When using `login_required` as a
+          decorator, this will be an empty tuple.
+
+        * `**kwargs` will be any parameters specified with keywords. When using `login_required` as a decorator,
+          this will be the parameters passed into the decorated method.
+          In the case of a Flask API endpoint, for example, this will be all of the endpoint method parameters.
+    :return Callable[[Callable[P, R]], Callable[P, R]]: _description_
+    """
+
+
+def login_required(
+    roles: Sequence[Role | str] | Callable[P, R] | Callable[..., Any] | None = None,
     auth_check_override: AuthCheckOverrideCallable | None = None,
-):
+    /,
+) -> Callable[[Callable[P, R]], Callable[P, R]] | Callable[P, R] | Callable[..., Any]:
     """
     Require a valid Flask session before calling the decorated function.
 
     This method uses the list of `roles` to determine whether the current session user
-    has any of the roles listed. Alternatively, the use of `auth_check_override` can is used to
+    has any of the roles listed. Alternatively, the use of `auth_check_override` is used to
     bypass the role check. If the `auth_check_override` method returns True, the user is considered
     to have access to the decorated API endpoint. If the `auth_check_override` method returns False,
     `login_required` falls back to checking `roles`.
@@ -107,8 +175,10 @@ def login_required(
 
     If `auth_check_override` is a callable, it will be called with the following parameters:
         * `user` is the current session user
+
         * `*args` will be any arguments passed without argument keywords. When using `login_required` as a
           decorator, this will be an empty tuple.
+
         * `**kwargs` will be any parameters specified with keywords. When using `login_required` as a decorator,
           this will be the parameters passed into the decorated method.
           In the case of a Flask API endpoint, for example, this will be all of the endpoint method parameters.
@@ -154,7 +224,9 @@ def login_required(
                     # if roles is empty, no roles will intersect.
                     # this means an empty list means "no roles have access"
                     role_intersection = [
-                        role for role in user.roles if role in (roles or [])
+                        str(role)
+                        for role in user.roles
+                        if (str(role) in ({str(r) for r in roles}) or [])
                     ]
                     if len(role_intersection) == 0:
                         # this should end up raising a 401 exception
@@ -439,7 +511,12 @@ class LoginManager(FlaskLoginManager):
         raise Unauthorized(response.data, response)
 
 
-class SAML2MiddlewareModule(Module):
+class SAML2MiddlewareModule(ConfigurableModule):  # Module):
+    @override
+    @staticmethod
+    def get_config_type() -> type[AbstractConfig]:
+        return SSOConfig
+
     @override
     def configure(self, binder: Binder) -> None:
         binder.install(SAML2Module)

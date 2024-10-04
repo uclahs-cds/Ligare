@@ -5,12 +5,14 @@ from connexion import FlaskApp
 from flask import Flask
 from Ligare.programming.config import AbstractConfig
 from Ligare.programming.str import get_random_str
-from Ligare.web.application import App, configure_openapi
+from Ligare.web.application import App  # pyright:ignore[reportDeprecated]
+from Ligare.web.application import ApplicationBuilder, configure_openapi
 from Ligare.web.config import Config, FlaskConfig, FlaskOpenApiConfig
 from Ligare.web.testing.create_app import CreateOpenAPIApp
 from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
+from typing_extensions import override
 
 
 class TestCreateOpenAPIApp(CreateOpenAPIApp):
@@ -53,7 +55,10 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         )
 
         toml_filename = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__create_app__loads_config_from_toml.__name__}-config.toml"
-        _ = App[Flask].create(config_filename=toml_filename)
+        application_builder = ApplicationBuilder[Flask]().use_configuration(
+            lambda config_builder: config_builder.with_config_filename(toml_filename)
+        )
+        _ = application_builder.build()
         assert load_config_mock.called
         assert load_config_mock.call_args and load_config_mock.call_args[0]
         assert load_config_mock.call_args[0][1] == toml_filename
@@ -76,9 +81,13 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         _ = mocker.patch("toml.load", return_value=toml_load_result)
 
         class CustomConfig(BaseModel, AbstractConfig):
+            @override
+            def post_load(self) -> None:
+                return super().post_load()
+
             foo: str = get_random_str(k=26)
 
-        app = App[Flask].create(
+        app = App[Flask].create(  # pyright:ignore[reportDeprecated]
             config_filename=toml_filename, application_configs=[CustomConfig]
         )
 
@@ -112,7 +121,7 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         _ = mocker.patch(
             "Ligare.web.application.load_config", return_value=basic_config
         )
-        _ = App[Flask].create()
+        _ = App[Flask].create()  # pyright:ignore[reportDeprecated]
 
         assert object.__getattribute__(basic_config.flask, config_var_name) == var_value
 
@@ -151,9 +160,9 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
 
         if should_fail:
             with pytest.raises(Exception):
-                _ = App[Flask].create()
+                _ = App[Flask].create()  # pyright:ignore[reportDeprecated]
         else:
-            _ = App[Flask].create()
+            _ = App[Flask].create()  # pyright:ignore[reportDeprecated]
 
     def test__CreateOpenAPIApp__create_app__configures_appropriate_app_type_based_on_config(
         self, mocker: MockerFixture
@@ -174,6 +183,6 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
             flask=FlaskConfig(app_name=app_name, openapi=FlaskOpenApiConfig())
         )
         _ = mocker.patch("Ligare.web.application.load_config", return_value=config)
-        _ = App[FlaskApp].create(config_filename=toml_filename)
+        _ = App[FlaskApp].create(config_filename=toml_filename)  # pyright:ignore[reportDeprecated]
 
         configure_method_mock.assert_called_once_with(config)

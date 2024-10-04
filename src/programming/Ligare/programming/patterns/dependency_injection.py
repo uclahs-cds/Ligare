@@ -3,6 +3,7 @@ import sys
 from typing import Callable, TypeVar
 
 from injector import Binder, Module, Provider
+from Ligare.programming.config import AbstractConfig
 from typing_extensions import override
 
 
@@ -40,3 +41,12 @@ class BatchModule(Module):
     def configure(self, binder: Binder) -> None:
         for interface, to in self._registrations.items():
             binder.bind(interface, to)
+
+
+from abc import ABC, abstractmethod
+
+
+class ConfigurableModule(Module, ABC):
+    @staticmethod
+    @abstractmethod
+    def get_config_type() -> type[AbstractConfig]: ...

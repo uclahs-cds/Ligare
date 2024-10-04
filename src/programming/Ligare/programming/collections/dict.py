@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import Any, TypeVar, Union
 
 AnyDict = dict[Any, Union[Any, "AnyDict"]]
+TKey = TypeVar("TKey")
+TValue = TypeVar("TValue")
+NestedDict = dict[TKey, Union[TValue, "NestedDict"]]
 
 
 def merge(a: AnyDict, b: AnyDict, skip_existing: bool = False):

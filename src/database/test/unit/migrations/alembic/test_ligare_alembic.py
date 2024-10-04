@@ -76,6 +76,7 @@ def test__LigareAlembic__passes_through_to_alembic_with_default_config_when_not_
     )
 
     ligare_alembic = LigareAlembic(None, MagicMock())
+    ligare_alembic._write_ligare_alembic_config = MagicMock()  # pyright: ignore[reportPrivateUsage]
     ligare_alembic.run()
 
     assert alembic_main.called

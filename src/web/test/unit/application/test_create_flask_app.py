@@ -7,7 +7,8 @@ import pytest
 from flask import Blueprint, Flask
 from Ligare.programming.config import AbstractConfig
 from Ligare.programming.str import get_random_str
-from Ligare.web.application import App, configure_blueprint_routes
+from Ligare.web.application import App  # pyright: ignore[reportDeprecated]
+from Ligare.web.application import configure_blueprint_routes
 from Ligare.web.config import Config, FlaskConfig
 from Ligare.web.testing.create_app import (
     CreateFlaskApp,
@@ -16,6 +17,7 @@ from Ligare.web.testing.create_app import (
 from mock import MagicMock
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
+from typing_extensions import override
 
 
 class TestCreateFlaskApp(CreateFlaskApp):
@@ -258,7 +260,7 @@ class TestCreateFlaskApp(CreateFlaskApp):
         )
 
         toml_filename = f"{TestCreateFlaskApp.test__CreateFlaskApp__create_app__loads_config_from_toml.__name__}-config.toml"
-        _ = App[Flask].create(config_filename=toml_filename)
+        _ = App[Flask].create(config_filename=toml_filename)  # pyright: ignore[reportDeprecated]
         assert load_config_mock.called
         assert load_config_mock.call_args and load_config_mock.call_args[0]
         assert load_config_mock.call_args[0][1] == toml_filename
@@ -281,9 +283,13 @@ class TestCreateFlaskApp(CreateFlaskApp):
         _ = mocker.patch("toml.load", return_value=toml_load_result)
 
         class CustomConfig(BaseModel, AbstractConfig):
+            @override
+            def post_load(self) -> None:
+                return super().post_load()
+
             foo: str = get_random_str(k=26)
 
-        app = App[Flask].create(
+        app = App[Flask].create(  # pyright: ignore[reportDeprecated]
             config_filename=toml_filename, application_configs=[CustomConfig]
         )
 
@@ -317,7 +323,7 @@ class TestCreateFlaskApp(CreateFlaskApp):
         _ = mocker.patch(
             "Ligare.web.application.load_config", return_value=basic_config
         )
-        _ = App[Flask].create()
+        _ = App[Flask].create()  # pyright: ignore[reportDeprecated]
 
         assert object.__getattribute__(basic_config.flask, config_var_name) == var_value
 
@@ -356,9 +362,9 @@ class TestCreateFlaskApp(CreateFlaskApp):
 
         if should_fail:
             with pytest.raises(Exception):
-                _ = App[Flask].create()
+                _ = App[Flask].create()  # pyright: ignore[reportDeprecated]
         else:
-            _ = App[Flask].create()
+            _ = App[Flask].create()  # pyright: ignore[reportDeprecated]
 
     def test__CreateFlaskApp__create_app__configures_appropriate_app_type_based_on_config(
         self, mocker: MockerFixture
@@ -379,6 +385,6 @@ class TestCreateFlaskApp(CreateFlaskApp):
         )
         config = Config(flask=FlaskConfig(app_name=app_name))
         _ = mocker.patch("Ligare.web.application.load_config", return_value=config)
-        _ = App[Flask].create(config_filename=toml_filename)
+        _ = App[Flask].create(config_filename=toml_filename)  # pyright: ignore[reportDeprecated]
 
         configure_method_mock.assert_called_once_with(config)

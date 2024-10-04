@@ -146,6 +146,7 @@ reportUnnecessaryTypeIgnoreComment = "information"
 reportUnusedCallResult = "information"
 reportMissingTypeStubs = "information"
 reportWildcardImportFromLibrary = "warning"
+reportDeprecated = "error"
 
 [tool.pytest.ini_options]
 pythonpath = [

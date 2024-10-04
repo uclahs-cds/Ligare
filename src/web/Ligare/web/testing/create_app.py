@@ -5,7 +5,6 @@ from collections import defaultdict
 from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivateUsage]
 from contextlib import ExitStack
 from dataclasses import dataclass
-from functools import lru_cache
 from types import ModuleType
 from typing import (
     Any,
@@ -22,7 +21,6 @@ from unittest.mock import AsyncMock, MagicMock, NonCallableMagicMock
 
 import json_logging
 import pytest
-import yaml
 from _pytest.fixtures import SubRequest
 from connexion import FlaskApp
 from flask import Flask, Request, Response, session
@@ -36,10 +34,11 @@ from Ligare.identity.config import SAML2Config, SSOConfig
 from Ligare.platform.dependency_injection import UserLoaderModule
 from Ligare.platform.identity import Role, User
 from Ligare.platform.identity.user_loader import TRole, UserId, UserMixin
+from Ligare.programming.collections.dict import NestedDict
 from Ligare.programming.config import AbstractConfig, ConfigBuilder
 from Ligare.programming.str import get_random_str
 from Ligare.web.application import (
-    App,
+    ApplicationBuilder,
     CreateAppResult,
     FlaskAppResult,
     OpenAPIAppResult,
@@ -303,12 +302,7 @@ class CreateApp(Generic[T_app]):
         self,
         mocker: MockerFixture,
         app_getter: Callable[
-            [
-                Config,
-                MockerFixture,
-                list[type[AbstractConfig]] | None,
-                list[Module | type[Module]] | None,
-            ],
+            [Config, MockerFixture, TAppInitHook | None],
             Generator[CreateAppResult[T_app], Any, None],
         ],
         client_getter: Callable[
@@ -321,16 +315,7 @@ class CreateApp(Generic[T_app]):
             client_init_hook: TClientInitHook[T_app] | None = None,
             app_init_hook: TAppInitHook | None = None,
         ) -> Generator[ClientInjector[T_flask_client], Any, None]:
-            application_configs: list[type[AbstractConfig]] | None = None
-            application_modules: list[Module | type[Module]] | None = None
-            if app_init_hook is not None:
-                application_configs = []
-                application_modules = []
-                app_init_hook(application_configs, application_modules)
-
-            application_result = next(
-                app_getter(config, mocker, application_configs, application_modules)
-            )
+            application_result = next(app_getter(config, mocker, app_init_hook))
 
             if client_init_hook is not None:
                 client_init_hook(application_result)
@@ -397,8 +382,7 @@ class CreateFlaskApp(CreateApp[Flask]):
         self,
         config: Config,
         mocker: MockerFixture,
-        application_configs: list[type[AbstractConfig]] | None = None,
-        application_modules: list[Module | type[Module]] | None = None,
+        app_init_hook: TAppInitHook | None = None,
     ) -> Generator[FlaskAppResult, Any, None]:
         # prevents the creation of a Connexion application
         if config.flask is not None:
@@ -414,13 +398,27 @@ class CreateFlaskApp(CreateApp[Flask]):
             return_value=MagicMock(load_config=MagicMock(return_value=config)),
         )
 
-        if application_configs is None:
-            application_configs = []
-        if application_modules is None:
-            application_modules = []
-        application_configs.append(SSOConfig)
+        application_configs: list[type[AbstractConfig]] | None = []
+        application_modules: list[Module | type[Module]] | None = []
+
+        if app_init_hook is not None:
+            app_init_hook(application_configs, application_modules)
+
         application_modules.append(SAML2MiddlewareModule)
-        app = App[Flask].create("config.toml", application_configs, application_modules)
+
+        logging.basicConfig(force=True)
+
+        application_builder = (
+            ApplicationBuilder[Flask]()
+            .with_modules(application_modules)
+            .use_configuration(
+                lambda config_builder: config_builder.enable_ssm(True)
+                .with_config_filename("config.toml")
+                .with_root_config_type(Config)
+                .with_config_types(application_configs)
+            )
+        )
+        app = application_builder.build()
         yield app
 
     @pytest.fixture()
@@ -520,8 +518,7 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         self,
         config: Config,
         mocker: MockerFixture,
-        application_configs: list[type[AbstractConfig]] | None = None,
-        application_modules: list[Module | type[Module]] | None = None,
+        app_init_hook: TAppInitHook | None = None,
     ) -> Generator[OpenAPIAppResult, Any, None]:
         # prevents the creation of a Connexion application
         if config.flask is None or config.flask.openapi is None:
@@ -535,24 +532,35 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
             return_value=MagicMock(load_config=MagicMock(return_value=config)),
         )
 
-        if application_configs is None:
-            application_configs = []
-        if application_modules is None:
-            application_modules = []
-        application_configs.append(SSOConfig)
-        application_modules.append(SAML2MiddlewareModule)
-        application_modules.append(
-            UserLoaderModule(
-                loader=User,  # pyright: ignore[reportArgumentType]
-                roles=Role,  # pyright: ignore[reportArgumentType]
-                user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
-                bases=[],
+        _application_configs: list[type[AbstractConfig]] = []
+        _application_modules = cast(
+            list[Module | type[Module]],
+            [
+                SAML2MiddlewareModule,
+                UserLoaderModule(
+                    loader=User,  # pyright: ignore[reportArgumentType]
+                    roles=Role,  # pyright: ignore[reportArgumentType]
+                    user_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    role_table=MagicMock(),  # pyright: ignore[reportArgumentType]
+                    bases=[],
+                ),
+            ],
+        )
+
+        if app_init_hook is not None:
+            app_init_hook(_application_configs, _application_modules)
+
+        application_builder = (
+            ApplicationBuilder[FlaskApp]()
+            .with_modules(_application_modules)
+            .use_configuration(
+                lambda config_builder: config_builder.enable_ssm(True)
+                .with_config_filename("config.toml")
+                .with_root_config_type(Config)
+                .with_config_types(_application_configs)
             )
         )
-        app = App[FlaskApp].create(
-            "config.toml", application_configs, application_modules
-        )
+        app = application_builder.build()
         yield app
 
     @pytest.fixture()
@@ -655,6 +663,7 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
     def openapi_client_configurable(
         self, mocker: MockerFixture
     ) -> OpenAPIClientInjectorConfigurable:
+        # FIXME some day json_logging needs to be fixed
         _ = mocker.patch("Ligare.web.application.json_logging")
         return self._client_configurable(
             mocker, self._get_real_openapi_app, self._openapi_client
@@ -693,32 +702,51 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
 
         return _flask_request_getter
 
-    @lru_cache
-    def _get_openapi_spec(self):
-        return yaml.safe_load(
-            """openapi: 3.0.3
-servers:
-  - url: http://testserver/
-    description: Test Application
-info:
-  title: "Test Application"
-  version: 3.0.3
-paths:
-  /:
-    get:
-      description: "Check whether the application is running."
-      operationId: "root.get"
-      parameters: []
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                type: string
-          description: "Application is running correctly."
-      summary: "A simple method that returns 200 as long as the application is running."
-"""
-        )
+    # this is the YAML-parsed dictionary from this OpenAPI spec
+    # openapi: 3.0.3
+    # servers:
+    # - url: http://testserver/
+    #    description: Test Application
+    # info:
+    # title: "Test Application"
+    # version: 3.0.3
+    # paths:
+    # /:
+    #    get:
+    #    description: "Check whether the application is running."
+    #    operationId: "root.get"
+    #    parameters: []
+    #    responses:
+    #        "200":
+    #        content:
+    #            application/json:
+    #            schema:
+    #                type: string
+    #        description: "Application is running correctly."
+    #    summary: "A simple method that returns 200 as long as the application is running."
+    _openapi_spec: NestedDict[str, Any] = {
+        "info": {"title": "Test Application", "version": "3.0.3"},
+        "openapi": "3.0.3",
+        "paths": {
+            "/": {
+                "get": {
+                    "description": "Check whether the application is running.",
+                    "operationId": "root.get",
+                    "parameters": [],
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {"schema": {"type": "string"}}
+                            },
+                            "description": "Application is running correctly",
+                        }
+                    },
+                    "summary": "A simple method that returns 200 as long as the application is running.",
+                }
+            }
+        },
+        "servers": [{"description": "Test Application", "url": "http://testserver/"}],
+    }
 
     @pytest.fixture()
     def openapi_mock_controller(self, request: FixtureRequest, mocker: MockerFixture):
@@ -760,7 +788,7 @@ paths:
             if spec_loader_mock is None:
                 spec_loader_mock = mocker.patch(
                     "connexion.spec.Specification._load_spec_from_file",
-                    return_value=self._get_openapi_spec(),
+                    return_value=CreateOpenAPIApp._openapi_spec,
                 )
 
         def end():
@@ -775,6 +803,8 @@ paths:
         mock_controller = MockController(begin=begin, end=end)
 
         try:
+            # TODO can this be a context manager instead of requiring
+            # the explicit begin() call?
             yield mock_controller
         finally:
             mock_controller.end()
