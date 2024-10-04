@@ -12,6 +12,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.3.0] - 2024-10-04
+### Changed
+* Updated Injector modules to be `ConfigurableModule`s instead of Modules
+
 ## [0.2.1] - 2024-08-09
 ### Changed
 * Update many dependencies
