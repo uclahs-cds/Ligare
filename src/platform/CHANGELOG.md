@@ -8,8 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md) for full monorepo notes.
 
+
 ---
 ## Unreleased
+
+## [0.4.0] - 2024-10-04
+### Added
+* Added a Feature Flag "router" module, supporting both a caching and database backend
+
+### Changed
+* Updated Injector modules to be `ConfigurableModule`s instead of Modules
 
 ## [0.3.0] - 2024-08-09
 ### Changed

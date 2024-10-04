@@ -11,6 +11,28 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.3.0] - 2024-10-04
+### Added
+* `Ligare.web.application.ApplicationBuilder` for more robust configuration and instantiation of web applications
+* `Ligare.web.middleware.feature_flags.FeatureFlagRouterModule` to support using Feature Flags in web applications
+* `Ligare.web.middleware.feature_flags.DBFeatureFlagRouterModule` to support Feature Flags in a database
+* `Ligare.web.middleware.feature_flags.CachingFeatureFlagRouterModule` to support an in-memory instance of Feature Flags
+* `Ligare.web.middleware.FeatureFlagMiddlewareModule` to support an HTTP API to manage and query Feature Flags
+
+### Changed
+* Existing usages of `App[T_app].create` or `create_app` now use `ApplicationBuilder`
+* Better static typing support for `Ligare.web.middleware.sso.login_required`
+* Updated `Ligare.web.middleware.sso.SAML2MiddlewareModule` to support the config refactor necessary for Feature Flags to function
+* Updated Flask/FlaskApp test clients and tests to support refactors in this version
+* Reduced unit test run time by avoiding parsing YAML for every test
+
+### Deprecated
+* `Ligare.web.application.App[T_app]` and `App[T_app].create`
+* `Ligare.web.application.create_app`
+
+### Fixed
+* Crash during requests and responses when flask-login has not been configured
+
 ## [0.2.5] - 2024-08-09
 ### Changed
 * Update many dependencies

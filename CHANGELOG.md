@@ -8,6 +8,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 ## Unreleased
 
+# `Ligare.all` [0.4.0] - 2024-10-04
+### Added
+* Feature Flags Injector module and API https://github.com/uclahs-cds/Ligare/pull/107/
+
+
+## `Ligare.database` [0.3.0] - 2024-10-04
+- [Ligare.database v0.3.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.database-v0.3.0/src/database/CHANGELOG.md#030---2024-10-04)
+
+## `Ligare.identity` [0.3.0] - 2024-10-04
+- [Ligare.identity v0.3.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.identity-v0.3.0/src/identity/CHANGELOG.md#030---2024-10-04)
+
+## `Ligare.platform` [0.4.0] - 2024-10-04
+- [Ligare.platform v0.4.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.platform-v0.4.0/src/platform/CHANGELOG.md#040---2024-10-04)
+
+## `Ligare.programming` [0.3.0] - 2024-10-04
+- [Ligare.programming v0.3.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.programming-v0.3.0/src/programming/CHANGELOG.md#030---2024-10-04)
+
+## `Ligare.web` [0.3.0] - 2024-10-04
+- [Ligare.web v0.3.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.3.0/src/web/CHANGELOG.md#030---2024-10-04)
+
 # `Ligare.all` [0.3.0] - 2024-08-09
 ### Changed
 * Update many dependencies
