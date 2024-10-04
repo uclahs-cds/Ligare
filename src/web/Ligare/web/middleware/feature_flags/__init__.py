@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from functools import wraps
 from logging import Logger
-from typing import Any, Callable, Generic, Sequence, TypedDict, cast
+from typing import Any, Callable, Generic, ParamSpec, Sequence, TypedDict, TypeVar, cast
 
 from connexion import FlaskApp, request
 from flask import Blueprint, Flask, abort
@@ -25,7 +25,6 @@ from Ligare.platform.feature_flag.feature_flag_router import (
     FeatureFlagRouter,
     TFeatureFlag,
 )
-from Ligare.platform.identity.user_loader import Role
 from Ligare.programming.config import AbstractConfig
 from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from Ligare.web.middleware.sso import login_required
@@ -107,8 +106,12 @@ class CachingFeatureFlagRouterModule(FeatureFlagRouterModule[CachingFeatureFlag]
         return injector.get(self._t_feature_flag)
 
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
 @inject
-def get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logger):
+def _get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logger):
     feature_flag_blueprint = Blueprint(
         "feature_flag", __name__, url_prefix=f"{config.api_base_url}"
     )
@@ -123,14 +126,16 @@ def get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logge
         require_flask_login is ignored if flask_login has been configured.
 
         If flask_login has _not_ been configured:
-            * If require_flask_login is True, a warning is logged and a method returning False is returned, rather than returning the endpoint function
-            * If require_flask_login is False, the endpoint function is returned
+            * If require_flask_login is True, a warning is logged and the request is aborted with a 405 error
+            * If require_flask_login is False, the endpoint function is executed
 
         :param bool require_flask_login: Determine whether flask_login must be configured for this endpoint to function
         :return _type_: _description_
         """
 
-        def __login_required(fn: Callable[..., Any]):
+        def __login_required(
+            fn: Callable[P, R],
+        ) -> Callable[P, R]:
             authorization_implementation: Callable[..., Any]
 
             if access_role is False:
@@ -158,7 +163,7 @@ def get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logge
 
         return __login_required
 
-    @feature_flag_blueprint.route("/feature_flag", methods=("GET",))  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
+    @feature_flag_blueprint.route("/feature_flag", methods=("GET",))
     @_login_required(False)
     @inject
     def feature_flag(feature_flag_router: FeatureFlagRouter[FeatureFlag]):  # pyright: ignore[reportUnusedFunction]
@@ -206,9 +211,7 @@ def get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logge
         else:
             return response, 404
 
-    @feature_flag_blueprint.route("/feature_flag", methods=("PATCH",))  # pyright: ignore[reportArgumentType,reportUntypedFunctionDecorator]
-    # @login_required([UserRole.Operator])
-    # TODO assign a specific role ?
+    @feature_flag_blueprint.route("/feature_flag", methods=("PATCH",))
     @_login_required(True)
     @inject
     async def feature_flag_patch(feature_flag_router: FeatureFlagRouter[FeatureFlag]):  # pyright: ignore[reportUnusedFunction]
@@ -251,10 +254,9 @@ def get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logge
 
 
 class FeatureFlagMiddlewareModule(Module):
-    @override
-    def __init__(self, access_roles: list[Role] | bool = True) -> None:
-        self._access_roles = access_roles
-        super().__init__()
+    """
+    Enable the use of Feature Flags and a Feature Flag management API.
+    """
 
     @override
     def configure(self, binder: Binder) -> None:
@@ -264,6 +266,12 @@ class FeatureFlagMiddlewareModule(Module):
         app.add_middleware(FeatureFlagMiddlewareModule.FeatureFlagMiddleware)
 
     class FeatureFlagMiddleware:
+        """
+        ASGI middleware for Feature Flags.
+
+        This middleware create a Flask blueprint the enables a Feature Flag management API.
+        """
+
         _app: ASGIApp
 
         def __init__(self, app: ASGIApp):
@@ -291,7 +299,7 @@ class FeatureFlagMiddlewareModule(Module):
 
                 log.debug("Registering FeatureFlag blueprint.")
                 app.register_blueprint(
-                    injector.call_with_injection(get_feature_flag_blueprint)
+                    injector.call_with_injection(_get_feature_flag_blueprint)
                 )
                 log.debug("FeatureFlag blueprint registered.")
 
