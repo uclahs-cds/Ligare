@@ -28,6 +28,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "Ligare.AWS",
     "Ligare.programming",
     "Ligare.platform",
     "Ligare.identity",

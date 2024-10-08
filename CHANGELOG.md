@@ -8,6 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 ## Unreleased
 
+# `Ligare.all` [0.4.1] - 2024-10-08
+### Fixed
+* Added `Ligare.AWS` to `Ligare.web` dependencies to fix application start failure
+
+
+## `Ligare.web` [0.3.1] - 2024-10-08
+- [Ligare.web v0.3.1](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.3.1/src/web/CHANGELOG.md#031---2024-10-08)
+
+
 # `Ligare.all` [0.4.0] - 2024-10-04
 ### Added
 * Feature Flags Injector module and API https://github.com/uclahs-cds/Ligare/pull/107/
@@ -27,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## `Ligare.web` [0.3.0] - 2024-10-04
 - [Ligare.web v0.3.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.3.0/src/web/CHANGELOG.md#030---2024-10-04)
+
 
 # `Ligare.all` [0.3.0] - 2024-08-09
 ### Changed
@@ -56,14 +66,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## `Ligare.web` [0.2.5] - 2024-08-09
 - [Ligare.web v0.2.5](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.2.5/src/web/CHANGELOG.md#025---2024-08-09)
 
+
 # `Ligare.all` [0.2.5] - 2024-05-30
 ## `Ligare.web` [0.2.4] - 2024-05-30
 - [Ligare.web v0.2.4](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.2.4/src/web/CHANGELOG.md#024---2024-05-30)
+
 
 # `Ligare.all` [0.2.4] - 2024-05-17
 
 ## `Ligare.web` [0.2.3] - 2024-05-17
 - [Ligare.web v0.2.3](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.2.3/src/web/CHANGELOG.md#023---2024-05-17)
+
 
 # `Ligare.all` [0.2.3] - 2024-05-16
 - Contains all libraries up to v0.2.1, and `Ligare.platform` v0.2.2 and `Ligare.web` v0.2.2
@@ -71,8 +84,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## `Ligare.web` [0.2.2] - 2024-05-16
 - [Ligare.web v0.2.2](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.2.2/src/web/CHANGELOG.md#022---2024-05-16)
 
+
 ## `Ligare.platform` [0.2.2] - 2024-05-16
 - [Ligare.platform v0.2.2](https://github.com/uclahs-cds/Ligare/blob/Ligare.platform-v0.2.2/src/platform/CHANGELOG.md#022---2024-05-16)
+
 
 # [0.2.0] - 2024-05-14
 ### Added
@@ -88,6 +103,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 - Possible crash when using dependency injection in some middlewares
 - Inconsistencies in database schema names during application runtime
+
 
 # [0.1.0] - 2024-02-16
 ### Added
