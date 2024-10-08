@@ -25,6 +25,13 @@ dependencies = [
 {% endif %}
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock",
+    "mock"
+]
+
 [tool.pyright]
 exclude = [
     ".venv",
