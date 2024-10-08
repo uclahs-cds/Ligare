@@ -289,6 +289,7 @@ class Scaffolder:
         def _render_module_template(
             template_name: str,
             config: dict[Any, Any],
+            template_directory_prefix: str | None = None,
         ):
             meta_module_env = Environment(
                 trim_blocks=True,
@@ -305,7 +306,9 @@ class Scaffolder:
             self._render_template(
                 template_name,
                 meta_module_env,
-                template_directory_prefix=f"{self._config.application.module_name}/modules/{module.module_name}",
+                template_directory_prefix=f"{self._config.application.module_name}/modules/{module.module_name}"
+                if template_directory_prefix is None
+                else template_directory_prefix,
                 overwrite_existing_files=overwrite_existing_files,
             )
 
