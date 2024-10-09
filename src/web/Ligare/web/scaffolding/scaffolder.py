@@ -226,6 +226,15 @@ class Scaffolder:
         # because the module renderer uses the module
         # template directory as the root directory.
         if META_TEMPLATE_NAME in templates:
+            # make the list of all template in the module available
+            # to __meta__.j2 so it can process it if needed.
+            # the directory prefix `templates/` is stripped, and __meta__.j2
+            # is removed from the list.
+            templates_copy = templates.copy()
+            templates_copy.remove("__meta__.j2")
+            env.globals["templates"] = [  # pyright: ignore[reportArgumentType]
+                template.replace("templates/", "") for template in templates_copy
+            ]
             self._render_template(
                 META_TEMPLATE_NAME,
                 env,
