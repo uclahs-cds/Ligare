@@ -1,3 +1,4 @@
+import logging
 import sys
 from logging import Logger
 from pathlib import Path
@@ -120,21 +121,24 @@ class LigareAlembic:
         config = self._get_config(argv)
 
         with self._initialize_alembic(config) as msg_capture:
+            self._log.info("Starting execution.")
             try:
                 return alembic_main(argv)
             except SystemExit as e:
-                self._log.error(e)
                 # If SystemExit is from anything other than
                 # needing to create the init dir, then crash.
                 # This is doable/reliable because Alembic first writes
                 # a message that the directory needs to be created,
                 # then calls `sys.exit(-1)`.
                 if not msg_capture.seen:
+                    self._log.error("Unexpected error from Alembic.", exc_info=e)
                     raise
 
                 self._log.debug(
                     f"The Alembic initialization error was seen. Ignoring `{SystemExit.__name__}` exception."
                 )
+
+        self._log.info("Finished execution.")
 
     def _initialize_alembic(self, config: Config):
         """
@@ -296,6 +300,7 @@ class LigareAlembic:
                 :return _type_: _description_
                 """
                 self._log.debug(f"Entering `{MsgCaptureCtxManager.__name__}` context.")
+                logging.getLogger("alembic.util.messaging").disabled = True
 
                 def _msg_new(
                     msg: str,
@@ -337,6 +342,7 @@ class LigareAlembic:
                 :param TracebackType | None exc_tb:
                 :return bool:
                 """
+                logging.getLogger("alembic.util.messaging").disabled = False
                 self._log.debug(f"Exiting `{MsgCaptureCtxManager.__name__}` context.")
                 alembic.util.messaging.msg = _msg_original
 
@@ -354,5 +360,5 @@ class LigareAlembic:
         :return None:
         """
         self._log.debug("Bootstrapping and executing `alembic` process.")
-        # FIXME this ends up logging ERROR:root:-1 in some cases
+
         return self._run()
