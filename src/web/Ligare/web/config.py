@@ -1,6 +1,6 @@
 from dataclasses import field
 from os import environ
-from typing import Literal
+from typing import Literal, Sequence, cast
 
 from flask.config import Config as FlaskAppConfig
 from Ligare.programming.config import AbstractConfig
@@ -16,7 +16,7 @@ class LoggingConfig(BaseModel):
 class WebSecurityCorsConfig(BaseModel):
     origins: list[str] | None = None
     allow_credentials: bool = False
-    allow_methods: list[
+    allow_methods: Sequence[
         Literal[
             "GET",
             "POST",
@@ -28,7 +28,11 @@ class WebSecurityCorsConfig(BaseModel):
             "CONNECT",
             "TRACE",
         ]
-    ] = field(default_factory=lambda: ["GET", "POST", "OPTIONS"])
+    ] = field(
+        default_factory=lambda: cast(
+            list[Literal["GET", "POST", "OPTIONS"]], ["GET", "POST", "OPTIONS"]
+        )
+    )
     allow_headers: list[str | Literal["*"]] = field(default_factory=lambda: ["*"])
 
 
