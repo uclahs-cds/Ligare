@@ -10,25 +10,30 @@ from sqlalchemy import MetaData
 from sqlalchemy.orm import Session
 from {{application.module_name}}.modules.database import Base
 {% endif %}
+from flask import Flask
+from Ligare.web.config import Config
+from Ligare.web.application import ApplicationBuilder
 
 def create_app():
-    application_configs = []
-    application_modules = []
 
     {% if 'database' in module %}
-    from Ligare.database.config import DatabaseConfig
     from Ligare.database.dependency_injection import ScopedSessionModule
-    application_configs.append(DatabaseConfig)
-    application_modules.append(ScopedSessionModule())
     {% endif %}
 
     # fmt: off
     from Ligare.web.application import App
-    result = App[AppType].create(
-        config_filename="{{application.module_name}}/config.toml",
-        application_configs=application_configs,
-        application_modules=application_modules
+    application_builder = (
+        ApplicationBuilder[Flask]()
+        {% if 'database' in module %}
+        .with_module(ScopedSessionModule())
+        {% endif %}
+        .use_configuration(
+            lambda config_builder: config_builder
+            .with_config_filename("{{application.module_name}}/config.toml")
+            .with_root_config_type(Config)
+        )
     )
+    result = application_builder.build()
     # fmt: on
 
     {% if module.database %}

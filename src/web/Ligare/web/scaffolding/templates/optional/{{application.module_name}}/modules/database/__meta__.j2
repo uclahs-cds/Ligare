@@ -1,0 +1,4 @@
+{% for template in templates|reject("equalto", "alembic.ini.j2") %}
+{{render_module_template(template, module_config)}}
+{% endfor %}
+{{ render_module_template("alembic.ini.j2", module_config, "") }}

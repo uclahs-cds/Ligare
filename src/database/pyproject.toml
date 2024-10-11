@@ -29,6 +29,7 @@ classifiers = [
 
 dependencies = [
     "Ligare.programming",
+    "Ligare.AWS",
 
     "sqlalchemy >= 1.4,< 2.0",
     "alembic ~= 1.8",
