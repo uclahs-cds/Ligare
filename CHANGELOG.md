@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 ## Unreleased
 
+# `Ligare.all` [0.4.1] - 2024-10-11
+### Fixed
+* Several `ligare-scaffold` bugs. #132
+* Cleaned up output of `ligare-alembic`
+
+## `Ligare.web` [0.3.2] - 2024-10-11
+- [Ligare.web v0.3.2](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.3.2/src/web/CHANGELOG.md#032---2024-10-11)
+
+## `Ligare.database` [0.3.1] - 2024-10-11
+- [Ligare.database v0.3.1](https://github.com/uclahs-cds/Ligare/blob/Ligare.database-v0.3.1/src/database/CHANGELOG.md#031---2024-10-11)
+
+
 # `Ligare.all` [0.4.1] - 2024-10-08
 ### Fixed
 * Added `Ligare.AWS` to `Ligare.web` dependencies to fix application start failure
