@@ -11,6 +11,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.3.2] - 2024-10-11
+### Fixed
+* Several `ligare-scaffold` bugs. #132
+
 ## [0.3.1] - 2024-10-08
 ### Fixed
 * Added `Ligare.AWS` to `Ligare.web` dependencies to fix application start failure
