@@ -1,0 +1,67 @@
+APPLICATION_NAME = {{application.module_name}}
+
+INSTALL_EDITABLE ?= true
+INSTALL_EXTRAS ?= true
+
+VENV ?= .venv
+
+PYTHON_VERSION ?= 3.10
+
+APPLICATION_INSTALL_PATH = $(VENV)/lib/python$(PYTHON_VERSION)/site-packages/$(APPLICATION_NAME)-*dist-info*
+
+ACTIVATE_VENV := . '$(VENV)/bin/activate'
+
+$(VENV) :
+	test -d '$(VENV)' || env python$(PYTHON_VERSION) -m venv '$(VENV)'
+	$(ACTIVATE_VENV) && \
+	pip install -U pip
+
+LIGARE_PATH ?=
+ifneq ($(LIGARE_PATH),)
+  ifeq ($(realpath $(LIGARE_PATH)),)
+    $(error The repository path `$(LIGARE_PATH)` does not exist)
+  endif
+  LIGARE_INSTALL_PATH = $(VENV)/lib/python$(PYTHON_VERSION)/site-packages/Ligare
+$(LIGARE_INSTALL_PATH) : $(VENV) $(APPLICATION_INSTALL_PATH)
+	cd '$(LIGARE_INSTALL_PATH)' && \
+	for d in */; do \
+		rm -rf "$$d" && \
+		ln -s "$(LIGARE_PATH)/src/$$d/Ligare/$$d"; \
+	done
+endif
+
+PIP_INSTALL_COMMAND := pip install 
+ifeq ($(INSTALL_EDITABLE),true)
+  PIP_INSTALL_COMMAND += -e #
+endif
+ifeq ($(INSTALL_EXTRAS),true)
+  PIP_INSTALL_COMMAND += .[dev] #
+else
+  PIP_INSTALL_COMMAND += . #
+endif
+$(APPLICATION_INSTALL_PATH) : $(VENV)
+	$(ACTIVATE_VENV) && \
+	$(PIP_INSTALL_COMMAND);
+
+	@echo '\n{{application.module_name}} is installed. Ativate your venv with `$(ACTIVATE_VENV)`';
+
+
+clean-build :
+	find . -type d \
+	\( \
+		-path ./$(VENV) \
+		-o -path ./.git \
+	\) -prune -false \
+	-o \( \
+		-name build \
+		-o -name dist \
+		-o -name __pycache__ \
+		-o -name \*.egg-info \
+		-o -name .pytest-cache \
+	\) -prune -exec rm -rf {} +
+
+.PHONY: clean clean-build
+clean : clean-build
+	rm -rf '$(VENV)';
+
+	@echo '\nDeactivate your venv with `deactivate`';
