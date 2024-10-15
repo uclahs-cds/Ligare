@@ -10,7 +10,6 @@ from sqlalchemy import MetaData
 from sqlalchemy.orm import Session
 from {{application.module_name}}.modules.database import Base
 {% endif %}
-from flask import Flask
 from Ligare.web.config import Config
 from Ligare.web.application import ApplicationBuilder
 
@@ -21,9 +20,8 @@ def create_app():
     {% endif %}
 
     # fmt: off
-    from Ligare.web.application import App
     application_builder = (
-        ApplicationBuilder[Flask]()
+        ApplicationBuilder[AppType]()
         {% if 'database' in module %}
         .with_module(ScopedSessionModule())
         {% endif %}
