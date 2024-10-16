@@ -65,6 +65,10 @@ $(APPLICATION_INSTALL_PATH) : $(VENV)
 
 	@echo '\n{{application.module_name}} is installed. Ativate your venv with `$(ACTIVATE_VENV)`';
 
+.PHONY: run
+run :
+	$(ACTIVATE_VENV) && \
+	python -m {{application.module_name}}
 
 clean-build :
 	find . -type d \
