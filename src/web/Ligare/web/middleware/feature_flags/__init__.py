@@ -74,7 +74,7 @@ class FeatureFlagRouterModule(ConfigurableModule, Generic[TFeatureFlag]):
     def _provide_feature_flag_router(
         self, injector: Injector
     ) -> FeatureFlagRouter[FeatureFlag]:
-        return injector.get(self._t_feature_flag)
+        return cast(FeatureFlagRouter[FeatureFlag], injector.get(self._t_feature_flag))
 
 
 class DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
@@ -86,7 +86,9 @@ class DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
     def _provide_db_feature_flag_router(
         self, injector: Injector
     ) -> FeatureFlagRouter[DBFeatureFlag]:
-        return injector.get(self._t_feature_flag)
+        return cast(
+            FeatureFlagRouter[DBFeatureFlag], injector.get(self._t_feature_flag)
+        )
 
     @singleton
     @provider
@@ -105,7 +107,9 @@ class CachingFeatureFlagRouterModule(FeatureFlagRouterModule[CachingFeatureFlag]
     def _provide_caching_feature_flag_router(
         self, injector: Injector
     ) -> FeatureFlagRouter[CachingFeatureFlag]:
-        return injector.get(self._t_feature_flag)
+        return cast(
+            FeatureFlagRouter[CachingFeatureFlag], injector.get(self._t_feature_flag)
+        )
 
 
 P = ParamSpec("P")
