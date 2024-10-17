@@ -41,6 +41,7 @@ dependencies = [
     "connexion[uvicorn]",
     "uvicorn-worker",
     "swagger_ui_bundle",
+    "injector",
     "python-dotenv",
     "json-logging",
     "lib_programname",

@@ -28,6 +28,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "injector",
     "pysaml2",
     "requests"
 ]
