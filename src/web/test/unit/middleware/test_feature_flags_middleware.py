@@ -94,8 +94,9 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
                 bases=[],
             )
         )
-        application_modules.append(CachingFeatureFlagRouterModule)
-        application_modules.append(FeatureFlagMiddlewareModule())
+        application_modules.append(
+            FeatureFlagMiddlewareModule(CachingFeatureFlagRouterModule)
+        )
 
     def test__FeatureFlagMiddleware__feature_flag_api_GET_requires_user_session_when_flask_login_is_configured(
         self,
@@ -108,8 +109,9 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
             application_configs: list[type[AbstractConfig]],
             application_modules: list[Module | type[Module]],
         ):
-            application_modules.append(CachingFeatureFlagRouterModule)
-            application_modules.append(FeatureFlagMiddlewareModule())
+            application_modules.append(
+                FeatureFlagMiddlewareModule(CachingFeatureFlagRouterModule)
+            )
 
         openapi_mock_controller.begin()
         app = next(
@@ -142,8 +144,9 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         ):
             if not flask_login_is_configured:
                 application_modules.clear()
-            application_modules.append(CachingFeatureFlagRouterModule)
-            application_modules.append(FeatureFlagMiddlewareModule())
+            application_modules.append(
+                FeatureFlagMiddlewareModule(CachingFeatureFlagRouterModule)
+            )
 
         def client_init_hook(app: CreateAppResult[FlaskApp]):
             caching_feature_flag_router = app.app_injector.flask_injector.injector.get(
@@ -363,8 +366,9 @@ class TestFeatureFlagsMiddleware(CreateOpenAPIApp):
         ):
             if not flask_login_is_configured:
                 application_modules.clear()
-            application_modules.append(CachingFeatureFlagRouterModule)
-            application_modules.append(FeatureFlagMiddlewareModule())
+            application_modules.append(
+                FeatureFlagMiddlewareModule(CachingFeatureFlagRouterModule)
+            )
 
         openapi_mock_controller.begin()
         app = next(

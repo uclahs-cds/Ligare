@@ -28,7 +28,9 @@ classifiers = [
 ]
 
 dependencies = [
-    "Ligare.database"
+    "Ligare.database",
+
+    "injector"
 ]
 
 dynamic = ["version", "readme"]
