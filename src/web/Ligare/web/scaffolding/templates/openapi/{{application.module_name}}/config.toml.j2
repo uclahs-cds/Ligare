@@ -8,7 +8,6 @@ sqlalchemy_echo = false
 app_name = '{{application.module_name}}'
 env = 'development'
 host = "localhost"
-# FIXME this should be an int
 port = "5000"
 
 [flask.openapi]
@@ -34,7 +33,7 @@ log_level = 'INFO'
 format = 'plaintext'
 
 [web.security.cors]
-origins = ['http://localhost:5000']
+origins = ['http://localhost:5000', 'http://127.0.0.1:5000']
 allow_credentials = true
 allow_methods = ['GET', 'POST', 'PATCH', 'OPTIONS']
 

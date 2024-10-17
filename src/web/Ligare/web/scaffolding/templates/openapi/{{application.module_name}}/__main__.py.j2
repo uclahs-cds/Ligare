@@ -1,5 +1,12 @@
+from Ligare.web.config import Config
+
 from {{application.module_name}} import create_app
 
-if __name__ == '__main__':
-    # TODO port must be taken from config
-    create_app().app_injector.app.run(port=5000)
+if __name__ == "__main__":
+    result = create_app()
+
+    app_config = result.app_injector.flask_injector.injector.get(Config)
+    host = app_config.flask and app_config.flask.host
+    port = 5000 if app_config.flask is None else int(app_config.flask.port)
+
+    result.app_injector.app.run(host=host, port=port)
