@@ -1,0 +1,91 @@
+# The name of the scaffolded application
+APPLICATION_NAME = {{application.module_name}}
+
+# Install an "editable" package with `pip install -e`
+INSTALL_EDITABLE ?= true
+
+# Install development packages like `pytest`
+INSTALL_EXTRAS ?= true
+
+# The default Python venv directory
+VENV ?= .venv
+
+# The default Python version
+PYTHON_VERSION ?= 3.10
+
+# The path to Ligare on the local filesystem. Optional.
+LIGARE_PATH ?=
+
+# The location of the installed scaffolded application
+APPLICATION_INSTALL_PATH = $(VENV)/lib/python$(PYTHON_VERSION)/site-packages/$(APPLICATION_NAME)-*dist-info*
+
+# The command to activate the Python venv
+ACTIVATE_VENV := . '$(VENV)/bin/activate'
+
+# The venv install target
+$(VENV) :
+	test -d '$(VENV)' || env python$(PYTHON_VERSION) -m venv '$(VENV)'
+	$(ACTIVATE_VENV) && \
+	pip install -U pip
+
+# If `LIGARE_PATH` is set, this will alter the installed
+# application's dependencies to use the local Ligare sources
+# rather than the packages sources from PyPI.
+ifneq ($(LIGARE_PATH),)
+  ifeq ($(realpath $(LIGARE_PATH)),)
+    $(error The repository path `$(LIGARE_PATH)` does not exist)
+  endif
+  LIGARE_INSTALL_PATH = $(VENV)/lib/python$(PYTHON_VERSION)/site-packages/Ligare
+# The Ligare install target
+$(LIGARE_INSTALL_PATH) : $(VENV) $(APPLICATION_INSTALL_PATH)
+	cd '$(LIGARE_INSTALL_PATH)' && \
+	for d in */; do \
+		rm -rf "$$d" && \
+		ln -s "$(LIGARE_PATH)/src/$$d/Ligare/$$d"; \
+	done
+endif
+
+# The `pip install` command. Changes depending on
+# the values of INSTALL_EDITABLE and INSTALL_EXTRAS.
+# The ` #` at the end of the lines are intentional
+# in order to add a space at the end of the variable's value.
+PIP_INSTALL_COMMAND := pip install 
+ifeq ($(INSTALL_EDITABLE),true)
+  PIP_INSTALL_COMMAND += -e #
+endif
+ifeq ($(INSTALL_EXTRAS),true)
+  PIP_INSTALL_COMMAND += .[dev] #
+else
+  PIP_INSTALL_COMMAND += . #
+endif
+# The application install target
+$(APPLICATION_INSTALL_PATH) : $(VENV)
+	$(ACTIVATE_VENV) && \
+	$(PIP_INSTALL_COMMAND);
+
+	@echo '\n{{application.module_name}} is installed. Ativate your venv with `$(ACTIVATE_VENV)`';
+
+.PHONY: run
+run :
+	$(ACTIVATE_VENV) && \
+	python -m {{application.module_name}}
+
+clean-build :
+	find . -type d \
+	\( \
+		-path ./$(VENV) \
+		-o -path ./.git \
+	\) -prune -false \
+	-o \( \
+		-name build \
+		-o -name dist \
+		-o -name __pycache__ \
+		-o -name \*.egg-info \
+		-o -name .pytest-cache \
+	\) -prune -exec rm -rf {} +
+
+.PHONY: clean clean-build
+clean : clean-build
+	rm -rf '$(VENV)';
+
+	@echo '\nDeactivate your venv with `deactivate`';

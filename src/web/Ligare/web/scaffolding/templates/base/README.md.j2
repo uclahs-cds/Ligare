@@ -2,6 +2,18 @@
 
 ## Usage
 
+### Get started automatically
+
+1. Run `make` in the project root
+
+Optionally, you can define the following envvars:
+
+* `INSTALL_EDITABLE` - defaults to `true` - if `true`, install an editable package with `pip install -e`
+* `INSTALL_EXTRAS` - defaults to `true` - if `true`, install development tools like `pytest`
+* `LIGARE_PATH` set this to the path of your local Ligare sources in order to use those instead of the sources from PyPI
+
+### Get started manually
+
 1. Create a virtual environment `python3 -m venv .venv`
 2. Activate the virtual environment `. .venv/bin/activate`
 3. Install dependencies `pip install .`
