@@ -58,8 +58,10 @@ class FeatureFlagPatch:
 
 
 class FeatureFlagRouterModule(ConfigurableModule, Generic[TFeatureFlag]):
-    def __init__(self, t_feature_flag: type[FeatureFlagRouter[TFeatureFlag]]) -> None:
-        self._t_feature_flag = t_feature_flag
+    def __init__(
+        self, t_feature_flag: type[FeatureFlagRouter[TFeatureFlag]] | None = None
+    ) -> None:
+        self._t_feature_flag = type(self) if t_feature_flag is None else t_feature_flag
         super().__init__()
 
     @override
@@ -213,6 +215,7 @@ def _get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logg
 
     @feature_flag_blueprint.route("/feature_flag", methods=("PATCH",))
     @_login_required(True)
+    # @_login_required(False)
     @inject
     async def feature_flag_patch(feature_flag_router: FeatureFlagRouter[FeatureFlag]):  # pyright: ignore[reportUnusedFunction]
         feature_flags_request: list[FeatureFlagPatchRequest] = await request.json()
@@ -258,8 +261,16 @@ class FeatureFlagMiddlewareModule(Module):
     Enable the use of Feature Flags and a Feature Flag management API.
     """
 
+    def __init__(
+        self,
+        feature_flag_router_module_type: type[FeatureFlagRouterModule[TFeatureFlag]],
+    ) -> None:
+        super().__init__()
+        self._feature_flag_router_module_type = feature_flag_router_module_type
+
     @override
     def configure(self, binder: Binder) -> None:
+        binder.install(self._feature_flag_router_module_type())
         super().configure(binder)
 
     def register_middleware(self, app: FlaskApp):
