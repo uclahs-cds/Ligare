@@ -76,6 +76,10 @@ class Scaffolder:
     _manager: Any
     _provider: IResourceProvider
 
+    MODULE_TEMPLATE_DIRECTORY = Path(
+        f"scaffolding/templates/optional/{{{{application.module_name}}}}/modules"
+    )
+
     def __init__(self, config: ScaffoldConfig, log: logging.Logger) -> None:
         self._config = config
         self._config_dict = asdict(config)
@@ -338,7 +342,7 @@ class Scaffolder:
             # module templates are stored under `optional/`
             # because we don't always want to render any given module.
             module_template_directory = Path(
-                f"scaffolding/templates/optional/{{{{application.module_name}}}}/modules/{module.module_name}"
+                Scaffolder.MODULE_TEMPLATE_DIRECTORY, module.module_name
             )
             # executed module hooks before any rendering is done
             # so the hooks can modify the config or do other

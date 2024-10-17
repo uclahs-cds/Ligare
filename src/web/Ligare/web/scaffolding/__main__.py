@@ -25,7 +25,7 @@ class ScaffoldInputArgs(Namespace):
     name: Operation  # pyright: ignore[reportUninitializedInstanceVariable]
     endpoints: list[Operation] | None = None
     template_type: Literal["basic", "openapi"] = "basic"
-    modules: list[Literal["database", "test"]] | None = None
+    modules: list[str] | None = None
     output_directory: str | None = None
 
 
@@ -35,7 +35,7 @@ class ScaffoldParsedArgs(NamedTuple):
     name: Operation
     endpoints: list[Operation]
     template_type: Literal["basic", "openapi"]
-    modules: list[Literal["database", "test"]] | None
+    modules: list[str] | None
     output_directory: str
 
 
@@ -61,6 +61,14 @@ class ScaffolderCli:
         )
 
         self._log = logging.getLogger()
+
+    def _find_modules(self):
+        return [
+            module_path.name
+            for module_path in Path(
+                Path(__file__).parent.parent, Scaffolder.MODULE_TEMPLATE_DIRECTORY
+            ).iterdir()
+        ]
 
     def _parse_args(self, args: list[str]) -> ScaffoldParsedArgs:
         parser = ArgumentParser(description="Ligare Web Project Scaffolding Tool")
@@ -95,7 +103,7 @@ class ScaffolderCli:
             default="basic",
             help="The type of template to scaffold.",
         )
-        modules = ["database", "test"]
+        modules = self._find_modules()
         _ = create_parser.add_argument(
             "-m",
             choices=modules,

@@ -405,7 +405,12 @@ def test__scaffold__uses_argv_when_sys_argv_not_set(mocker: MockerFixture):
 def test__scaffold__uses_argv_for_basic_scaffold_configuration(
     mode: str, config_name: str, config_value: str, mocker: MockerFixture
 ):
-    _ = mocker.patch("Ligare.web.scaffolding.__main__.Scaffolder")
+    from Ligare.web.scaffolding.scaffolder import Scaffolder
+
+    _ = mocker.patch(
+        "Ligare.web.scaffolding.__main__.Scaffolder",
+        MODULE_TEMPLATE_DIRECTORY=Scaffolder.MODULE_TEMPLATE_DIRECTORY,
+    )
     config_mock = mocker.patch("Ligare.web.scaffolding.__main__.ScaffoldConfig")
 
     argv_values = [mode, "-n", "test"]
@@ -429,7 +434,12 @@ def test__scaffold__uses_argv_for_endpoint_configuration(
     mode: str,
     mocker: MockerFixture,
 ):
-    _ = mocker.patch("Ligare.web.scaffolding.__main__.Scaffolder")
+    from Ligare.web.scaffolding.scaffolder import Scaffolder
+
+    _ = mocker.patch(
+        "Ligare.web.scaffolding.__main__.Scaffolder",
+        MODULE_TEMPLATE_DIRECTORY=Scaffolder.MODULE_TEMPLATE_DIRECTORY,
+    )
     config_mock = mocker.patch("Ligare.web.scaffolding.__main__.ScaffoldConfig")
 
     argv_values = [mode, "-n", "test", "-e", "foo", "-e", "bar"]
@@ -450,7 +460,12 @@ def test__scaffold__uses_argv_for_endpoint_configuration(
 def test__scaffold__create_mode_uses_argv_for_module_configuration(
     mocker: MockerFixture,
 ):
-    _ = mocker.patch("Ligare.web.scaffolding.__main__.Scaffolder")
+    from Ligare.web.scaffolding.scaffolder import Scaffolder
+
+    _ = mocker.patch(
+        "Ligare.web.scaffolding.__main__.Scaffolder",
+        MODULE_TEMPLATE_DIRECTORY=Scaffolder.MODULE_TEMPLATE_DIRECTORY,
+    )
     config_mock = mocker.patch("Ligare.web.scaffolding.__main__.ScaffoldConfig")
 
     argv_values = ["create", "-n", "test", "-m", "database"]
