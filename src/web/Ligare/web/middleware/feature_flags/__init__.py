@@ -105,9 +105,6 @@ class DBFeatureFlagRouterModule:
         def _provide_db_feature_flag_router_table_base(
             self,
         ) -> type[FeatureFlagTableBase]:
-            # FeatureFlagTable is a FeatureFlagTableBase provided through
-            # SQLAlchemy's declarative meta API
-            # return cast(type[FeatureFlagTableBase], FeatureFlagTable)
             return self._feature_flag_table
 
     def __new__(
