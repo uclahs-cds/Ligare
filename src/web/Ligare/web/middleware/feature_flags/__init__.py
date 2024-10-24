@@ -6,6 +6,8 @@ from typing import Any, Callable, Generic, ParamSpec, Sequence, TypedDict, TypeV
 from connexion import FlaskApp, request
 from flask import Blueprint, Flask, abort
 from injector import Binder, Injector, Module, inject, provider, singleton
+from Ligare.database.dependency_injection import ScopedSessionModule
+from Ligare.database.types import MetaBase
 from Ligare.platform.feature_flag.caching_feature_flag_router import (
     CachingFeatureFlagRouter,
 )
@@ -77,25 +79,45 @@ class FeatureFlagRouterModule(ConfigurableModule, Generic[TFeatureFlag]):
         return cast(FeatureFlagRouter[FeatureFlag], injector.get(self._t_feature_flag))
 
 
-class DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
-    def __init__(self) -> None:
-        super().__init__(DBFeatureFlagRouter)
+class DBFeatureFlagRouterModule:
+    class _DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
+        _feature_flag_table: type[FeatureFlagTableBase]
+        _bases: list[MetaBase | type[MetaBase]] | None = None
 
-    @singleton
-    @provider
-    def _provide_db_feature_flag_router(
-        self, injector: Injector
-    ) -> FeatureFlagRouter[DBFeatureFlag]:
-        return cast(
-            FeatureFlagRouter[DBFeatureFlag], injector.get(self._t_feature_flag)
-        )
+        def __init__(self) -> None:
+            super().__init__(DBFeatureFlagRouter)
 
-    @singleton
-    @provider
-    def _provide_db_feature_flag_router_table_base(self) -> type[FeatureFlagTableBase]:
-        # FeatureFlagTable is a FeatureFlagTableBase provided through
-        # SQLAlchemy's declarative meta API
-        return cast(type[FeatureFlagTableBase], FeatureFlagTable)
+        @override
+        def configure(self, binder: Binder) -> None:
+            binder.install(ScopedSessionModule(self._bases))
+
+        @singleton
+        @provider
+        def _provide_db_feature_flag_router(
+            self, injector: Injector
+        ) -> FeatureFlagRouter[DBFeatureFlag]:
+            return cast(
+                FeatureFlagRouter[DBFeatureFlag], injector.get(self._t_feature_flag)
+            )
+
+        @singleton
+        @provider
+        def _provide_db_feature_flag_router_table_base(
+            self,
+        ) -> type[FeatureFlagTableBase]:
+            # FeatureFlagTable is a FeatureFlagTableBase provided through
+            # SQLAlchemy's declarative meta API
+            # return cast(type[FeatureFlagTableBase], FeatureFlagTable)
+            return self._feature_flag_table
+
+    def __new__(
+        cls,
+        feature_flag_table: type[FeatureFlagTableBase],
+        bases: list[MetaBase | type[MetaBase]] | None = None,
+    ) -> "type[DBFeatureFlagRouterModule._DBFeatureFlagRouterModule]":
+        cls._DBFeatureFlagRouterModule._feature_flag_table = feature_flag_table
+        cls._DBFeatureFlagRouterModule._bases = bases
+        return cls._DBFeatureFlagRouterModule
 
 
 class CachingFeatureFlagRouterModule(FeatureFlagRouterModule[CachingFeatureFlag]):

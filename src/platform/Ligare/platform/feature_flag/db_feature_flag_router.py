@@ -7,6 +7,7 @@ from injector import inject
 from sqlalchemy import Boolean, Column, String, Unicode
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.declarative import DeclarativeMeta
+from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.session import Session
 from typing_extensions import override
 
@@ -24,6 +25,8 @@ TFeatureFlag = TypeVar("TFeatureFlag", bound=FeatureFlag, covariant=True)
 
 
 class FeatureFlagTableBase(ABC):
+    __tablename__: str
+
     def __init__(  # pyright: ignore[reportMissingSuperCall]
         self,
         /,
@@ -36,9 +39,9 @@ class FeatureFlagTableBase(ABC):
         )
 
     __tablename__: str
-    name: Column[Unicode] | str
-    description: Column[Unicode] | str
-    enabled: Column[Boolean] | bool
+    name: str
+    description: str
+    enabled: bool
 
 
 class FeatureFlagTable:
@@ -70,17 +73,15 @@ class FeatureFlagTable:
 
 
 class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
-    # The SQLAlchemy table type used for querying from the type[FeatureFlag] database table
-    _feature_flag: type[FeatureFlagTableBase]
-    # The SQLAlchemy session used for connecting to and querying the database
-    _session: Session
-
     @inject
     def __init__(
-        self, feature_flag: type[FeatureFlagTableBase], session: Session, logger: Logger
+        self,
+        feature_flag: type[FeatureFlagTableBase],
+        scoped_session: ScopedSession,
+        logger: Logger,
     ) -> None:
         self._feature_flag = feature_flag
-        self._session = session
+        self._scoped_session = scoped_session
         super().__init__(logger)
 
     @override
@@ -103,20 +104,21 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
             raise ValueError("`name` parameter is required and cannot be empty.")
 
         feature_flag: FeatureFlagTableBase
-        try:
-            feature_flag = (
-                self._session.query(self._feature_flag)
-                .filter(self._feature_flag.name == name)
-                .one()
-            )
-        except NoResultFound as e:
-            raise LookupError(
-                f"The feature flag `{name}` does not exist. It must be created before being accessed."
-            ) from e
+        with self._scoped_session() as session:
+            try:
+                feature_flag = (
+                    session.query(self._feature_flag)
+                    .filter(self._feature_flag.name == name)
+                    .one()
+                )
+            except NoResultFound as e:
+                raise LookupError(
+                    f"The feature flag `{name}` does not exist. It must be created before being accessed."
+                ) from e
 
-        old_enabled_value = cast(bool | None, feature_flag.enabled)
-        feature_flag.enabled = is_enabled
-        self._session.commit()
+            old_enabled_value = cast(bool | None, feature_flag.enabled)
+            feature_flag.enabled = is_enabled
+            session.commit()
         _ = super().set_feature_is_enabled(name, is_enabled)
 
         return FeatureFlagChange(
@@ -149,11 +151,12 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
         if check_cache and super().feature_is_cached(name):
             return super().feature_is_enabled(name, default)
 
-        feature_flag = (
-            self._session.query(self._feature_flag)
-            .filter(self._feature_flag.name == name)
-            .one_or_none()
-        )
+        with self._scoped_session() as session:
+            feature_flag = (
+                session.query(self._feature_flag)
+                .filter(self._feature_flag.name == name)
+                .one_or_none()
+            )
 
         if feature_flag is None:
             self._logger.warning(
@@ -192,14 +195,15 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
         If `names` is `None` this sequence contains _all_ feature flags in the database. Otherwise, the list is filtered.
         """
         db_feature_flags: list[FeatureFlagTableBase]
-        if names is None:
-            db_feature_flags = self._session.query(self._feature_flag).all()
-        else:
-            db_feature_flags = (
-                self._session.query(self._feature_flag)
-                .filter(cast(Column[String], self._feature_flag.name).in_(names))
-                .all()
-            )
+        with self._scoped_session() as session:
+            if names is None:
+                db_feature_flags = session.query(self._feature_flag).all()
+            else:
+                db_feature_flags = (
+                    session.query(self._feature_flag)
+                    .filter(cast(Column[String], self._feature_flag.name).in_(names))
+                    .all()
+                )
 
         feature_flags = tuple(
             self._create_feature_flag(
