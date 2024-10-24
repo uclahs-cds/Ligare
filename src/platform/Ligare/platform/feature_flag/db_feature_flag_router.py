@@ -8,7 +8,6 @@ from sqlalchemy import Boolean, Column, String, Unicode
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm.scoping import ScopedSession
-from sqlalchemy.orm.session import Session
 from typing_extensions import override
 
 from .caching_feature_flag_router import CachingFeatureFlagRouter
@@ -207,9 +206,9 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
 
         feature_flags = tuple(
             self._create_feature_flag(
-                name=cast(str, feature_flag.name),
-                enabled=cast(bool, feature_flag.enabled),
-                description=cast(str, feature_flag.description),
+                name=feature_flag.name,
+                enabled=feature_flag.enabled,
+                description=feature_flag.description,
             )
             for feature_flag in db_feature_flags
         )
