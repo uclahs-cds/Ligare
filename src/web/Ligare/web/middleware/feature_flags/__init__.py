@@ -18,10 +18,7 @@ from Ligare.platform.feature_flag.db_feature_flag_router import DBFeatureFlagRou
 from Ligare.platform.feature_flag.db_feature_flag_router import (
     FeatureFlag as DBFeatureFlag,
 )
-from Ligare.platform.feature_flag.db_feature_flag_router import (
-    FeatureFlagTable,
-    FeatureFlagTableBase,
-)
+from Ligare.platform.feature_flag.db_feature_flag_router import FeatureFlagTableBase
 from Ligare.platform.feature_flag.feature_flag_router import (
     FeatureFlag,
     FeatureFlagRouter,
@@ -80,41 +77,39 @@ class FeatureFlagRouterModule(ConfigurableModule, Generic[TFeatureFlag]):
 
 
 class DBFeatureFlagRouterModule:
-    class _DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
-        _feature_flag_table: type[FeatureFlagTableBase]
-        _bases: list[MetaBase | type[MetaBase]] | None = None
-
-        def __init__(self) -> None:
-            super().__init__(DBFeatureFlagRouter)
-
-        @override
-        def configure(self, binder: Binder) -> None:
-            binder.install(ScopedSessionModule(self._bases))
-
-        @singleton
-        @provider
-        def _provide_db_feature_flag_router(
-            self, injector: Injector
-        ) -> FeatureFlagRouter[DBFeatureFlag]:
-            return cast(
-                FeatureFlagRouter[DBFeatureFlag], injector.get(self._t_feature_flag)
-            )
-
-        @singleton
-        @provider
-        def _provide_db_feature_flag_router_table_base(
-            self,
-        ) -> type[FeatureFlagTableBase]:
-            return self._feature_flag_table
-
     def __new__(
         cls,
         feature_flag_table: type[FeatureFlagTableBase],
         bases: list[MetaBase | type[MetaBase]] | None = None,
-    ) -> "type[DBFeatureFlagRouterModule._DBFeatureFlagRouterModule]":
-        cls._DBFeatureFlagRouterModule._feature_flag_table = feature_flag_table
-        cls._DBFeatureFlagRouterModule._bases = bases
-        return cls._DBFeatureFlagRouterModule
+    ):
+        class _DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
+            _feature_flag_table: type[FeatureFlagTableBase] = feature_flag_table
+            _bases: list[MetaBase | type[MetaBase]] | None = bases
+
+            def __init__(self) -> None:
+                super().__init__(DBFeatureFlagRouter)
+
+            @override
+            def configure(self, binder: Binder) -> None:
+                binder.install(ScopedSessionModule(self._bases))
+
+            @singleton
+            @provider
+            def _provide_db_feature_flag_router(
+                self, injector: Injector
+            ) -> FeatureFlagRouter[DBFeatureFlag]:
+                return cast(
+                    FeatureFlagRouter[DBFeatureFlag], injector.get(self._t_feature_flag)
+                )
+
+            @singleton
+            @provider
+            def _provide_db_feature_flag_router_table_base(
+                self,
+            ) -> type[FeatureFlagTableBase]:
+                return self._feature_flag_table
+
+        return _DBFeatureFlagRouterModule
 
 
 class CachingFeatureFlagRouterModule(FeatureFlagRouterModule[CachingFeatureFlag]):
