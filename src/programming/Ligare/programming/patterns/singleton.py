@@ -20,39 +20,47 @@ _SingletonType = NewType("_SingletonType", _Singleton)
 class Singleton(type):
     """
     Singleton metaclass.
-    Create a new Singleton type by setting that class's metaclass:
 
-    `class Foo(metaclass=Singleton): ...`
+    To create a new Singleton class, set the metaclass of your class to `Singleton`:
 
-    Classes created as Singletons should be considered `@final`.
+    .. code-block:: python
 
-    By default, the classes created by Singleton cannot have their attributes changed.
-    To change this behavior, define an attribute named `_block_change` whose value is `False`.
-    Not defining this attribute, or setting any other value, uses the default behavior.
-    Be _VERY CAREFUL_ when using `_block_change = False` as `Singleton` is _NOT_ threadsafe.
-    Note also that it is not possible to prevent the deletion of _class_ attributes.
+        class Foo(metaclass=Singleton):
+            pass
 
-    For example, these are all equivalent:
-    ```
-    class Foo(metaclass=Singleton): ...
+    **Behavior**:
+    By default, Singleton classes prevent attribute modifications. To allow attribute modifications,
+    define an attribute named `_block_change` in the class and set it to `False`.
+    Not defining this attribute, or setting any other value, will enforce the default behavior.
 
-    class Foo(metaclass=Singleton):
-        _block_change = True
+    **Warning**:
+    Setting `_block_change = False` disables attribute protection, and `Singleton` is **not** thread-safe
+    in this configuration. Additionally, it is not possible to prevent the deletion of _class_ attributes.
 
-    class Foo(metaclass=Singleton):
-        _block_change = None
+    **Examples**:
+    The following classes are all equivalent:
 
-    class Foo(metaclass=Singleton):
-        _block_change = 123
-    ```
+    .. code-block:: python
 
-    While this example is how to enable changes of attributes.
-    ```
-    class Foo(metaclass=Singleton):
-        _block_change = False
-    ```
+        class Foo(metaclass=Singleton):
+            pass
+
+        class Foo(metaclass=Singleton):
+            _block_change = True
+
+        class Foo(metaclass=Singleton):
+            _block_change = None
+
+        class Foo(metaclass=Singleton):
+            _block_change = 123
+
+    To enable attribute modifications:
+
+    .. code-block:: python
+
+        class Foo(metaclass=Singleton):
+            _block_change = False
     """
-
     class InstanceValue:
         __value: Any
         __deleted: bool
