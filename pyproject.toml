@@ -92,7 +92,8 @@ dev-dependencies = [
     "pyright == 1.1.391",
     "isort ~= 5.13",
     "ruff ~= 0.3",
-    "bandit[sarif,toml] ~= 1.7"
+    "bandit[sarif,toml] ~= 1.7",
+    "sphinx"
 ]
 
 [tool.pyright]

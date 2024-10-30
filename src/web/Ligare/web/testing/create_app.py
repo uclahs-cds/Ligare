@@ -100,13 +100,14 @@ class ClientInjectorConfigurable(Protocol[T_app, T_flask_client]):
     """
     Get a Flask test client using the specified application configuration.
 
-    Args
-    ------
-        config: `Config` The custom application configuration used to instantiate the Flask app.
+    Parameters
+    ----------
+    config : Config
+        The custom application configuration used to instantiate the Flask app.
 
     Returns
-    ------
-        `FlaskClientInjector[T_flask_client]`
+    -------
+    FlaskClientInjector[T_flask_client]
     """
 
     def __call__(
@@ -134,16 +135,19 @@ class RequestConfigurable(Protocol):
 
     This creates the Flask test client using the `ClientConfigurable` fixture.
 
-    Args
-    ------
-        config: `Config` The custom application configuration used to instantiate the Flask app.
-        request_context_args: `dict[Any, Any] | None = None` The optional request context arguments
-            set up in the request context. These may contain, for example, request headers,
-            authentication credentials, etc.
+    Parameters
+    ----------
+    config : Config
+        The custom application configuration used to instantiate the Flask app.
+
+    request_context_args : dict[Any, Any] | None, optional
+        The optional request context arguments set up in the request context.
+        These may contain, for example, request headers, authentication
+        credentials, etc.
 
     Returns
-    ------
-        `RequestContext`
+    -------
+    RequestContext
     """
 
     def __call__(
@@ -184,20 +188,21 @@ class OpenAPIMockController(MockController):
     `openapi_mock.end()` is called after the test finishes, and may also
     be explicitly called in the test.
 
-    Args
-    ------
-        `Callable[[], Response]` A method used as the request handler for GET requests set to `/`.
-        This parameter is set through parametrization:
+    Parameters
+    ----------
+    request_handler : Callable[[], Response]
+        A method used as the request handler for GET requests set to `/`.
+        This parameter is set through parametrization, as shown in the example:
 
-        ```python
-        @pytest.mark.parametrize("openapi_mock", lambda: {}, indirect=["openapi_mock"])
-        def test_my_test(openapi_mock: OpenAPIMockController):
-            ...
-        ```
+        .. code-block:: python
+
+            @pytest.mark.parametrize("openapi_mock", lambda: {}, indirect=["openapi_mock"])
+            def test_my_test(openapi_mock: OpenAPIMockController):
+                ...
 
     Returns
-    ------
-        `RequestContext`
+    -------
+    RequestContext
     """
 
 
