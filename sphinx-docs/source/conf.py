@@ -6,7 +6,9 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import sys
 from typing import Any
+from unittest.mock import Mock
 
 from sphinx.application import Sphinx
 from sphinx.ext.autodoc import Options
@@ -35,6 +37,8 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
+    "sphinx_autodoc_typehints",
+    "sphinx_toolbox.more_autodoc.autoprotocol",
 ]
 
 autosummary_generate = True
@@ -43,6 +47,12 @@ autodoc_default_options = {
     "undoc-members": True,
     "private-members": False,
     "special-members": "__init__",
+}
+
+autodoc_type_aliases = {
+    "_typeshed": "Any",
+    "_typeshed.ReadableBuffer": "Any",  # or define as per your needs
+    "ReadableBuffer": "Any",  # handles forward references
 }
 
 
@@ -76,7 +86,18 @@ def skip_member(
     # WARNING: autodoc: failed to import attribute 'MiddlewareRequestDict.starlette.exception_handlers' from module 'Ligare.web.middleware.openapi';
     if name == "starlette.exception_handlers":
         return True
+
     return skip
+
+
+def replace_init_with_call(
+    app: Sphinx, what: str, name: str, obj: Any, options: Any, lines: list[str]
+) -> None:
+    # If `__init__` is being documented on a Protocol, replace its docs with `__call__`
+    if what == "class" and name == "__init__" and hasattr(obj, "__call__"):
+        call_docs = (obj.__call__.__doc__ or "").splitlines()
+        lines.clear()
+        lines.extend(call_docs)
 
 
 def setup(app: Sphinx) -> None:
@@ -88,4 +109,8 @@ def setup(app: Sphinx) -> None:
     app : Sphinx
         The Sphinx application instance.
     """
-    app.connect("autodoc-skip-member", skip_member)
+    # prevent
+    # WARNING: Failed guarded type import with ModuleNotFoundError("No module named '_typeshed'")
+    sys.modules["_typeshed"] = Mock()
+    _ = app.connect("autodoc-skip-member", skip_member)
+    _ = app.connect("autodoc-process-docstring", replace_init_with_call)

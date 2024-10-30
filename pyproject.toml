@@ -93,7 +93,9 @@ dev-dependencies = [
     "isort ~= 5.13",
     "ruff ~= 0.3",
     "bandit[sarif,toml] ~= 1.7",
-    "sphinx"
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx_toolbox"
 ]
 
 [tool.pyright]
