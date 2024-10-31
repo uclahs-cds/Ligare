@@ -95,7 +95,8 @@ dev-dependencies = [
     "bandit[sarif,toml] ~= 1.7",
     "sphinx",
     "sphinx-autodoc-typehints",
-    "sphinx_toolbox"
+    "sphinx_toolbox",
+    "sphinx-rtd-theme"
 ]
 
 [tool.pyright]

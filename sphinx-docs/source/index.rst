@@ -18,5 +18,12 @@ documentation for details.
    :toctree: generated
    :recursive:
 
-   Ligare.web
+   Ligare.AWS
+   Ligare.database
+   Ligare.development
+   Ligare.GitHub
+   Ligare.identity
+   Ligare.platform
    Ligare.programming
+   Ligare.testing
+   Ligare.web
