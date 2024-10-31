@@ -1,11 +1,23 @@
 from dataclasses import dataclass
 from functools import wraps
 from logging import Logger
-from typing import Any, Callable, Generic, ParamSpec, Sequence, TypedDict, TypeVar, cast
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    ParamSpec,
+    Sequence,
+    TypedDict,
+    TypeVar,
+    cast,
+)
 
 from connexion import FlaskApp, request
 from flask import Blueprint, Flask, abort
 from injector import Binder, Injector, Module, inject, provider, singleton
+from Ligare.database.dependency_injection import ScopedSessionModule
+from Ligare.database.types import MetaBase
 from Ligare.platform.feature_flag.caching_feature_flag_router import (
     CachingFeatureFlagRouter,
 )
@@ -16,10 +28,7 @@ from Ligare.platform.feature_flag.db_feature_flag_router import DBFeatureFlagRou
 from Ligare.platform.feature_flag.db_feature_flag_router import (
     FeatureFlag as DBFeatureFlag,
 )
-from Ligare.platform.feature_flag.db_feature_flag_router import (
-    FeatureFlagTable,
-    FeatureFlagTableBase,
-)
+from Ligare.platform.feature_flag.db_feature_flag_router import FeatureFlagTableBase
 from Ligare.platform.feature_flag.feature_flag_router import (
     FeatureFlag,
     FeatureFlagRouter,
@@ -58,13 +67,32 @@ class FeatureFlagPatch:
 
 
 class FeatureFlagRouterModule(ConfigurableModule, Generic[TFeatureFlag]):
-    def __init__(self, t_feature_flag: type[FeatureFlagRouter[TFeatureFlag]]) -> None:
-        self._t_feature_flag = t_feature_flag
+    """
+    An Injector module to provide an instance of a Feature Flag Router.
+
+    :type ConfigurableModule: Enables loading of Ligare.web.middleware.feature_flags.Config config information
+    :type Generic[TFeatureFlag]: The type of Feature Flag containing feature flag data
+    """
+
+    def __init__(
+        self, t_feature_flag: type[FeatureFlagRouter[TFeatureFlag]] | None = None
+    ) -> None:
+        """
+        Get an instance of the generic FeatureFlagRouterModule.
+
+        :param type[FeatureFlagRouter[TFeatureFlag]] | None t_feature_flag: The type of Feature Flag Router this Injector module provides, defaults to None
+        """
+        self._t_feature_flag = type(self) if t_feature_flag is None else t_feature_flag
         super().__init__()
 
     @override
     @staticmethod
     def get_config_type() -> type[AbstractConfig]:
+        """
+        Get the Feature Flag Router Module configuration type.
+
+        :return type[Ligare.web.middleware.feature_flags.Config]:
+        """
         return Config
 
     @singleton
@@ -72,29 +100,70 @@ class FeatureFlagRouterModule(ConfigurableModule, Generic[TFeatureFlag]):
     def _provide_feature_flag_router(
         self, injector: Injector
     ) -> FeatureFlagRouter[FeatureFlag]:
-        return injector.get(self._t_feature_flag)
+        """
+        Provide the instance of FeatureFlagRouter[TFeatureFlag].
+
+        :param Injector injector: The IoC container
+        :return FeatureFlagRouter[FeatureFlag]: The FeatureFlagRouter[TFeatureFlag] instance
+        """
+        return cast(FeatureFlagRouter[FeatureFlag], injector.get(self._t_feature_flag))
 
 
-class DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
-    def __init__(self) -> None:
-        super().__init__(DBFeatureFlagRouter)
+class DBFeatureFlagRouterModule:
+    def __new__(
+        cls,
+        feature_flag_table: type[FeatureFlagTableBase],
+        bases: list[MetaBase | type[MetaBase]] | None = None,
+    ):
+        """
+        An Injector module to work with Feature Flags stored in a database.
 
-    @singleton
-    @provider
-    def _provide_db_feature_flag_router(
-        self, injector: Injector
-    ) -> FeatureFlagRouter[DBFeatureFlag]:
-        return injector.get(self._t_feature_flag)
+        :param type[FeatureFlagTableBase] feature_flag_table: The base table type representing columns the database table contains, and other aspects of SQLAlchemy Table object
+        :param list[MetaBase  |  type[MetaBase]] | None bases: All MetaBase types an SQLAlchemy ScopedSession instance is responsible for, defaults to None
+        :return _type_: _description_
+        """
 
-    @singleton
-    @provider
-    def _provide_db_feature_flag_router_table_base(self) -> type[FeatureFlagTableBase]:
-        # FeatureFlagTable is a FeatureFlagTableBase provided through
-        # SQLAlchemy's declarative meta API
-        return cast(type[FeatureFlagTableBase], FeatureFlagTable)
+        class _DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
+            _feature_flag_table: type[FeatureFlagTableBase] = feature_flag_table
+            _bases: list[MetaBase | type[MetaBase]] | None = bases
+
+            def __init__(self) -> None:
+                super().__init__(DBFeatureFlagRouter)
+
+            @override
+            def configure(self, binder: Binder) -> None:
+                binder.install(ScopedSessionModule(self._bases))
+
+            @singleton
+            @provider
+            def _provide_db_feature_flag_router(
+                self, injector: Injector
+            ) -> FeatureFlagRouter[DBFeatureFlag]:
+                """
+                Provide an instance of the FeatureFlagRouter for the DBFeatureFlag type.
+                """
+                return cast(
+                    FeatureFlagRouter[DBFeatureFlag], injector.get(self._t_feature_flag)
+                )
+
+            @singleton
+            @provider
+            def _provide_db_feature_flag_router_table_base(
+                self,
+            ) -> type[FeatureFlagTableBase]:
+                """
+                Provide the base table type of the Feature Flag table.
+                """
+                return self._feature_flag_table
+
+        return _DBFeatureFlagRouterModule
 
 
 class CachingFeatureFlagRouterModule(FeatureFlagRouterModule[CachingFeatureFlag]):
+    """
+    An Injector module to work with Feature Flags in-memory.
+    """
+
     def __init__(self) -> None:
         super().__init__(CachingFeatureFlagRouter)
 
@@ -103,7 +172,12 @@ class CachingFeatureFlagRouterModule(FeatureFlagRouterModule[CachingFeatureFlag]
     def _provide_caching_feature_flag_router(
         self, injector: Injector
     ) -> FeatureFlagRouter[CachingFeatureFlag]:
-        return injector.get(self._t_feature_flag)
+        """
+        Provide an instance of the FeatureFlagRouter for the CachingFeatureFlag type.
+        """
+        return cast(
+            FeatureFlagRouter[CachingFeatureFlag], injector.get(self._t_feature_flag)
+        )
 
 
 P = ParamSpec("P")
@@ -112,6 +186,15 @@ R = TypeVar("R")
 
 @inject
 def _get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logger):
+    """
+    Create and return a Flask Blueprint with API endpoints for querying and managing Feature Flags.
+
+    :param Flask app: The registered Flask application this Blueprint will be applied to.
+    :param FeatureFlagConfig config: The Feature Flag configuration type.
+    :param Logger log:
+    :raises ValueError:
+    :return Blueprint:
+    """
     feature_flag_blueprint = Blueprint(
         "feature_flag", __name__, url_prefix=f"{config.api_base_url}"
     )
@@ -166,7 +249,17 @@ def _get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logg
     @feature_flag_blueprint.route("/feature_flag", methods=("GET",))
     @_login_required(False)
     @inject
-    def feature_flag(feature_flag_router: FeatureFlagRouter[FeatureFlag]):  # pyright: ignore[reportUnusedFunction]
+    def feature_flag(  # pyright: ignore[reportUnusedFunction]
+        feature_flag_router: FeatureFlagRouter[FeatureFlag],
+    ) -> dict[str, Any] | tuple[dict[str, Any], Literal[404]]:
+        """
+        Query Feature Flag values.
+        This API does not require a Flask session.
+
+        :param FeatureFlagRouter[FeatureFlag] feature_flag_router: The Feature Flag router type.
+        :raises ValueError:
+        :return dict[str, Any] | tuple[dict[str, Any], Literal[404]]:
+        """
         request_query_names: list[str] | None = request.query_params.getlist("name")
 
         feature_flags: Sequence[FeatureFlag]
@@ -214,7 +307,15 @@ def _get_feature_flag_blueprint(app: Flask, config: FeatureFlagConfig, log: Logg
     @feature_flag_blueprint.route("/feature_flag", methods=("PATCH",))
     @_login_required(True)
     @inject
-    async def feature_flag_patch(feature_flag_router: FeatureFlagRouter[FeatureFlag]):  # pyright: ignore[reportUnusedFunction]
+    async def feature_flag_patch(  # pyright: ignore[reportUnusedFunction]
+        feature_flag_router: FeatureFlagRouter[FeatureFlag],
+    ) -> dict[str, Any] | tuple[dict[str, Any], Literal[404]]:
+        """
+        Modify Feature Flag values.
+        Requires a Flask session and appropriate User Role access. If access is not granted, HTTP status 405 is returned.
+
+        :return dict[str, Any] | tuple[dict[str, Any], Literal[404]]:
+        """
         feature_flags_request: list[FeatureFlagPatchRequest] = await request.json()
 
         feature_flags = [
@@ -258,8 +359,21 @@ class FeatureFlagMiddlewareModule(Module):
     Enable the use of Feature Flags and a Feature Flag management API.
     """
 
+    def __init__(
+        self,
+        feature_flag_router_module_type: type[FeatureFlagRouterModule[TFeatureFlag]],
+    ) -> None:
+        """
+        Create the Injector module.
+
+        :param type[FeatureFlagRouterModule[TFeatureFlag]] feature_flag_router_module_type:
+        """
+        super().__init__()
+        self._feature_flag_router_module_type = feature_flag_router_module_type
+
     @override
     def configure(self, binder: Binder) -> None:
+        binder.install(self._feature_flag_router_module_type())
         super().configure(binder)
 
     def register_middleware(self, app: FlaskApp):
