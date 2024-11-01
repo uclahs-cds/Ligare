@@ -12,6 +12,14 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.5.0] - 2024-11-01
+### Added
+- Added a function decorator `feature_flag(...)` to control the availability of a function based on a feature flag's enablement. d5d2242
+- Added Feature Flag module for querying and altering Feature Flags in a running application.
+
+### Changed
+- Alter how FeatureFlags are queried to resolve issues with schemas and multiple `ScopedSession` Injector registrations. 76353a1
+
 ## [0.4.0] - 2024-10-04
 ### Added
 * Added a Feature Flag "router" module, supporting both a caching and database backend
