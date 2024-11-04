@@ -46,7 +46,7 @@ autodoc_default_options = {
     "members": True,
     "undoc-members": True,
     "private-members": False,
-    "special-members": "__init__",
+    "special-members": "__init__,__new__,__version__",
 }
 
 autodoc_type_aliases = {
@@ -90,16 +90,6 @@ def skip_member(
     return skip
 
 
-def replace_init_with_call(
-    app: Sphinx, what: str, name: str, obj: Any, options: Any, lines: list[str]
-) -> None:
-    # If `__init__` is being documented on a Protocol, replace its docs with `__call__`
-    if what == "class" and name == "__init__" and hasattr(obj, "__call__"):
-        call_docs = (obj.__call__.__doc__ or "").splitlines()
-        lines.clear()
-        lines.extend(call_docs)
-
-
 def setup(app: Sphinx) -> None:
     """
     Connects the `skip_member` function to the `autodoc-skip-member` event.
@@ -113,4 +103,3 @@ def setup(app: Sphinx) -> None:
     # WARNING: Failed guarded type import with ModuleNotFoundError("No module named '_typeshed'")
     sys.modules["_typeshed"] = Mock()
     _ = app.connect("autodoc-skip-member", skip_member)
-    _ = app.connect("autodoc-process-docstring", replace_init_with_call)
