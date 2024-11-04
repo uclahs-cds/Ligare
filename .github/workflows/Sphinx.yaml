@@ -1,0 +1,48 @@
+name: Build and publish Sphinx docs
+
+on:
+  push:
+    tags:
+      - "Ligare.all-v*"
+  workflow_dispatch:
+jobs:
+  build:
+    name: Checkout and Setup
+    runs-on: ubuntu-latest
+
+    env:
+      PYTHON_VERSION: "3.10"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        id: install-python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          echo Setting up dependencies
+          DEFAULT_TARGET=cicd \
+          VENV=.github-venv \
+          REWRITE_DEPENDENCIES=true \
+            make Sphinx-html
+
+  deploy:
+    needs: build
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
