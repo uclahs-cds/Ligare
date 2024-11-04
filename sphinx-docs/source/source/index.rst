@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Ligare documentation
+Ligare Source Documentation
 ====================
 
 Add your content using ``reStructuredText`` syntax. See the
@@ -13,6 +13,17 @@ documentation for details.
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-   :glob:
 
-   */index
+.. autosummary::
+   :toctree: ../source/generated
+   :recursive:
+
+   Ligare.AWS
+   Ligare.database
+   Ligare.development
+   Ligare.GitHub
+   Ligare.identity
+   Ligare.platform
+   Ligare.programming
+   Ligare.testing
+   Ligare.web
