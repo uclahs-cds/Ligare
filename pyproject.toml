@@ -99,6 +99,12 @@ dev-dependencies = [
     "sphinx-rtd-theme"
 ]
 
+# Install if you want to use the Esbonio extension
+# in VSCode to write reStructuredText documents.
+vscode-sphinx = [
+    "esbonio"
+]
+
 [tool.pyright]
 pythonVersion = "3.10"
 
