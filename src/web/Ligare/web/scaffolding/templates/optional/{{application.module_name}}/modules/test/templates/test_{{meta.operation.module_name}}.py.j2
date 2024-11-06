@@ -6,7 +6,7 @@ from Ligare.web.testing.create_app import CreateOpenAPIApp as CreateApp
 from {{application.module_name}} import create_app
 from Ligare.web.testing.config import UseInmemoryDatabaseResult
 
-{% if module.database %}
+{% if {'module_name': 'database'} in modules %} 
 from {{application.module_name}}.modules.database import {{meta.operation.module_name.capitalize()}}
 from sqlalchemy.orm import Session
 {% endif %}
@@ -24,7 +24,7 @@ class TestApp(CreateApp):
 
         assert _app.client.app.app.name == "{{application.module_name}}"
 
-{% if module.database %}
+{% if {'module_name': 'database'} in modules %} 
     def test__{{meta.operation.module_name}}__post__stores_data_in_{{meta.operation.module_name}}_table(self, use_inmemory_database: UseInmemoryDatabaseResult):
         _app = self.get_app(create_app)
         client = _app.client
