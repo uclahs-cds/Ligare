@@ -15,7 +15,7 @@ Prerequisites
 Creating Applications
 --------------------------
 
-The command ``ligare-scaffold`` is used to create web applications. It supports to types of web applications:
+The command ``ligare-scaffold`` is used to create web applications. It supports two types of web applications:
 
 * "basic" which creates a simple Flask application
 * "openapi" which creates a Connexion application that uses OpenAPI
@@ -79,7 +79,7 @@ The scaffolder helps with adding the initial endpoints for your application thro
 
 For our kitchen example, let's consider a busier restaurant with a full menu for **order**\ s, more complex
 **inventory** requirements, and multiple **chef**\ s. It is usually easier to manage this complexity by segmenting
-these components into different API _endpoints_.
+these components into different API *endpoints*.
 
 .. code-block:: console
 
@@ -125,7 +125,7 @@ but that data is lost every time your application restarts. You may want to use 
 
     sqlite:///kitchen.db
 
-When your application first runs, an SQLite database will exist at the root of your application directory with the name ``app.db``.
+When your application first runs, an SQLite database is created at the root of your application directory with the name ``kitchen.db``.
 
 Debugging in VSCode
 ^^^^^^^^^^^^^^^^^^^
