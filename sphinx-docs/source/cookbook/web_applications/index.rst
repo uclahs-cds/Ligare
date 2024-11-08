@@ -7,3 +7,4 @@ Web Applications
 	:glob:
 
 	*
+	*/index
