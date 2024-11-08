@@ -4,9 +4,10 @@ Working With Scaffolded Applications
 .. toctree::
 	:maxdepth: 2
 	:caption: Contents:
-	:glob:
 
-	*
+   basic-applications
+   openapi-applications
+   modules
 
 Before continuing with this document, review :doc:`../create-application-with-scaffolder`.
 
