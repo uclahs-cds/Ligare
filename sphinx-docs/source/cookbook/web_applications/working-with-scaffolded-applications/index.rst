@@ -7,7 +7,7 @@ Working With Scaffolded Applications
 
    basic-applications
    openapi-applications
-   modules
+   modules/index
 
 Before continuing with this document, review :doc:`../create-application-with-scaffolder`.
 

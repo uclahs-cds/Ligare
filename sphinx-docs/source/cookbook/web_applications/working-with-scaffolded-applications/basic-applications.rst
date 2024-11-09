@@ -17,7 +17,7 @@ The ``application.py`` file contains an endpoint for the root URL of the applica
 when the application is running in a "development" environment.
 
 Adding Endpoints
-================
+-----------------
 
 Let's extend the Kitchen application with two new endpoints:
 
@@ -31,12 +31,43 @@ we will add a new endpoint URL to the file. Open the file ``kitchen_flask/endpoi
 
    @inject
    @order_blueprint.route("/bill")
+   def get_order_bill(session: Session):
+      order_id = int(request.args.get('order_id'))
+
+This adds a new function that is executed when the URL ``/order/bill`` is accessed.
+The function is given an instance of the `Session <https://docs.sqlalchemy.org/en/14/orm/session.html>`_ type from SQLAlchemy,
+and it gets the values of a URL parameter called ``order_id`` from the full URL ``/order/bill?order_id=123``.
+Right now the function doesn't do anything, so let's add something to it.
+
+.. code-block:: python
+
+   @inject
+   @order_blueprint.route("/bill")
    def get_order(session: Session):
-       # bill = {"orderId": "123", "items": [{"name": "burger", "price": 5.0, "amount": 1}, {"name": "cake", "price": 6.0, "amount": 1}]}
-       bill = session \
+      order_id = int(request.args.get('order_id'))
+
+      bill = session \
          .query(Order) \
          .join(Bill) \
+         .filter(Order.id == order_id) \
          .one()
+
+With this, the function queries the database for the order and its associated bill, but the function still doesn't
+send anything back to the requester of the data. We can do that by returning a dictionary assembled from the data.
+This works because Flask will turn a dictionary into `JSON <https://flask.palletsprojects.com/en/stable/patterns/javascript/#return-json-from-views>`_
+that the requester can work with.
+
+.. code-block:: python
+
+   @inject
+   @order_blueprint.route("/bill")
+   def get_order(session: Session):
+      order_id = int(request.args.get('order_id'))
+
+      bill = session \
+      .query(Order) \
+      .join(Bill) \
+      .one()
 
       return dict([(
          item["name"],
@@ -47,4 +78,5 @@ we will add a new endpoint URL to the file. Open the file ``kitchen_flask/endpoi
          for item in bill["items"]
       ])
 
-.. also need to add an example of adding tables
+You now have enough information to add your own endpoints! However, to make this example functional we also need to add
+a new database table. Review :ref:`adding-tables` ...
