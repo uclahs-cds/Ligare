@@ -218,6 +218,7 @@ class ScaffolderCli:
             endpoints=[
                 ScaffoldEndpoint(operation=endpoint) for endpoint in args.endpoints
             ],
+            template_type="basic",
         )
 
         scaffolder = Scaffolder(config, self._log)
