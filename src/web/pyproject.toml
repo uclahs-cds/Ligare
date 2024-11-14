@@ -34,7 +34,7 @@ dependencies = [
     "Ligare.identity",
     "Ligare.database",
 
-    "Flask == 3.0.3",
+    "Flask == 3.1.0",
     "flask-injector",
     "flask-login",
     "connexion == 3.1.0",
