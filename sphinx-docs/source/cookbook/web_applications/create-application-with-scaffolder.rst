@@ -154,4 +154,5 @@ The Test module will create additional tests when the Database module is also sp
     ligare-scaffold create -n kitchen -m database -m test
 
 .. note::
+
     Due to a `bug <https://github.com/uclahs-cds/Ligare/issues/149>`_, the creation of database tests only occurs if ``-m database`` is specified before ``-m test``.
