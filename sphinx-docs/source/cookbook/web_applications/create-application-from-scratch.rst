@@ -16,11 +16,12 @@ First we need to prepare a Python project. We will use a Python `virtual environ
 
 Create a project directory, create a new virtual environment, and activate the virtual environment.
 
-.. code-block:: console
+.. code-block:: shell-session
 
-   $ mkdir my-ligare-app && cd my-ligare-app
-   my-ligare-app $ python -m venv .venv
-   my-ligare-app $ . .venv/bin/activate
+   user@: $ mkdir my-ligare-app && cd my-ligare-app
+   user@: $ python -m venv .venv
+   user@: my-ligare-app $ python -m venv .venv
+   user@: my-ligare-app $ . .venv/bin/activate
 
 The following commands are executed with the virtual environment activated.
 
@@ -28,9 +29,9 @@ Now we can create a minimal ``pyproject.toml`` file that let's us create our app
 
 First we need to ensure compatibility with Python 3.10.
 
-.. code-block:: console
+.. code-block:: shell-session
 
-   my-ligare-app $ cat > pyproject.toml << EOF
+   user@: my-ligare-app $ cat > pyproject.toml << EOF
    [project]
    requires-python = ">= 3.10"
 
@@ -38,21 +39,21 @@ First we need to ensure compatibility with Python 3.10.
 
 Next we set the name of our application.
 
-.. code-block:: console
+.. code-block:: shell-session
 
-   my-ligare-app $ echo 'name = "my-ligare-app"' >> pyproject.toml
+   user@: my-ligare-app $ echo 'name = "my-ligare-app"' >> pyproject.toml
 
 Then we set an initial version.
 
-.. code-block:: console
+.. code-block:: shell-session
 
-   my-ligare-app $ echo 'version = "0.0.1"' >> pyproject.toml
+   user@: my-ligare-app $ echo 'version = "0.0.1"' >> pyproject.toml
 
 Finally, we include ``Ligare.web`` as a dependency of our application.
 
-.. code-block:: console
+.. code-block:: shell-session
 
-   my-ligare-app $ cat >> pyproject.toml << EOF
+   user@: my-ligare-app $ cat >> pyproject.toml << EOF
 
    dependencies = [
       "Ligare.web"
@@ -75,9 +76,9 @@ Once completed, our ``pyproject.toml`` should look like this.
 
 Now we can install everything necessary to create a Ligare application.
 
-.. code-block:: console
+.. code-block:: shell-session
 
-   my-ligare-app $ pip install -e .
+   user@: my-ligare-app $ pip install -e .
 
 We use ``-e`` here because this allows the application to run our changes to code without requiring that we reinstall the application every time we change something.
 
@@ -90,10 +91,10 @@ We will follow a structure that lets us write the application as a single Python
 
 First create the module.
 
-.. code-block:: console
+.. code-block:: shell-session
 
-   my-ligare-app $ mkdir app
-   my-ligare-app $ touch app/__init__.py
+   user@: my-ligare-app $ mkdir app
+   user@: my-ligare-app $ touch app/__init__.py
 
 Now we need to add some code to ``__init__.py``.
 
@@ -114,9 +115,9 @@ Modify ``app/__init__.py`` with the following.
 
 Now we have something we can run - but it doesn't do a whole lot. Go ahead and run this code.
 
-.. code-block:: console
+.. code-block:: shell-session
 
-   my-ligare-app $ python app/__init__.py
+   user@: my-ligare-app $ python app/__init__.py
 
 As you can see, nothing really happens. This is because a builder needs to `build` what it has configured, and then something needs to be done with the built object.
 
@@ -147,9 +148,9 @@ Change ``app/__init__.py`` to look like this.
 
 And create the config file.
 
-.. code-block:: console
+.. code-block:: shell-session
 
-   my-ligare-app $ touch app/config.toml
+   user@: my-ligare-app $ touch app/config.toml
 
 Now if we run the application, we still get an error, but we're told that the config file is invalid.
 
@@ -188,14 +189,23 @@ This is because, while we do have a functional web application, we still haven't
 API `endpoints` to it.
 
 
+Adding API Endpoints
+--------------------
 
+Adding an API endpoint to a `FlaskApp` application requires two things:
+
+* A Python function to respond to an API request
+* A `specification` to tell the application what the endpoint is, and where to handle requests
+
+The Python functions are regular functions that you're already familiar with.
+The specification is an `OpenAPI specification <https://swagger.io/specification/>`_ written in a YAML file.
+
+First, let's modify the application config file ``app/config.toml``. Add the ``flask.openapi`` section so your file looks like this.
 
 .. code-block:: toml
 
    [flask]
    app_name = 'app'
-   host = "localhost"
-   port = "5000"
 
    [flask.openapi]
    spec_path = 'openapi.yaml'
