@@ -274,3 +274,7 @@ Sphinx: $(VENV) $(DEFAULT_TARGET) Makefile
 Sphinx-%: $(VENV) $(DEFAULT_TARGET) Makefile
 	$(ACTIVATE_VENV) && \
 	$(SPHINXBUILD) -M $(patsubst Sphinx-%,%,$@) "sphinx-docs/$(SOURCEDIR)" "sphinx-docs/$(BUILDDIR)" $(SPHINXOPTS)
+
+Sphinx-autobuild: $(VENV) $(DEFAULT_TARGET) Makefile
+	$(ACTIVATE_VENV) && \
+	sphinx-autobuild "sphinx-docs/$(SOURCEDIR)" "sphinx-docs/$(BUILDDIR)/html"
