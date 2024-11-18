@@ -19,7 +19,6 @@ Create a project directory, create a new virtual environment, and activate the v
 .. code-block:: shell-session
 
    user@: $ mkdir my-ligare-app && cd my-ligare-app
-   user@: $ python -m venv .venv
    user@: my-ligare-app $ python -m venv .venv
    user@: my-ligare-app $ . .venv/bin/activate
 

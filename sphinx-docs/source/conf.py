@@ -35,6 +35,7 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx_autodoc_typehints",
     "sphinx_toolbox.more_autodoc.autoprotocol",
+    "sphinx_copybutton",
 ]
 
 autosummary_generate = True
@@ -50,6 +51,11 @@ autodoc_type_aliases = {
     "_typeshed.ReadableBuffer": "Any",  # or define as per your needs
     "ReadableBuffer": "Any",  # handles forward references
 }
+
+copybutton_exclude = ".linenos, .gp"
+copybutton_prompt_text = r">>> |\.\.\. |\$ "
+copybutton_prompt_is_regexp = True
+copybutton_only_copy_prompt_lines = True
 
 
 def skip_member(
