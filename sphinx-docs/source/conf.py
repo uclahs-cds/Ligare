@@ -48,8 +48,8 @@ autodoc_default_options = {
 
 autodoc_type_aliases = {
     "_typeshed": "Any",
-    "_typeshed.ReadableBuffer": "Any",  # or define as per your needs
-    "ReadableBuffer": "Any",  # handles forward references
+    "_typeshed.ReadableBuffer": "Any",
+    "ReadableBuffer": "Any",
 }
 
 copybutton_exclude = ".linenos, .gp"
