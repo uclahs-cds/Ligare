@@ -96,7 +96,8 @@ dev-dependencies = [
     "sphinx",
     "sphinx-autodoc-typehints",
     "sphinx_toolbox",
-    "sphinx-rtd-theme"
+    "sphinx-rtd-theme",
+    "sphinx-copybutton"
 ]
 
 # Install if you want to use the Esbonio extension
