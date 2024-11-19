@@ -7,7 +7,7 @@ Setting Up Your Project
 
 First we need to prepare a Python project. We will use a Python `virtual environment <https://docs.python.org/3/library/venv.html>`_, and the project configuration file `pyproject.toml <https://packaging.python.org/en/latest/guides/writing-pyproject-toml/>`_.
 
-.. note:: 
+.. important:: 
 
    Ligare requires a minimum Python version of 3.10.
 

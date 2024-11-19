@@ -8,3 +8,7 @@ class NotEndsWithConfigError(InvalidConfigNameError):
 
 class ConfigBuilderStateError(Exception):
     """The config builder has not been configured correctly."""
+
+
+class ConfigInvalidError(Exception):
+    """A configuration class failed to instantiate with a given configuration input."""

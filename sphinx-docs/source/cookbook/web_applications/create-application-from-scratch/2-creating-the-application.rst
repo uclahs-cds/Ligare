@@ -21,8 +21,29 @@ Now we need to add some code to ``__init__.py``.
 Let's also explore a bit about how ``Ligare.web`` works.
 
 First, ``Ligare.web`` uses a `builder <https://en.wikipedia.org/wiki/Builder_pattern>`_ to set up an instance of your application during runtime.
-This allows us to specify things like config files, application modules like ``Ligare.database``, and more. The class we need for this
-is :obj:`ApplicationBuilder[T] <Ligare.web.application.ApplicationBuilder>`. We also need the application type. For this example, we're using `FlaskApp <https://connexion.readthedocs.io/en/2.9.0/autoapi/connexion/apps/flask_app/index.html#connexion.apps.flask_app.FlaskApp>`_.
+This allows us to `build` our application using specific functions to configure desired beavhiors and features.
+
+.. seealso::
+
+   A `builder <https://en.wikipedia.org/wiki/Builder_pattern>`_ is a pattern that helps programmers configure an instance of some other `type`.
+   For this guide, it helps us configure an instance of ``FlaskApp``, which is the
+   class name for the type of application we're creating.
+
+
+The class we need for this is :obj:`ApplicationBuilder[T] <Ligare.web.application.ApplicationBuilder>`. We also need the application type. For this example, we're using `FlaskApp <https://github.com/spec-first/connexion/blob/3450a602fdd43b1d3a06581fd0106397b32e965b/connexion/apps/flask.py#L166>`_.
+
+.. seealso::
+
+   A "generic" class is a way to specify `generic` functionality for a range of more specific types.
+   Here, we use the generic class :obj:`ApplicationBuilder[T] <Ligare.web.application.ApplicationBuilder>` to configure `generic` aspects of
+   ``FlaskApp``.
+   Here, the "generic type" is named ``T`` and is how we reference the more specific type that
+   it represents.
+
+   .. note:: 
+
+      :obj:`ApplicationBuilder[T] <Ligare.web.application.ApplicationBuilder>` supports one other type of class called ``Flask``.
+      Review `this guide <it doesn't exist yet>`_ to see how to create a ``Flask`` application.
 
 Modify ``app/__init__.py`` with the following.
 
@@ -32,6 +53,16 @@ Modify ``app/__init__.py`` with the following.
    from connexion import FlaskApp
 
    application_builder = ApplicationBuilder[FlaskApp]()
+
+   application_builder.use_configuration(
+       lambda config_builder: \
+           config_builder.with_config_filename("app/config.toml")
+   )
+
+   result = application_builder.build()
+
+   result.run()
+
 
 Now we have something we can run - but it doesn't do a whole lot. Go ahead and run this code.
 

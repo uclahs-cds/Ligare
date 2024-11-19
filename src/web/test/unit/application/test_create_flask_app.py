@@ -6,6 +6,7 @@ from typing import cast
 import pytest
 from flask import Blueprint, Flask
 from Ligare.programming.config import AbstractConfig
+from Ligare.programming.config.exceptions import ConfigInvalidError
 from Ligare.programming.str import get_random_str
 from Ligare.web.application import App  # pyright: ignore[reportDeprecated]
 from Ligare.web.application import configure_blueprint_routes
@@ -243,8 +244,8 @@ class TestCreateFlaskApp(CreateFlaskApp):
         self, flask_client_configurable: FlaskClientInjectorConfigurable
     ):
         with pytest.raises(
-            Exception,
-            match=r"^You must set \[flask\] in the application configuration\.$",
+            ConfigInvalidError,
+            match=r"^You must set \[flask\] in the application configuration\.",
         ):
             _ = next(flask_client_configurable(Config()))
 
