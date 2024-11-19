@@ -16,6 +16,7 @@ from typing import (
 
 import json_logging
 from connexion import FlaskApp
+from connexion.options import SwaggerUIOptions
 from flask import Blueprint, Flask
 from flask_injector import FlaskInjector
 from injector import Module
@@ -509,8 +510,11 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     connexion_app = FlaskApp(
         config.flask.app_name,
         specification_dir=exec_dir,
-        # host=host,
-        # port=port,
+        swagger_ui_options=SwaggerUIOptions(
+            swagger_ui=config.flask.openapi.use_swagger,
+            swagger_ui_path=config.flask.openapi.swagger_url
+            or SwaggerUIOptions.swagger_ui_path,
+        ),
     )
     app = connexion_app.app
     config.update_flask_config(app.config)
