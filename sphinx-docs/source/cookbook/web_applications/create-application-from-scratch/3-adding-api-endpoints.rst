@@ -68,11 +68,7 @@ This ensures the ``localhost`` and ``port`` options in ``config.toml`` are used.
       )
 
    result = application_builder.build()
-   app = result.app_injector.app
-
-   injector = result.app_injector.flask_injector.injector
-   config = injector.get(FlaskConfig)
-   app.run(host=config.host, port=int(config.port))
+   result.run()
 
 Adding Endpoints
 ^^^^^^^^^^^^^^^^

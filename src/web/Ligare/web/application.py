@@ -28,7 +28,10 @@ from Ligare.programming.config import (
     TConfig,
     load_config,
 )
-from Ligare.programming.config.exceptions import ConfigBuilderStateError
+from Ligare.programming.config.exceptions import (
+    ConfigBuilderStateError,
+    ConfigInvalidError,
+)
 from Ligare.programming.dependency_injection import ConfigModule
 from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
@@ -243,14 +246,14 @@ class ApplicationConfigBuilder(Generic[TConfig]):
     def build(self) -> TConfig | None:
         if not (self._use_ssm or self._use_filename):
             raise InvalidBuilderStateError(
-                "Cannot build the application config without either `use_ssm` or `use_filename` having been configured."
+                f"Cannot build the application config without either `{ApplicationConfigBuilder[TConfig].enable_ssm.__name__}` or `{ApplicationConfigBuilder[TConfig].with_config_filename.__name__}` having been configured."
             )
 
         try:
             config_type = self._config_builder.build()
         except ConfigBuilderStateError as e:
             raise BuilderBuildError(
-                "A root config must be specified using `with_root_config` before calling `build()`."
+                f"A root config must be specified using `{ApplicationConfigBuilder[TConfig].with_root_config_type.__name__}`, `{ApplicationConfigBuilder[TConfig].with_config_type.__name__}`, or `{ApplicationConfigBuilder[TConfig].with_config_types.__name__}` before calling `{ApplicationConfigBuilder[TConfig].build.__name__}`."
             ) from e
 
         full_config: TConfig | None = None
@@ -389,19 +392,32 @@ class ApplicationBuilder(Generic[T_app]):
         _ = self._application_config_builder.with_config_value_overrides(
             config_overrides
         )
-        config = self._application_config_builder.build()
+        try:
+            config = self._application_config_builder.build()
+        except InvalidBuilderStateError as e:
+            raise BuilderBuildError(
+                f"`{ApplicationBuilder[T_app].__name__}` failed to build the application configuration because the `{ApplicationConfigBuilder[Config].__name__}` instance was improperly configured. \
+Review the exception raised from `{ApplicationConfigBuilder[Config].__name__}` and apply fixes through this `{ApplicationBuilder[T_app].__name__}` instance's `{ApplicationBuilder[T_app].use_configuration.__name__}` method."
+            ) from e
+        except BuilderBuildError as e:
+            raise BuilderBuildError(
+                f"`{ApplicationBuilder[T_app].__name__}` failed to build the application configuration due to an error when creating the application configuration. \
+Review the exception raised from `{ApplicationConfigBuilder[Config].__name__}` and apply fixes through this `{ApplicationBuilder[T_app].__name__}` instance's `{ApplicationBuilder[T_app].use_configuration.__name__}` method."
+            ) from e
 
         if config is None:
             raise BuilderBuildError(
-                "Failed to load the application configuration correctly."
+                f"The application configuration failed to load for an unknown reason. Review the `{ApplicationConfigBuilder[Config].__name__}` instance's configuration."
             )
 
         if config.flask is None:
-            raise Exception("You must set [flask] in the application configuration.")
+            raise ConfigInvalidError(
+                "You must set [flask] in the application configuration. Review the documentation for the Ligare.web TOML format and requirements."
+            )
 
         if not config.flask.app_name:
-            raise Exception(
-                "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar."
+            raise ConfigInvalidError(
+                "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar. Review the documentation for the Ligare.web TOML format and requirements."
             )
 
         app: T_app

@@ -6,6 +6,7 @@ import toml
 from Ligare.programming.collections.dict import AnyDict, merge
 from Ligare.programming.config.exceptions import (
     ConfigBuilderStateError,
+    ConfigInvalidError,
     NotEndsWithConfigError,
 )
 from typing_extensions import Self
@@ -138,7 +139,12 @@ def load_config(
     :param AnyDict | None config_overrides: Explicit data used to override any data in the TOML file, defaults to None
     :return TConfig: The hydrated configuration object
     """
-    config_dict: dict[str, Any] = toml.load(toml_file_path)
+    try:
+        config_dict: dict[str, Any] = toml.load(toml_file_path)
+    except FileNotFoundError as e:
+        full_path = Path(toml_file_path).resolve()
+        raise ConfigInvalidError(f"The configuration file specified, `{toml_file_path}`, could not be found at `{full_path}` and was not loaded. \
+Is the file path correct?") from e
 
     if config_overrides is not None:
         config_dict = merge(config_dict, config_overrides)
