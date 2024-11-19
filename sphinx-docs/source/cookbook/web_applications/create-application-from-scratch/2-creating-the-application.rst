@@ -64,67 +64,55 @@ Modify ``app/__init__.py`` with the following.
    result.run()
 
 
-Now we have something we can run - but it doesn't do a whole lot. Go ahead and run this code.
+Now we have something we can run. Go ahead and run this code.
 
 .. code-block:: shell-session
 
    user@: my-ligare-app $ python app/__init__.py
 
-As you can see, nothing really happens. This is because a builder needs to `build` what it has configured, and then something needs to be done with the built object.
+Unfortunately, it seems we have another step to take because the application tells us it cannot find its configuration file.
+That makes sense, because we haven't created it yet.
 
-Add this to the end of ``app/__init__.py``.
+.. code-block:: console
 
-.. code-block:: python
+   ConfigInvalidError: The configuration file specified, `app/config.toml`,
+   could not be found at `/my-ligare-app/app/config.toml` and was not loaded.
+   Is the file path correct?
 
-   result = application_builder.build()
-
-Now if we run the application, we get this error.
-
-   InvalidBuilderStateError: Cannot build the application config without either `use_ssm` or `use_filename` having been configured.
-
-We're getting there, but this error tells us that we still need to modify the builder to satisfy a requirement.
-In this case, we need to add the method ``use_configuration``, and we need to add a config file.
-
-Change ``app/__init__.py`` to look like this.
-
-.. code-block:: python
-
-   application_builder = ApplicationBuilder[FlaskApp]() \
-      .use_configuration(
-         lambda config_builder: \
-            config_builder.with_config_filename("app/config.toml")
-      )
-
-   result = application_builder.build()
-
-And create the config file.
+Let's create that file.
 
 .. code-block:: shell-session
 
-   user@: my-ligare-app $ touch app/config.toml
-
-Now if we run the application, we still get an error, but we're told that the config file is invalid.
-
-   Exception: You must set [flask] in the application configuration
-
-This is because we didn't actually put anything in the config file. So let's do that.
-
-Change ``app/config.toml`` to the following.
-
-.. code-block:: toml
+   user@: my-ligare-app $ cat > app/config.toml <<EOF
+   [logging]
+   format = 'plaintext'
 
    [flask]
    app_name = 'app'
+   EOF
 
-Now if we run the application, we get a single line of output and the application exits.
-Add one more line to ``app/__init__.py``. This tells the application to start accepting
-API requests so that it doesn't just immediately exit.
+.. note::
 
-.. code-block:: python
+   Due to a `bug <https://github.com/uclahs-cds/Ligare/issues/158>`_ with JSON logging, plaintext logging must be configured.
+   This format also makes it easier to read the output of your application in the console when you are building and testing it.
 
-   result.app_injector.app.run()
+Run the application again.
 
-Now you can visit http://localhost:5000 to see your application in action!
+.. code-block:: shell-session
+
+   user@: my-ligare-app $ python app/__init__.py
+
+Now you will see this.
+
+.. code-block:: console
+
+   * Serving Flask app 'app'
+   * Debug mode: off
+   WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+   * Running on http://localhost:5000
+   Press CTRL+C to quit
+
+Congrats! Your application is running. Now you can visit http://localhost:5000 to see your application in action!
 
 But it doesn't do anything except tell you that nothing can be found.
 
