@@ -18,17 +18,28 @@ Modifying the Existing Application
 
 First, let's modify the application config file ``app/config.toml``. Add the ``flask.openapi`` section so your file looks like this.
 
-.. code-block:: toml
+.. code-block:: shell-session
 
-   [flask]
-   app_name = 'app'
-
+   user@: my-ligare-app $ cat >> app/config.toml << EOF
    [flask.openapi]
    spec_path = 'openapi.yaml'
 
+   EOF
+
 This change allows us to use an OpenAPI specification file to control details of the API endpoint.
 
-We also need to modify the ``[flask]`` section, and add a ``[logging]`` section.
+
+.. note::
+
+   Due to a `bug <https://github.com/uclahs-cds/Ligare/issues/158>`_ with JSON logging, plaintext logging must be configured.
+
+   .. code-block:: shell-session
+
+      user@: my-ligare-app $ cat >> app/config.toml << EOF
+      [logging]
+      format = 'plaintext'
+
+      EOF
 
 Your file will look like this.
 
@@ -36,8 +47,6 @@ Your file will look like this.
 
    [flask]
    app_name = 'app'
-   host = 'localhost'
-   port = '5000'
 
    [flask.openapi]
    spec_path = 'openapi.yaml'

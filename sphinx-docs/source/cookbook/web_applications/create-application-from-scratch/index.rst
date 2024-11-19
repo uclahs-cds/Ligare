@@ -9,7 +9,7 @@ We will create this application from scratch, building each piece necessary for 
    :maxdepth: 2
    :caption: Contents:
 
-   setting-up-your-project
-   creating-the-application
-   adding-api-endpoints
-   additional-features
+   1-setting-up-your-project
+   2-creating-the-application
+   3-adding-api-endpoints
+   4-additional-features
