@@ -2,8 +2,8 @@ Working With Scaffolded Applications
 ====================================
 
 .. toctree::
-	:maxdepth: 2
-	:caption: Contents:
+   :maxdepth: 2
+   :caption: Contents:
 
    basic-applications
    openapi-applications
