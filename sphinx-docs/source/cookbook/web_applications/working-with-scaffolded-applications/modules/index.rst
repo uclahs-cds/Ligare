@@ -5,7 +5,7 @@ Modules
 	:maxdepth: 2
 	:caption: Contents:
 
-   database
+	database
 
 The selected modules usually contain code in the ``kitchen_openapi/modules/`` directory.
 
