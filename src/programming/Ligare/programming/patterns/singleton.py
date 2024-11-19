@@ -61,6 +61,7 @@ class Singleton(type):
         class Foo(metaclass=Singleton):
             _block_change = False
     """
+
     class InstanceValue:
         __value: Any
         __deleted: bool
