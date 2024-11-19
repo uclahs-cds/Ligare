@@ -16,7 +16,9 @@ The specification is an `OpenAPI specification <https://swagger.io/specification
 Modifying the Existing Application
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-First, let's modify the application config file ``app/config.toml``. Add the ``flask.openapi`` section so your file looks like this.
+We need to have your application load the OpenAPI specification file, which is used to control the details of your API.
+
+Let's modify the application config file ``app/config.toml`` to add the ``flask.openapi`` section.
 
 .. code-block:: shell-session
 
@@ -26,49 +28,18 @@ First, let's modify the application config file ``app/config.toml``. Add the ``f
 
    EOF
 
-This change allows us to use an OpenAPI specification file to control details of the API endpoint.
-
-
-.. note::
-
-   Due to a `bug <https://github.com/uclahs-cds/Ligare/issues/158>`_ with JSON logging, plaintext logging must be configured.
-
-   .. code-block:: shell-session
-
-      user@: my-ligare-app $ cat >> app/config.toml << EOF
-      [logging]
-      format = 'plaintext'
-
-      EOF
-
 Your file will look like this.
 
 .. code-block:: toml
+
+   [logging]
+   format = 'plaintext'
 
    [flask]
    app_name = 'app'
 
    [flask.openapi]
    spec_path = 'openapi.yaml'
-
-   [logging]
-   format = 'plaintext'
-
-Finally, let's make a few modifications to ``app/__init__.py``.
-This ensures the ``localhost`` and ``port`` options in ``config.toml`` are used.
-
-.. code-block:: python
-
-   from Ligare.web.config import FlaskConfig
-
-   application_builder = ApplicationBuilder[FlaskApp]() \
-      .use_configuration(
-         lambda config_builder: \
-            config_builder.with_config_filename("app/config.toml")
-      )
-
-   result = application_builder.build()
-   result.run()
 
 Adding Endpoints
 ^^^^^^^^^^^^^^^^
