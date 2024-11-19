@@ -34,7 +34,7 @@ from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
 from typing_extensions import Self, deprecated
 
-from .config import Config
+from .config import Config, FlaskConfig
 from .middleware import (
     register_api_request_handlers,
     register_api_response_handlers,
@@ -79,6 +79,53 @@ class CreateAppResult(Generic[T_app]):
 
     flask_app: Flask
     app_injector: AppInjector[T_app]
+
+    def run(
+        self,
+        import_string: str | None = None,
+        # uvicorn's default is 127.0.0.1 but we default to localhost
+        # and try to load the value from a config file
+        host: str | None = None,
+        # uvicorn's default is 8000 but we default to 5000
+        # and try to load the value from a config file
+        port: int | None = None,
+        **kwargs: Any,
+    ):
+        """
+        Call this method to start your application.
+        This method is partly a passthrough for `uvicorn.run`.
+
+        Reference https://github.com/encode/uvicorn/blob/fe3910083e3990695bc19c2ef671dd447262ae18/uvicorn/main.py#L463
+
+        :param import_string: application as import string (eg. "main:app"). This is needed to run
+                              using reload.
+        :param host: The hostname this application should accept requests for.
+                              If `None`, the value in the application's `FlaskConfig` instance is used;
+                              otherwise, this parameter value is used.
+        :param port: The port this application should listen on for requests.
+                              If `None`, the value in the application's `FlaskConfig` instance is used;
+                              otherwise, this parameter value is used.
+        """
+        app = self.app_injector.app
+        injector = self.app_injector.flask_injector.injector
+        config = injector.get(FlaskConfig)
+
+        host = host or config.host
+        port = port or int(config.port)
+
+        if isinstance(app, FlaskApp):
+            app.run(
+                import_string=import_string,  # pyright: ignore[reportArgumentType] the connexion type annotation is wrong; `None` is supported.
+                host=host,
+                port=port,
+                **kwargs,
+            )
+        else:
+            app.run(
+                host=host,
+                port=port,
+                **kwargs,
+            )
 
 
 FlaskAppResult = CreateAppResult[Flask]
