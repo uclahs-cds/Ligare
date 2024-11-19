@@ -21,7 +21,7 @@ Create a project directory, create a new virtual environment, and activate the v
 
 The following commands are executed with the virtual environment activated.
 
-Now we can create a minimal ``pyproject.toml`` file that let's us create our application, and install ``Ligare.web``.
+Now we can create a minimal ``pyproject.toml`` file that lets us create our application, and install ``Ligare.web``.
 
 First we need to ensure compatibility with Python 3.10.
 
