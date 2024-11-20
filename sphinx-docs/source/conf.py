@@ -6,8 +6,10 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
 import sys
-from os import environ
+import zipfile
+from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
 
@@ -60,13 +62,17 @@ copybutton_prompt_text = r">>> |\.\.\. |\$ "
 copybutton_prompt_is_regexp = True
 copybutton_only_copy_prompt_lines = True
 
-github_ref = environ.get("GITHUB_REF") or "main"
+github_ref = os.environ.get("GITHUB_REF") or "main"
 
 extlinks = {
     "example": (
         f"https://github.com/uclahs-cds/Ligare/blob/{github_ref}/examples/%s",
         None,
-    )
+    ),
+    "archive": (
+        "https://uclahs-cds.github.io/Ligare/_downloads/%s.zip",
+        "Download example archive [%s.zip]",
+    ),
 }
 
 
@@ -104,6 +110,30 @@ def skip_member(
     return skip
 
 
+def create_zips_for_examples(app: Sphinx, exception: Exception | None):
+    if exception is not None:
+        return
+
+    examples_dir = Path("examples").resolve()
+    example_paths = examples_dir.glob("*")
+    output_dir = Path(app.outdir, "_downloads")
+
+    if not output_dir.exists():
+        output_dir.mkdir(755)
+
+    for example_path in example_paths:
+        # Store the zip file in the `_downloads` output directory with the name
+        # of the example (which is the directory name), e.g. _downloads/web-api.zip
+        with zipfile.ZipFile(
+            Path(output_dir, f"{example_path.name}.zip"), "w", zipfile.ZIP_DEFLATED
+        ) as zip_file:
+            for root, _, files in os.walk(examples_dir):
+                for file in files:
+                    file_path = Path(root, file)
+                    arcname = Path.relative_to(file_path, examples_dir)
+                    zip_file.write(file_path, arcname)
+
+
 def setup(app: Sphinx) -> None:
     """
     Connects the `skip_member` function to the `autodoc-skip-member` event.
@@ -117,3 +147,4 @@ def setup(app: Sphinx) -> None:
     # WARNING: Failed guarded type import with ModuleNotFoundError("No module named '_typeshed'")
     sys.modules["_typeshed"] = Mock()
     _ = app.connect("autodoc-skip-member", skip_member)
+    _ = app.connect("build-finished", create_zips_for_examples)
