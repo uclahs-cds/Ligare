@@ -123,7 +123,7 @@ def create_zips_for_examples(app: Sphinx, exception: Exception | None):
     output_dir = Path(app.outdir, "_downloads")
 
     if not output_dir.exists():
-        output_dir.mkdir(755)
+        output_dir.mkdir()
 
     for example_path in example_paths:
         # Store the zip file in the `_downloads` output directory with the name
