@@ -60,11 +60,11 @@ copybutton_prompt_text = r">>> |\.\.\. |\$ "
 copybutton_prompt_is_regexp = True
 copybutton_only_copy_prompt_lines = True
 
-git_ref = environ.get("GITHUB_REF") or "main"
+github_ref = environ.get("GITHUB_REF") or "main"
 
 extlinks = {
     "example": (
-        f"https://github.com/uclahs-cds/ligare/blob/{git_ref}/examples/%s",
+        f"https://github.com/uclahs-cds/Ligare/blob/{github_ref}/examples/%s",
         None,
     )
 }
