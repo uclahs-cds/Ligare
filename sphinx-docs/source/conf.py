@@ -36,6 +36,7 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx_toolbox.more_autodoc.autoprotocol",
     "sphinx_copybutton",
+    "sphinx.ext.viewcode",
 ]
 
 autosummary_generate = True
