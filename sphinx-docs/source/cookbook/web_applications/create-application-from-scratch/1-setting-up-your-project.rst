@@ -58,17 +58,9 @@ Finally, we include ``Ligare.web`` as a dependency of our application.
 
 Once completed, our ``pyproject.toml`` should look like this.
 
-.. code-block:: toml
-
-   [project]
-   requires-python = "3.10"
-
-   name = "my-ligare-app"
-   version = "0.0.1"
-
-   dependencies = [
-      "Ligare.web"
-   ]
+.. literalinclude:: ../../../../../examples/web-api/pyproject.toml
+   :language: toml
+   :caption: :example:`web-api/pyproject.toml`
 
 Now we can install everything necessary to create a Ligare application.
 

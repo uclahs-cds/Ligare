@@ -65,9 +65,13 @@ copybutton_only_copy_prompt_lines = True
 github_ref = os.environ.get("GITHUB_REF") or "main"
 
 extlinks = {
+    "source": (
+        f"https://github.com/uclahs-cds/Ligare/blob/{github_ref}/%s",
+        None,
+    ),
     "example": (
         f"https://github.com/uclahs-cds/Ligare/blob/{github_ref}/examples/%s",
-        None,
+        "Review example sources [%s]",
     ),
     "archive": (
         "https://uclahs-cds.github.io/Ligare/_downloads/%s.zip",

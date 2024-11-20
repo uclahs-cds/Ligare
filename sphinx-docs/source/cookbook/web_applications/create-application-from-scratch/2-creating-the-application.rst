@@ -49,8 +49,7 @@ Modify ``app/__init__.py`` with the following.
 
 .. literalinclude:: ../../../../../examples/web-api/app/__init__.py
    :language: python
-
-:download:`Download this example <../../../../../examples/web-api/app/__init__.py>`
+   :caption: :example:`web-api/app/__init__.py`
 
 Now we have something we can run. Go ahead and run this code.
 
