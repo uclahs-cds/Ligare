@@ -30,16 +30,9 @@ Let's modify the application config file ``app/config.toml`` to add the ``flask.
 
 Your file will look like this.
 
-.. code-block:: toml
-
-   [logging]
-   format = 'plaintext'
-
-   [flask]
-   app_name = 'app'
-
-   [flask.openapi]
-   spec_path = 'openapi.yaml'
+.. literalinclude:: ../../../../../examples/web-api/app/config.toml
+  :language: toml
+  :caption: :example:`web-api/app/config.toml`
 
 Adding Endpoints
 ^^^^^^^^^^^^^^^^
@@ -54,25 +47,9 @@ The ``openapi.yaml`` File
 
 Create a new file at ``app/openapi.yaml`` and add this content.
 
-.. code-block:: yaml
-
-   info:
-     title: Test Application
-     version: 3.0.3
-   openapi: 3.0.3
-   paths:
-     /:
-       get:
-         description: Say "Hello, World!"
-         operationId: root.get
-         responses:
-           "200":
-             content:
-               application/json:
-                 schema:
-                   type: string
-             description: Said "Hello, World!" successfully
-
+.. literalinclude:: ../../../../../examples/web-api/app/openapi.yaml
+   :language: yaml
+   :caption: :example:`web-api/app/openapi.yaml`
 
 This OpenAPI specification states that there is an HTTP GET endpoint at
 ``/`` that returns an HTTP 200 status, and a JSON string for its content.
@@ -88,10 +65,9 @@ for this endpoint.
 
 Create the file ``app/root.py`` and add this to it.
 
-.. code-block:: python
-
-   def get():
-      return "Hello, World!"
+.. literalinclude:: ../../../../../examples/web-api/app/root.py
+   :language: python
+   :caption: :example:`web-api/app/root.py`
 
 The function named ``get`` is the same one specified for the ``operationId`` property.
 This is all you need to do to return data through your API endpoint!
