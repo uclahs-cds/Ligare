@@ -7,6 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 import sys
+from os import environ
 from typing import Any
 from unittest.mock import Mock
 
@@ -37,6 +38,7 @@ extensions = [
     "sphinx_toolbox.more_autodoc.autoprotocol",
     "sphinx_copybutton",
     "sphinx.ext.viewcode",
+    "sphinx.ext.extlinks",
 ]
 
 autosummary_generate = True
@@ -57,6 +59,15 @@ copybutton_exclude = ".linenos, .gp"
 copybutton_prompt_text = r">>> |\.\.\. |\$ "
 copybutton_prompt_is_regexp = True
 copybutton_only_copy_prompt_lines = True
+
+git_ref = environ.get("GITHUB_REF") or "main"
+
+extlinks = {
+    "example": (
+        f"https://github.com/uclahs-cds/ligare/blob/{git_ref}/examples/%s",
+        None,
+    )
+}
 
 
 def skip_member(

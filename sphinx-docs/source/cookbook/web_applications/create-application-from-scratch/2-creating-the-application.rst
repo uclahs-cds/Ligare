@@ -47,22 +47,10 @@ The class we need for this is :obj:`ApplicationBuilder[T] <Ligare.web.applicatio
 
 Modify ``app/__init__.py`` with the following.
 
-.. code-block:: python
+.. literalinclude:: ../../../../../examples/web-api/app/__init__.py
+   :language: python
 
-   from Ligare.web.application import ApplicationBuilder
-   from connexion import FlaskApp
-
-   application_builder = ApplicationBuilder[FlaskApp]()
-
-   application_builder.use_configuration(
-       lambda config_builder: \
-           config_builder.with_config_filename("app/config.toml")
-   )
-
-   result = application_builder.build()
-
-   result.run()
-
+:download:`Download this example <../../../../../examples/web-api/app/__init__.py>`
 
 Now we have something we can run. Go ahead and run this code.
 
