@@ -1,3 +1,5 @@
+.. _examples-web-applications:
+
 Web Applications
 ================
 

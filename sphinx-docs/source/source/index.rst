@@ -1,14 +1,7 @@
-.. Ligare documentation master file, created by
-   sphinx-quickstart on Tue Oct 29 08:52:59 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Ligare Source Documentation
-====================
+===========================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+This is API documentation for working with the Ligare libraries.
 
 .. toctree::
    :maxdepth: 2

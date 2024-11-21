@@ -277,4 +277,6 @@ Sphinx-%: $(VENV) $(DEFAULT_TARGET) Makefile
 
 Sphinx-autobuild: $(VENV) $(DEFAULT_TARGET) Makefile
 	$(ACTIVATE_VENV) && \
-	sphinx-autobuild "sphinx-docs/$(SOURCEDIR)" "sphinx-docs/$(BUILDDIR)/html"
+	sphinx-autobuild "sphinx-docs/$(SOURCEDIR)" "sphinx-docs/$(BUILDDIR)/html" \
+	    --watch src/ --ignore "!src/**/*.py" --ignore "src/*/test/**" \
+		-j auto
