@@ -1,3 +1,7 @@
+"""
+Libraries used by :ref:`Ligare.web.scaffolding`.
+"""
+
 import logging
 import re
 import sys

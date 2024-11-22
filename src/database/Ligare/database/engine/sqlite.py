@@ -1,3 +1,7 @@
+"""
+Integrations with SQLAlchemy's `SQLite <https://docs.sqlalchemy.org/en/14/core/engines.html#sqlite>`_ engine.
+"""
+
 from sqlite3 import Connection
 from typing import Any, Callable
 

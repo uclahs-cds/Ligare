@@ -1,3 +1,7 @@
+"""
+Flask-specific integrations for :ref:`Ligare.web`.
+"""
+
 import re
 import uuid
 from logging import Logger

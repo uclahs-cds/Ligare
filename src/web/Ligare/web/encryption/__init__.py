@@ -1,3 +1,7 @@
+"""
+Libraries for encryption and decryption.
+"""
+
 import hashlib
 from typing import TYPE_CHECKING, Any, Callable, Dict
 

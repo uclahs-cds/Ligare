@@ -1,3 +1,8 @@
+"""
+:ref:`Ligare.programming`'s API for working with configuration files.
+=====================================================================
+"""
+
 import abc
 from pathlib import Path
 from typing import Any, Generic, TypeVar, cast

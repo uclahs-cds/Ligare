@@ -1,3 +1,7 @@
+"""
+:ref:`Ligare.web`'s integration with :ref:`Ligare.programming.config`.
+"""
+
 from dataclasses import field
 from os import environ
 from typing import Literal, Sequence, cast

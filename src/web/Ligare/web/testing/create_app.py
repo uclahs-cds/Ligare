@@ -1,3 +1,7 @@
+"""
+Fixtures for testing :ref:`Ligare.web`, Flask, and Connexion/OpenAPI applications.
+"""
+
 import importlib
 import logging
 import sys

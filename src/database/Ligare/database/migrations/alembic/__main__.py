@@ -1,3 +1,7 @@
+"""
+A wrapper application, named ``ligare-alembic``, for the ``alembic`` command.
+"""
+
 import logging
 from os import environ
 

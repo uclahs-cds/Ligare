@@ -1,3 +1,7 @@
+"""
+Handlers for differences in SQL dialects.
+"""
+
 from abc import ABC, abstractmethod
 
 from Ligare.database.types import MetaBase, TableNameCallback
