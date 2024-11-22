@@ -1,3 +1,7 @@
+"""
+Connexion and OpenAPI-specific integrations for :ref:`Ligare.web`.
+"""
+
 import re
 import uuid
 from collections.abc import Iterable

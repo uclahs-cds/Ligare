@@ -1,3 +1,7 @@
+"""
+Libraries for hosting :ref:`Ligare.web` applications with ASGI.
+"""
+
 from Ligare.programming.collections.dict import merge
 from uvicorn.workers import UvicornWorker
 

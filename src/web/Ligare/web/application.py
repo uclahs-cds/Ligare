@@ -1,3 +1,7 @@
+"""
+The framework API for creating Flask and Connexion applications.
+"""
+
 import logging
 from collections import defaultdict
 from dataclasses import dataclass

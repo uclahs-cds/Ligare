@@ -1,3 +1,7 @@
+"""
+:ref:`Ligare.web`'s integration with `Injector <https://pypi.org/project/injector/>`_ and `Flask Injector <https://pypi.org/project/Flask-Injector/>`_.
+"""
+
 from functools import partial
 from typing import Any, Callable, Protocol, Tuple, Type, cast
 

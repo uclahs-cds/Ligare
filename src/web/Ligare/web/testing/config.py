@@ -1,3 +1,8 @@
+"""
+Fixtures related to :ref:`Ligare.database`.
+"""
+# FIXME this file should perhaps be renamed to be more meaningful regarding the one fixture in here.
+
 from typing import Any, Callable, Generator
 
 import pytest

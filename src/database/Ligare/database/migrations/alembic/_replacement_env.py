@@ -1,3 +1,7 @@
+"""
+Alembic environment executor for scaffolded applications.
+"""
+
 from pathlib import Path
 
 from alembic import context

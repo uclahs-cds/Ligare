@@ -1,3 +1,7 @@
+"""
+Integrations with SQLAlchemy's `PostgreSQL <https://docs.sqlalchemy.org/en/14/core/engines.html#postgresql>`_ engine.
+"""
+
 from importlib.util import find_spec
 from typing import Any, Callable, Union
 

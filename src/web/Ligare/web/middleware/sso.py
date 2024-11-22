@@ -1,3 +1,7 @@
+"""
+:ref:`Ligare.web`'s IAM controls and integration with :ref:`Ligare.identity`.
+"""
+
 import logging
 import logging as log
 from abc import ABC

@@ -1,3 +1,8 @@
+"""
+Exceptions raised by the configuration system.
+"""
+
+
 class InvalidConfigNameError(Exception):
     """The class name used as a configuration type is invalid."""
 

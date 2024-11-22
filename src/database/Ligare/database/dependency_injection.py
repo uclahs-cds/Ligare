@@ -1,3 +1,7 @@
+"""
+`Injector <https://pypi.org/project/injector/>`_ dependency injection modules for database connection objects.
+"""
+
 from injector import Binder, CallableProvider, Injector, inject, singleton
 from Ligare.database.config import Config, DatabaseConfig
 from Ligare.database.engine import DatabaseEngine
