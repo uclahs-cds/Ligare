@@ -1,3 +1,7 @@
+"""
+Database schema handlers for SQLAlchemy and PostgreSQL.
+"""
+
 from alembic.operations.base import Operations
 from sqlalchemy.engine import Dialect
 

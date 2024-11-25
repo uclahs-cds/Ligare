@@ -1,0 +1,12 @@
+/* change `..code-block:: shell-session` prompt appearance */
+.highlight .gp {
+    color: #616161;
+    font-style: italic;
+}
+
+/* put `literalinclude` captions on the left and closer to coe blocks */
+.rst-content .literal-block-wrapper .code-block-caption {
+    text-align: left;
+    padding-bottom: 0.5em;
+    margin-top: -1.5em;
+}

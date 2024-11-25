@@ -1,3 +1,7 @@
+"""
+The framework API for creating Flask and Connexion applications.
+"""
+
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
@@ -16,6 +20,7 @@ from typing import (
 
 import json_logging
 from connexion import FlaskApp
+from connexion.options import SwaggerUIOptions
 from flask import Blueprint, Flask
 from flask_injector import FlaskInjector
 from injector import Module
@@ -28,13 +33,16 @@ from Ligare.programming.config import (
     TConfig,
     load_config,
 )
-from Ligare.programming.config.exceptions import ConfigBuilderStateError
+from Ligare.programming.config.exceptions import (
+    ConfigBuilderStateError,
+    ConfigInvalidError,
+)
 from Ligare.programming.dependency_injection import ConfigModule
 from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
 from typing_extensions import Self, deprecated
 
-from .config import Config
+from .config import Config, FlaskConfig
 from .middleware import (
     register_api_request_handlers,
     register_api_response_handlers,
@@ -79,6 +87,53 @@ class CreateAppResult(Generic[T_app]):
 
     flask_app: Flask
     app_injector: AppInjector[T_app]
+
+    def run(
+        self,
+        import_string: str | None = None,
+        # uvicorn's default is 127.0.0.1 but we default to localhost
+        # and try to load the value from a config file
+        host: str | None = None,
+        # uvicorn's default is 8000 but we default to 5000
+        # and try to load the value from a config file
+        port: int | None = None,
+        **kwargs: Any,
+    ):
+        """
+        Call this method to start your application.
+        This method is partly a passthrough for `uvicorn.run`.
+
+        Reference https://github.com/encode/uvicorn/blob/fe3910083e3990695bc19c2ef671dd447262ae18/uvicorn/main.py#L463
+
+        :param import_string: application as import string (eg. "main:app"). This is needed to run
+                              using reload.
+        :param host: The hostname this application should accept requests for.
+                              If `None`, the value in the application's `FlaskConfig` instance is used;
+                              otherwise, this parameter value is used.
+        :param port: The port this application should listen on for requests.
+                              If `None`, the value in the application's `FlaskConfig` instance is used;
+                              otherwise, this parameter value is used.
+        """
+        app = self.app_injector.app
+        injector = self.app_injector.flask_injector.injector
+        config = injector.get(FlaskConfig)
+
+        host = host or config.host
+        port = port or int(config.port)
+
+        if isinstance(app, FlaskApp):
+            app.run(
+                import_string=import_string,  # pyright: ignore[reportArgumentType] the connexion type annotation is wrong; `None` is supported.
+                host=host,
+                port=port,
+                **kwargs,
+            )
+        else:
+            app.run(
+                host=host,
+                port=port,
+                **kwargs,
+            )
 
 
 FlaskAppResult = CreateAppResult[Flask]
@@ -196,14 +251,14 @@ class ApplicationConfigBuilder(Generic[TConfig]):
     def build(self) -> TConfig | None:
         if not (self._use_ssm or self._use_filename):
             raise InvalidBuilderStateError(
-                "Cannot build the application config without either `use_ssm` or `use_filename` having been configured."
+                f"Cannot build the application config without either `{ApplicationConfigBuilder[TConfig].enable_ssm.__name__}` or `{ApplicationConfigBuilder[TConfig].with_config_filename.__name__}` having been configured."
             )
 
         try:
             config_type = self._config_builder.build()
         except ConfigBuilderStateError as e:
             raise BuilderBuildError(
-                "A root config must be specified using `with_root_config` before calling `build()`."
+                f"A root config must be specified using `{ApplicationConfigBuilder[TConfig].with_root_config_type.__name__}`, `{ApplicationConfigBuilder[TConfig].with_config_type.__name__}`, or `{ApplicationConfigBuilder[TConfig].with_config_types.__name__}` before calling `{ApplicationConfigBuilder[TConfig].build.__name__}`."
             ) from e
 
         full_config: TConfig | None = None
@@ -342,19 +397,32 @@ class ApplicationBuilder(Generic[T_app]):
         _ = self._application_config_builder.with_config_value_overrides(
             config_overrides
         )
-        config = self._application_config_builder.build()
+        try:
+            config = self._application_config_builder.build()
+        except InvalidBuilderStateError as e:
+            raise BuilderBuildError(
+                f"`{ApplicationBuilder[T_app].__name__}` failed to build the application configuration because the `{ApplicationConfigBuilder[Config].__name__}` instance was improperly configured. \
+Review the exception raised from `{ApplicationConfigBuilder[Config].__name__}` and apply fixes through this `{ApplicationBuilder[T_app].__name__}` instance's `{ApplicationBuilder[T_app].use_configuration.__name__}` method."
+            ) from e
+        except BuilderBuildError as e:
+            raise BuilderBuildError(
+                f"`{ApplicationBuilder[T_app].__name__}` failed to build the application configuration due to an error when creating the application configuration. \
+Review the exception raised from `{ApplicationConfigBuilder[Config].__name__}` and apply fixes through this `{ApplicationBuilder[T_app].__name__}` instance's `{ApplicationBuilder[T_app].use_configuration.__name__}` method."
+            ) from e
 
         if config is None:
             raise BuilderBuildError(
-                "Failed to load the application configuration correctly."
+                f"The application configuration failed to load for an unknown reason. Review the `{ApplicationConfigBuilder[Config].__name__}` instance's configuration."
             )
 
         if config.flask is None:
-            raise Exception("You must set [flask] in the application configuration.")
+            raise ConfigInvalidError(
+                "You must set [flask] in the application configuration. Review the documentation for the Ligare.web TOML format and requirements."
+            )
 
         if not config.flask.app_name:
-            raise Exception(
-                "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar."
+            raise ConfigInvalidError(
+                "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar. Review the documentation for the Ligare.web TOML format and requirements."
             )
 
         app: T_app
@@ -446,8 +514,11 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     connexion_app = FlaskApp(
         config.flask.app_name,
         specification_dir=exec_dir,
-        # host=host,
-        # port=port,
+        swagger_ui_options=SwaggerUIOptions(
+            swagger_ui=config.flask.openapi.use_swagger,
+            swagger_ui_path=config.flask.openapi.swagger_url
+            or SwaggerUIOptions.swagger_ui_path,
+        ),
     )
     app = connexion_app.app
     config.update_flask_config(app.config)

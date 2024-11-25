@@ -1,3 +1,7 @@
+"""
+Utilities for getting information from SQLAlchemy's `declarative mapping <https://docs.sqlalchemy.org/en/14/orm/mapping_styles.html#declarative-mapping>` API.
+"""
+
 from typing import Any, Type
 
 from sqlalchemy.ext.declarative import DeclarativeMeta

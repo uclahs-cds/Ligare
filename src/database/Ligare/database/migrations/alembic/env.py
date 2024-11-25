@@ -1,3 +1,7 @@
+"""
+Alembic integrations with :ref:`Ligare.programming`, :ref:`Ligare.AWS`, and :ref:`Ligare.database`.
+"""
+
 import logging
 from configparser import ConfigParser
 from pathlib import Path

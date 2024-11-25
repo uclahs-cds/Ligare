@@ -256,3 +256,27 @@ reset-check:
 reset : reset-check clean
 	git checkout -- $(PYPROJECT_FILES)
 
+
+SPHINXOPTS    ?=
+SPHINXBUILD   ?= sphinx-build
+SOURCEDIR     = source
+BUILDDIR      = build
+
+Sphinx-help: $(VENV) $(DEFAULT_TARGET)
+	@$(ACTIVATE_VENV) && \
+	$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+.PHONY: Sphinx-help Makefile
+
+Sphinx: $(VENV) $(DEFAULT_TARGET) Makefile
+	$(MAKE) Sphinx-html
+
+Sphinx-%: $(VENV) $(DEFAULT_TARGET) Makefile
+	$(ACTIVATE_VENV) && \
+	$(SPHINXBUILD) -M $(patsubst Sphinx-%,%,$@) "sphinx-docs/$(SOURCEDIR)" "sphinx-docs/$(BUILDDIR)" $(SPHINXOPTS)
+
+Sphinx-autobuild: $(VENV) $(DEFAULT_TARGET) Makefile
+	$(ACTIVATE_VENV) && \
+	sphinx-autobuild "sphinx-docs/$(SOURCEDIR)" "sphinx-docs/$(BUILDDIR)/html" \
+	    --watch src/ --ignore "!src/**/*.py" --ignore "src/*/test/**" \
+		-j auto

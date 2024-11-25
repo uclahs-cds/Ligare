@@ -41,7 +41,9 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
             )
         )
 
-        connexion_mock.assert_called_with(app_name, specification_dir=spec_path)
+        connexion_mock.assert_called()
+        assert connexion_mock.call_args.kwargs
+        assert connexion_mock.call_args.kwargs["specification_dir"] == spec_path
 
     def test__CreateOpenAPIApp__create_app__loads_config_from_toml(
         self, basic_config: Config, mocker: MockerFixture

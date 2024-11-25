@@ -1,3 +1,7 @@
+"""
+:ref:`Ligare.database`'s integration with :ref:`Ligare.programming.config`.
+"""
+
 from typing import Any
 
 from Ligare.programming.config import AbstractConfig

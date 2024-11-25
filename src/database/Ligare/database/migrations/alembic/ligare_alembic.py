@@ -1,3 +1,7 @@
+"""
+The ``ligare-alembic`` application.
+"""
+
 import logging
 import sys
 from logging import Logger
