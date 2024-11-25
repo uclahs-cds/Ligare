@@ -1,9 +1,14 @@
+import itertools
 import logging
 import re
+from collections.abc import Iterable
 from dataclasses import asdict
 from typing import Any, cast
+from unittest.mock import _Call, call
 
 import pytest
+from jinja2 import Environment, PackageLoader
+from Ligare.programming.collections.dict import merge
 from Ligare.web.scaffolding.__main__ import ScaffolderCli, scaffold
 from Ligare.web.scaffolding.scaffolder import (
     Operation,
@@ -12,7 +17,7 @@ from Ligare.web.scaffolding.scaffolder import (
     Scaffolder,
     ScaffoldModule,
 )
-from pytest import CaptureFixture
+from pytest import CaptureFixture, FixtureRequest
 from pytest_mock import MockerFixture
 
 # pyright: reportPrivateUsage=false
@@ -482,6 +487,82 @@ def test__scaffold__create_mode_uses_argv_for_module_configuration(
     assert "database" in module_names
 
 
+@pytest.fixture
+def scaffold_config(request: FixtureRequest):
+    parameters: str | list[str] | None = getattr(request, "param", None)
+
+    modules: list[ScaffoldModule] | None = None
+    if isinstance(parameters, str):
+        modules = [ScaffoldModule(module_name=parameters)]
+    elif isinstance(parameters, Iterable) and parameters:
+        modules = [
+            ScaffoldModule(module_name=module_name) for module_name in parameters
+        ]
+
+    return ScaffoldConfig(
+        output_directory="/dev/null",
+        application=Operation(name="foo"),
+        template_type="basic",
+        modules=modules,
+    )
+
+
+modules = ["database", "test", "vscode"]
+module_combinations = list(
+    itertools.chain.from_iterable(
+        itertools.combinations(modules, r) for r in range(len(modules) + 1)
+    )
+)
+
+
+@pytest.mark.parametrize(
+    "scaffold_config",
+    module_combinations,
+    indirect=["scaffold_config"],
+)
+def test__scaffold__create_mode_renders_only_selected_modules(
+    scaffold_config: ScaffoldConfig,
+    mocker: MockerFixture,
+):
+    _ = mocker.patch("builtins.input", return_value="Y")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.BaseLoader")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Environment")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.PackageLoader")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Template")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Scaffolder._create_directory")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Scaffolder._scaffold_directory")
+    _ = mocker.patch("Ligare.web.scaffolding.scaffolder.Scaffolder._scaffold_endpoints")
+    _ = mocker.patch(
+        "Ligare.web.scaffolding.scaffolder.Scaffolder._check_scaffolded_application_exists",
+        return_value=False,
+    )
+    module_hook_mock = mocker.patch(
+        "Ligare.web.scaffolding.scaffolder.Scaffolder._execute_module_hooks"
+    )
+
+    argv_values = ["create", "-n", "test", "-o", "/dev/null"]
+
+    if scaffold_config.modules:
+        for module in scaffold_config.modules:
+            argv_values.extend(["-m", module.module_name])
+
+    scaffold(argv_values)
+
+    calls: list[_Call] = []
+    if scaffold_config.modules:
+        for module in scaffold_config.modules:
+            calls.append(
+                call(
+                    f"scaffolding/templates/optional/{{{{application.module_name}}}}/modules/{module.module_name}"
+                )
+            )
+
+        assert module_hook_mock.call_count == len(scaffold_config.modules)
+        module_hook_mock.assert_has_calls(calls, any_order=True)
+    else:
+        module_hook_mock.assert_not_called()
+
+
 def test__scaffold__create_mode_database_module_configures_database(
     mocker: MockerFixture,
 ):
@@ -506,22 +587,12 @@ def test__scaffold__create_mode_database_module_configures_database(
 
     scaffold(argv_values)
 
-    pass
     module_hook_mock.assert_called_once_with(
         "scaffolding/templates/optional/{{application.module_name}}/modules/database"
     )
 
 
-@pytest.fixture
-def scaffold_config():
-    return ScaffoldConfig(
-        output_directory="/dev/null",
-        application=Operation(name="foo"),
-        template_type="basic",
-        modules=[ScaffoldModule(module_name="database")],
-    )
-
-
+@pytest.mark.parametrize("scaffold_config", [["database"]], indirect=True)
 def test__database_module__on_create__asks_for_connection_string(
     scaffold_config: ScaffoldConfig,
     mocker: MockerFixture,
@@ -530,6 +601,7 @@ def test__database_module__on_create__asks_for_connection_string(
 
     mock_log = mocker.patch("logging.Logger", spec=logging.Logger)
     scaffolder = Scaffolder(config=scaffold_config, log=mock_log)
+
     scaffolder._execute_module_hooks(
         "scaffolding/templates/optional/{{application.module_name}}/modules/database",
     )
@@ -542,6 +614,7 @@ def test__database_module__on_create__asks_for_connection_string(
     ]
 
 
+@pytest.mark.parametrize("scaffold_config", [["database"]], indirect=True)
 def test__database_module__on_create__uses_user_input_connection_string(
     scaffold_config: ScaffoldConfig,
     mocker: MockerFixture,
@@ -558,3 +631,47 @@ def test__database_module__on_create__uses_user_input_connection_string(
         scaffolder._config_dict["module"]["database"]["connection_string"]
         == "sqlite:///dev/null"
     )
+
+
+@pytest.mark.parametrize(
+    "database_module_config",
+    [
+        # simulate the test module running before the database module
+        {},
+        # simulate the test module running after the database module
+        {"module": {"database": {"connection_string": "sqlite:///:memory:"}}},
+    ],
+)
+def test__test_module__renders_database_tests_when_database_module_is_specified(
+    database_module_config: dict[str, Any],
+):
+    # This test doesn't run the scaffolder. Instead, it looks up the test module
+    # template that we know needs to reference the database module and tests
+    # that template file output directly. To accomplish that, we use the Jinja2
+    # methods that the scaffolder uses to render, and just render the template
+    # ourselves. Then, we assert that the content "UseInmemoryDatabaseResult"
+    # is in the rendered output which, for this test anyway, means that the
+    # template is doing the correct thing.
+    module_path = "scaffolding/templates/optional/{{application.module_name}}/modules/test/templates"
+    # this is the specific test module template that references the database module
+    template_path = "test_{{meta.operation.module_name}}.py.j2"
+    env = Environment(
+        trim_blocks=True,
+        lstrip_blocks=True,
+        loader=PackageLoader("Ligare.web", module_path),
+    )
+    template = env.get_template(template_path)
+    template_stream = template.stream(
+        merge(
+            # TODO this might be a useful fixture so more tests like this can be written
+            {
+                "application": {"module_name": "app"},
+                "meta": {"operation": {"module_name": "test"}},
+                "modules": [{"module_name": "test"}, {"module_name": "database"}],
+            },
+            database_module_config,
+        )
+    )
+
+    rendered_template = "".join(template_stream)
+    assert "UseInmemoryDatabaseResult" in rendered_template
