@@ -2,10 +2,10 @@
 The framework API for creating applications.
 """
 
+import abc
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from os import path
 from types import FunctionType
 from typing import (
     Any,
@@ -20,11 +20,11 @@ from typing import (
 )
 
 from injector import Binder, Injector, Module
-from lib_programname import get_path_executed_script
 from Ligare.AWS.ssm import SSMParameters
 from Ligare.programming.collections.dict import NestedDict
 from Ligare.programming.config import (
     AbstractConfig,
+    Config,
     ConfigBuilder,
     TConfig,
     load_config,
@@ -37,21 +37,18 @@ from Ligare.programming.patterns.dependency_injection import (
     LoggerModule,
 )
 from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
-from pydantic import BaseModel
 from typing_extensions import Self, override
-
-_get_program_dir = lambda: path.dirname(get_path_executed_script())
-_get_exec_dir = lambda: path.abspath(".")
-
-TApp = TypeVar("TApp")
 
 TAppConfig = TypeVar("TAppConfig", bound=AbstractConfig)
 
 
-class Config(BaseModel, AbstractConfig):
-    @override
-    def post_load(self) -> None:
-        return super().post_load()
+class ApplicationBase(abc.ABC):
+    @abc.abstractmethod
+    def run(self, *args: Any, **kwargs: Any):
+        pass
+
+
+TApp = TypeVar("TApp", bound=ApplicationBase)
 
 
 class AppModule(BatchModule, Generic[TApp]):
@@ -78,21 +75,27 @@ class AppModule(BatchModule, Generic[TApp]):
     def configure(self, binder: Binder) -> None:
         super().configure(binder)
 
+        to: TApp
+
         if self._exec is not None:
             if isinstance(self._exec, type) and not self._exec == type:
-                binder.bind(self._exec, to=self._exec())
+                to = cast(TApp, self._exec())
+                binder.bind(self._exec, to=to)
             else:
                 if isinstance(self._exec, FunctionType):
-                    to: TApp = self._exec()
+                    to = self._exec()
                     binder.bind(type(to), to=to)
                 else:
-                    binder.bind(type(self._exec), to=self._exec)
+                    to = cast(TApp, self._exec)
+                    binder.bind(type(self._exec), to=to)
+
+            binder.bind(ApplicationBase, to=to)
 
         binder.install(LoggerModule(self._name))
 
 
 @dataclass
-class AppInjector(Generic[TApp]):
+class CreateAppResult(Generic[TApp]):
     """
     Contains an instantiated `TApp` application in `app`,
     and its associated `Injector` IoC container.
@@ -104,20 +107,8 @@ class AppInjector(Generic[TApp]):
     app: TApp
     injector: Injector
 
-
-@dataclass
-class CreateAppResult(Generic[TApp]):
-    """
-    TODO update this
-    Contains an instantiated Flask application and its
-    associated application "container." This is either
-    the same Flask instance, or an OpenAPI application.
-
-    :param flask_app Generic: The Flask application.
-    :param app_injector AppInjector[TApp]: The application's wrapper and IoC container.
-    """
-
-    app_injector: AppInjector[TApp]
+    def run(self):
+        return self.injector.call_with_injection(self.app.run)
 
 
 class UseConfigurationCallback(Protocol[TConfig]):
@@ -274,6 +265,11 @@ class ApplicationBuilder(Generic[TApp]):
     @overload
     def with_module(self, module: type[Module]) -> Self: ...
     def with_module(self, module: Module | type[Module]) -> Self:
+        if isinstance(module, AppModule):
+            raise Exception(
+                "Cannot add a module of type `AppModule`. This module is added when `ApplicationBuilder` is instantiated."
+            )
+
         module_type = type(module) if isinstance(module, Module) else module
         if issubclass(module_type, ConfigurableModule):
             _ = self._application_config_builder.with_config_type(
@@ -323,8 +319,7 @@ class ApplicationBuilder(Generic[TApp]):
 
         return self
 
-    # FIXME this method actually only returns an injector, so perhaps the class should be renamed.
-    def build(self) -> Injector:  # CreateAppResult[TApp]:
+    def build(self) -> CreateAppResult[TApp]:
         config_overrides: NestedDict[str, Any] = defaultdict(dict)
 
         _ = self._application_config_builder.with_config_value_overrides(
@@ -348,31 +343,18 @@ Review the exception raised from `{ApplicationConfigBuilder[AbstractConfig].__na
                 f"The application configuration failed to load for an unknown reason. Review the `{ApplicationConfigBuilder[AbstractConfig].__name__}` instance's configuration."
             )
 
-        app: TApp
-
         application_modules = [
             ConfigModule(config, type(config))
             for (_, config) in cast(
                 Generator[tuple[str, AbstractConfig], None, None], config
             )
         ] + (self._modules if self._modules else [])
-        # The `config` module cannot be overridden unless the application
-        # IoC container is fiddled with. `config` is the instance registered
-        # to `AbstractConfig`.
-        modules = (
-            [ConfigModule(config, Config)]
-            + [
-                (module if isinstance(module, Module) else module())
-                for module in (application_modules if application_modules else [])
-            ]
-            # + [
-            #    (module if isinstance(module, Module) else module())
-            #    for module in [AppModule(app)]
-            #    + (application_modules if application_modules else [])
-            # ]
-        )
-        injector = Injector(modules)
-        # flask_injector.injector.binder.bind(Injector, flask_injector.injector)
 
-        # return CreateAppResult[TApp](app, AppInjector[TApp](app, injector))
-        return injector
+        modules = [ConfigModule(config, Config)] + [
+            (module if isinstance(module, Module) else module())
+            for module in (application_modules if application_modules else [])
+        ]
+        injector = Injector(modules)
+
+        app = cast(TApp, injector.get(ApplicationBase))
+        return CreateAppResult[TApp](app=app, injector=injector)
