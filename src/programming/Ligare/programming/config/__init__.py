@@ -14,7 +14,8 @@ from Ligare.programming.config.exceptions import (
     ConfigInvalidError,
     NotEndsWithConfigError,
 )
-from typing_extensions import Self
+from pydantic import BaseModel
+from typing_extensions import Self, override
 
 
 class AbstractConfig(abc.ABC):
@@ -27,6 +28,12 @@ class AbstractConfig(abc.ABC):
         """
         This method is called by `load_config` after TOML data has been loaded into the pluggable config type instance.
         """
+
+
+class Config(BaseModel, AbstractConfig):
+    @override
+    def post_load(self) -> None:
+        return super().post_load()
 
 
 TConfig = TypeVar("TConfig", bound=AbstractConfig)
