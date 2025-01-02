@@ -40,7 +40,7 @@ from Ligare.programming.config.exceptions import (
 from Ligare.programming.dependency_injection import ConfigModule
 from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
-from typing_extensions import Self, deprecated
+from typing_extensions import Self
 
 from .config import Config, FlaskConfig
 from .middleware import (
@@ -138,40 +138,6 @@ class CreateAppResult(Generic[T_app]):
 
 FlaskAppResult = CreateAppResult[Flask]
 OpenAPIAppResult = CreateAppResult[FlaskApp]
-
-
-# In Python 3.12 we can use generics in functions,
-# but we target >= Python 3.10. This is one way
-# around that limitation.
-@deprecated("`App` is deprecated. Use `ApplicationBuilder`.")
-class App(Generic[T_app]):
-    """
-    Create a new generic type for the application instance.
-
-    Type Args:
-        T_app: Either `Flask` or `FlaskApp`
-    """
-
-    @deprecated("`App.create` is deprecated. Use `ApplicationBuilder`.")
-    @staticmethod
-    def create(
-        config_filename: str = "config.toml",
-        # FIXME should be a list of PydanticDataclass
-        application_configs: list[type[AbstractConfig]] | None = None,
-        application_modules: list[Module | type[Module]] | None = None,
-    ) -> CreateAppResult[T_app]:
-        """
-        Bootstrap the Flask applcation.
-
-        Args:
-            config_filename: The name of the TOML file to load configuration information from.
-            application_config: A list of Pydantic objects to store configuration information from the TOML file.
-            application_modules: Modules the application will use for the application lifetime.
-        """
-        return cast(
-            CreateAppResult[T_app],
-            _create_app(config_filename, application_configs, application_modules),
-        )
 
 
 class UseConfigurationCallback(Protocol[TConfig]):
@@ -454,45 +420,6 @@ Review the exception raised from `{ApplicationConfigBuilder[Config].__name__}` a
         return CreateAppResult[T_app](
             flask_app, AppInjector[T_app](app, flask_injector)
         )
-
-
-@deprecated("`create_app` is deprecated. Use `ApplicationBuilder`.")
-def create_app(
-    config_filename: str = "config.toml",
-    # FIXME should be a list of PydanticDataclass
-    application_configs: list[type[AbstractConfig]] | None = None,
-    application_modules: list[Module | type[Module]] | None = None,
-) -> CreateAppResult[TApp]:
-    """
-    Do not use this method directly. Instead, use `App[T_app].create()` or `ApplicationBuilder[TApp, TConfig]()`
-    """
-    return _create_app(config_filename, application_configs, application_modules)
-
-
-def _create_app(
-    config_filename: str = "config.toml",
-    # FIXME should be a list of PydanticDataclass
-    application_configs: list[type[AbstractConfig]] | None = None,
-    application_modules: list[Module | type[Module]] | None = None,
-) -> CreateAppResult[TApp]:
-    # set up the default configuration as soon as possible
-    # also required to call before json_logging.config_root_logger()
-    logging.basicConfig(force=True)
-
-    application_builder = (
-        ApplicationBuilder[TApp]()
-        .with_flask_app_name(environ.get("FLASK_APP", None))
-        .with_flask_env(environ.get("FLASK_ENV", None))
-        .with_modules(application_modules)
-        .use_configuration(
-            lambda config_builder: config_builder.enable_ssm(True)
-            .with_config_filename(config_filename)
-            .with_root_config_type(Config)
-            .with_config_types(application_configs)
-        )
-    )
-    app = application_builder.build()
-    return app
 
 
 def configure_openapi(config: Config, name: Optional[str] = None):
