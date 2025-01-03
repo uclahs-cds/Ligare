@@ -101,8 +101,18 @@ def test__ConfigBuilder__build__uses_root_config_when_no_section_configs_specifi
     config_builder = ConfigBuilder[TestConfig]()
     _ = config_builder.with_root_config(TestConfig)
     config_type = config_builder.build()
-    assert config_type is TestConfig
+    assert issubclass(config_type, TestConfig)
     assert isinstance(config_type(), TestConfig)
+
+
+def test__ConfigBuilder__build__config_instance_base_class_is_the_specified_root_config_type_when_no_section_configs_specified():
+    config_builder = ConfigBuilder[TestConfig]()
+    _ = config_builder.with_root_config(TestConfig)
+    config_type = config_builder.build()
+    assert issubclass(config_type, TestConfig)
+    assert isinstance(config_type(), TestConfig)
+    assert config_type.__bases__[0] is TestConfig
+    assert config_type().__class__.__bases__[0] is TestConfig
 
 
 def test__ConfigBuilder__build__creates_config_type_when_multiple_configs_specified(
@@ -120,6 +130,17 @@ def test__ConfigBuilder__build__creates_config_type_when_multiple_configs_specif
 
     assert TestConfig in config_type.__mro__
     assert hasattr(config, "baz")
+
+
+def test__ConfigBuilder__build__config_instance_base_class_is_the_specified_root_config_type_when_multiple_configs_specified():
+    config_builder = ConfigBuilder[TestConfig]()
+    _ = config_builder.with_root_config(TestConfig)
+    _ = config_builder.with_configs([BazConfig])
+    config_type = config_builder.build()
+    assert issubclass(config_type, TestConfig)
+    assert isinstance(config_type(), TestConfig)
+    assert config_type.__bases__[0] is TestConfig
+    assert config_type().__class__.__bases__[0] is TestConfig
 
 
 def test__ConfigBuilder__build__sets_dynamic_config_values_when_multiple_configs_specified(
