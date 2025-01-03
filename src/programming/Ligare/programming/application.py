@@ -51,7 +51,9 @@ class ApplicationBaseProtocol(Protocol):
         pass
 
 
-TApp = TypeVar("TApp", bound=ApplicationBaseProtocol)
+TApp = TypeVar(
+    "TApp", bound=ApplicationBaseProtocol, covariant=True, contravariant=False
+)
 
 
 class AppModule(BatchModule, Generic[TApp]):
@@ -99,6 +101,16 @@ class AppModule(BatchModule, Generic[TApp]):
         binder.install(LoggerModule(self._name))
 
 
+class CreateAppResultProtocol(Protocol[TApp]):
+    @property
+    def app(self) -> TApp: ...
+
+    @property
+    def injector(self) -> Injector: ...
+
+    def run(self) -> None: ...
+
+
 @dataclass
 class CreateAppResult(Generic[TApp]):
     """
@@ -112,7 +124,7 @@ class CreateAppResult(Generic[TApp]):
     app: TApp
     injector: Injector
 
-    def run(self):
+    def run(self) -> None:
         return self.injector.call_with_injection(self.app.run)
 
 
@@ -378,7 +390,7 @@ Review the exception raised from `{ApplicationConfigBuilder[AbstractConfig].__na
             for module in (application_modules if application_modules else [])
         ]
 
-    def build(self) -> CreateAppResult[TApp]:
+    def build(self) -> CreateAppResultProtocol[TApp]:
         config = self._build_config()
 
         self._register_config_modules(config)
