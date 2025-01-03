@@ -57,8 +57,10 @@ class AppModule(BatchModule, Generic[TApp]):
         exec: type[TApp] | Callable[..., TApp] | None = None,
         app_name: str | None = None,
         *args: tuple[Any, Any],
+        **kwargs: dict[str, Any],
     ) -> None:
         super().__init__(dict({(arg[0], arg[1]) for arg in args}))
+        self._kwargs = kwargs
 
         if exec is None:
             self._name = app_name if app_name else "app"
@@ -79,11 +81,11 @@ class AppModule(BatchModule, Generic[TApp]):
 
         if self._exec is not None:
             if isinstance(self._exec, type) and not self._exec == type:
-                to = cast(TApp, self._exec())
+                to = cast(TApp, self._exec(**self._kwargs))
                 binder.bind(self._exec, to=to)
             else:
                 if isinstance(self._exec, FunctionType):
-                    to = self._exec()
+                    to = self._exec(**self._kwargs)
                     binder.bind(type(to), to=to)
                 else:
                     to = cast(TApp, self._exec)
@@ -232,10 +234,17 @@ class ApplicationConfigBuilderCallback(Protocol[TAppConfig]):
     ) -> "None | ApplicationConfigBuilder[TAppConfig]": ...
 
 
-@final
 class ApplicationBuilder(Generic[TApp]):
-    def __init__(self, exec: type[TApp] | Callable[..., TApp]) -> None:
-        self._modules: list[Module | type[Module]] = [AppModule(exec)]
+    @overload
+    def __init__(self, exec: type[TApp] | Callable[[], TApp]) -> None: ...
+    @overload
+    def __init__(
+        self, exec: type[TApp] | Callable[..., TApp], **kwargs: Any
+    ) -> None: ...
+
+    def __init__(self, exec: type[TApp] | Callable[..., TApp], **kwargs: Any) -> None:
+        super().__init__()
+        self._modules: list[Module | type[Module]] = [AppModule(exec, None, **kwargs)]
         self._config_overrides: dict[str, Any] = {}
 
     _APPLICATION_CONFIG_BUILDER_PROPERTY_NAME: str = "__application_config_builder"
@@ -319,12 +328,7 @@ class ApplicationBuilder(Generic[TApp]):
 
         return self
 
-    def build(self) -> CreateAppResult[TApp]:
-        config_overrides: NestedDict[str, Any] = defaultdict(dict)
-
-        _ = self._application_config_builder.with_config_value_overrides(
-            config_overrides
-        )
+    def _build_config(self) -> AbstractConfig:
         try:
             config = self._application_config_builder.build()
         except InvalidBuilderStateError as e:
@@ -343,17 +347,41 @@ Review the exception raised from `{ApplicationConfigBuilder[AbstractConfig].__na
                 f"The application configuration failed to load for an unknown reason. Review the `{ApplicationConfigBuilder[AbstractConfig].__name__}` instance's configuration."
             )
 
-        application_modules = [
-            ConfigModule(config, type(config))
-            for (_, config) in cast(
-                Generator[tuple[str, AbstractConfig], None, None], config
-            )
-        ] + (self._modules if self._modules else [])
+        return config
 
-        modules = [ConfigModule(config, Config)] + [
+    def _register_config_modules(self, config: AbstractConfig):
+        config_generator = cast(
+            Generator[tuple[str, AbstractConfig], None, None], config
+        )
+        config_modules = (
+            [ConfigModule(config, type(config)) for (_, config) in config_generator]
+            + [ConfigModule(config, Config)]
+            # Forcefully register the generated config as a module of its own type.
+            # This causes the "root" config type to resolve as the generated config
+            # without requiring application authors to worry about this.
+            # This means applications can use the `Ligare.programming.config.Config`
+            # class _or_ whatever the root config type is to get the full config.
+            # Because of how the config generation works, there is only one base type.
+            + [ConfigModule(config, config.__class__.__bases__[0])]
+        )
+
+        _ = self.with_modules(cast(list[Module | type[Module]], config_modules))
+
+    def _build_application_modules(self) -> list[Module | type[Module]]:
+        application_modules = self._modules if self._modules else []
+
+        return [
             (module if isinstance(module, Module) else module())
             for module in (application_modules if application_modules else [])
         ]
+
+    def build(self) -> CreateAppResult[TApp]:
+        config = self._build_config()
+
+        self._register_config_modules(config)
+
+        modules = self._build_application_modules()
+
         injector = Injector(modules)
 
         app = cast(TApp, injector.get(ApplicationBase))
