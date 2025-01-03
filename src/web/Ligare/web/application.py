@@ -9,7 +9,6 @@ from os import environ, path
 from typing import (
     Any,
     Callable,
-    Generator,
     Generic,
     Optional,
     Protocol,
@@ -24,11 +23,12 @@ from connexion import FlaskApp
 from connexion.options import SwaggerUIOptions
 from flask import Blueprint, Flask
 from flask_injector import FlaskInjector
-from injector import Module
 from lib_programname import get_path_executed_script
 from Ligare.AWS.ssm import SSMParameters
 from Ligare.programming.application import ApplicationBase
-from Ligare.programming.application import ApplicationBuilder as AppBuild
+from Ligare.programming.application import (
+    ApplicationBuilder as GenericApplicationBuilder,
+)
 from Ligare.programming.collections.dict import NestedDict
 from Ligare.programming.config import (
     AbstractConfig,
@@ -40,8 +40,6 @@ from Ligare.programming.config.exceptions import (
     ConfigBuilderStateError,
     ConfigInvalidError,
 )
-from Ligare.programming.dependency_injection import ConfigModule
-from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
 from typing_extensions import Self, override
 
@@ -320,7 +318,7 @@ class ApplicationConfigBuilderCallback(Protocol[TAppConfig]):
 
 
 @final
-class ApplicationBuilder(AppBuild[T_app]):
+class ApplicationBuilder(GenericApplicationBuilder[T_app]):
     def __init__(
         self,
         exec: type[T_app] | Callable[..., T_app],

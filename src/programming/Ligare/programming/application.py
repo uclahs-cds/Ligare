@@ -4,7 +4,6 @@ The framework API for creating applications.
 
 import abc
 import logging
-from collections import defaultdict
 from dataclasses import dataclass
 from types import FunctionType
 from typing import (
@@ -21,7 +20,6 @@ from typing import (
 
 from injector import Binder, Injector, Module
 from Ligare.AWS.ssm import SSMParameters
-from Ligare.programming.collections.dict import NestedDict
 from Ligare.programming.config import (
     AbstractConfig,
     Config,
@@ -48,7 +46,12 @@ class ApplicationBase(abc.ABC):
         pass
 
 
-TApp = TypeVar("TApp", bound=ApplicationBase)
+class ApplicationBaseProtocol(Protocol):
+    def run(self, *args: Any, **kwargs: Any):
+        pass
+
+
+TApp = TypeVar("TApp", bound=ApplicationBaseProtocol)
 
 
 class AppModule(BatchModule, Generic[TApp]):
