@@ -23,6 +23,7 @@ from connexion import FlaskApp
 from connexion.options import SwaggerUIOptions
 from flask import Blueprint, Flask
 from flask_injector import FlaskInjector
+from injector import Injector
 from lib_programname import get_path_executed_script
 from Ligare.AWS.ssm import SSMParameters
 from Ligare.programming.application import ApplicationBase
@@ -88,6 +89,17 @@ class CreateAppResult(ApplicationBase, Generic[T_app]):
 
     flask_app: Flask
     app_injector: AppInjector[T_app]
+
+    @property
+    def app(self) -> T_app:
+        return self.app_injector.app
+
+    @property
+    def injector(self) -> Injector:
+        return self.app_injector.flask_injector.injector
+
+    @overload
+    def run(self) -> None: ...
 
     @overload
     def run(
