@@ -14,7 +14,8 @@ from Ligare.programming.config.exceptions import (
     ConfigInvalidError,
     NotEndsWithConfigError,
 )
-from typing_extensions import Self
+from pydantic import BaseModel
+from typing_extensions import Self, override
 
 
 class AbstractConfig(abc.ABC):
@@ -27,6 +28,12 @@ class AbstractConfig(abc.ABC):
         """
         This method is called by `load_config` after TOML data has been loaded into the pluggable config type instance.
         """
+
+
+class Config(BaseModel, AbstractConfig):
+    @override
+    def post_load(self) -> None:
+        return super().post_load()
 
 
 TConfig = TypeVar("TConfig", bound=AbstractConfig)
@@ -90,7 +97,10 @@ class ConfigBuilder(Generic[TConfig]):
         :return type[TConfig]: The TConfig type, including any pluggable config types
         """
         if self._root_config and not self._configs:
-            return self._root_config
+            _new_type = cast(
+                "type[TConfig]", type("GeneratedConfig", (self._root_config,), {})
+            )
+            return _new_type
 
         if not self._configs:
             raise ConfigBuilderStateError(
@@ -148,8 +158,10 @@ def load_config(
         config_dict: dict[str, Any] = toml.load(toml_file_path)
     except FileNotFoundError as e:
         full_path = Path(toml_file_path).resolve()
-        raise ConfigInvalidError(f"The configuration file specified, `{toml_file_path}`, could not be found at `{full_path}` and was not loaded. \
-Is the file path correct?") from e
+        raise ConfigInvalidError(
+            f"The configuration file specified, `{toml_file_path}`, could not be found at `{full_path}` and was not loaded. \
+Is the file path correct?"
+        ) from e
 
     if config_overrides is not None:
         config_dict = merge(config_dict, config_overrides)

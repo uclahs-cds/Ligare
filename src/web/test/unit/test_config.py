@@ -1,9 +1,8 @@
 import pytest
-from flask import Flask
 from Ligare.programming.collections.dict import AnyDict
 from Ligare.programming.config import AbstractConfig, load_config
 from Ligare.programming.config.exceptions import ConfigBuilderStateError
-from Ligare.web.application import ApplicationBuilder, ApplicationConfigBuilder
+from Ligare.web.application import ApplicationConfigBuilder
 from Ligare.web.config import Config
 from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
 from pydantic import BaseModel
@@ -190,22 +189,3 @@ def test__ApplicationConfigBuilder__build__applies_config_overrides(
     assert hasattr(config, "logging")
     assert hasattr(getattr(config, "logging"), "log_level")
     assert getattr(getattr(config, "logging"), "log_level") == "INFO"
-
-
-# FIXME move to application tests
-def test__ApplicationBuilder__build__something(mocker: MockerFixture):
-    fake_config_dict = {"logging": {"log_level": "DEBUG"}, "flask": {"app_name": "app"}}
-    _ = mocker.patch("io.open")
-    _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
-
-    application_builder = ApplicationBuilder[Flask]().use_configuration(
-        lambda config_builder: config_builder.with_root_config_type(
-            Config
-        ).with_config_filename("foo.toml")
-    )
-
-    _ = (
-        application_builder.with_flask_app_name("overridden_app")
-        .with_flask_env("overridden_dev")
-        .build()
-    )

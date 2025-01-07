@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from os import environ, path
 from typing import (
     Any,
-    Generator,
+    Callable,
     Generic,
     Optional,
     Protocol,
@@ -23,9 +23,13 @@ from connexion import FlaskApp
 from connexion.options import SwaggerUIOptions
 from flask import Blueprint, Flask
 from flask_injector import FlaskInjector
-from injector import Module
+from injector import Injector
 from lib_programname import get_path_executed_script
 from Ligare.AWS.ssm import SSMParameters
+from Ligare.programming.application import ApplicationBase
+from Ligare.programming.application import (
+    ApplicationBuilder as GenericApplicationBuilder,
+)
 from Ligare.programming.collections.dict import NestedDict
 from Ligare.programming.config import (
     AbstractConfig,
@@ -37,10 +41,8 @@ from Ligare.programming.config.exceptions import (
     ConfigBuilderStateError,
     ConfigInvalidError,
 )
-from Ligare.programming.dependency_injection import ConfigModule
-from Ligare.programming.patterns.dependency_injection import ConfigurableModule
 from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
-from typing_extensions import Self, deprecated
+from typing_extensions import Self, override
 
 from .config import Config, FlaskConfig
 from .middleware import (
@@ -75,7 +77,7 @@ class AppInjector(Generic[T_app]):
 
 
 @dataclass
-class CreateAppResult(Generic[T_app]):
+class CreateAppResult(ApplicationBase, Generic[T_app]):
     """
     Contains an instantiated Flask application and its
     associated application "container." This is either
@@ -88,8 +90,74 @@ class CreateAppResult(Generic[T_app]):
     flask_app: Flask
     app_injector: AppInjector[T_app]
 
+    @property
+    def app(self) -> T_app:
+        return self.app_injector.app
+
+    @property
+    def injector(self) -> Injector:
+        return self.app_injector.flask_injector.injector
+
+    @overload
+    def run(self) -> None: ...
+
+    @overload
+    def run(
+        self: "CreateAppResult[Flask]",
+        *,
+        host: str | None = None,
+        port: int | None = None,
+        debug: bool | None = None,
+        load_dotenv: bool = True,
+        **options: Any,
+    ) -> None:
+        """
+        Call this method to start your application.
+        This method is a passthrough for `Flask.run`.
+
+        Reference https://github.com/encode/uvicorn/blob/fe3910083e3990695bc19c2ef671dd447262ae18/uvicorn/main.py#L463
+
+        :param host: The hostname this application should accept requests for.
+                              If `None`, the value in the application's `FlaskConfig` instance is used;
+                              otherwise, this parameter value is used.
+        :param port: The port this application should listen on for requests.
+                              If `None`, the value in the application's `FlaskConfig` instance is used;
+                              otherwise, this parameter value is used.
+        """
+        ...
+
+    @overload
+    def run(
+        self: "CreateAppResult[FlaskApp]",
+        *,
+        import_string: str | None = None,
+        host: str | None = None,
+        # uvicorn's default is 8000 but we default to 5000
+        # and try to load the value from a config file
+        port: int | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Call this method to start your application.
+        This method is partly a passthrough for `uvicorn.run`.
+
+        Reference https://github.com/encode/uvicorn/blob/fe3910083e3990695bc19c2ef671dd447262ae18/uvicorn/main.py#L463
+
+        :param import_string: application as import string (eg. "main:app"). This is needed to run
+                              using reload.
+        :param host: The hostname this application should accept requests for.
+                              If `None`, the value in the application's `FlaskConfig` instance is used;
+                              otherwise, this parameter value is used.
+        :param port: The port this application should listen on for requests.
+                              If `None`, the value in the application's `FlaskConfig` instance is used;
+                              otherwise, this parameter value is used.
+        """
+        ...
+
+    @override
     def run(
         self,
+        *,
         import_string: str | None = None,
         # uvicorn's default is 127.0.0.1 but we default to localhost
         # and try to load the value from a config file
@@ -138,40 +206,6 @@ class CreateAppResult(Generic[T_app]):
 
 FlaskAppResult = CreateAppResult[Flask]
 OpenAPIAppResult = CreateAppResult[FlaskApp]
-
-
-# In Python 3.12 we can use generics in functions,
-# but we target >= Python 3.10. This is one way
-# around that limitation.
-@deprecated("`App` is deprecated. Use `ApplicationBuilder`.")
-class App(Generic[T_app]):
-    """
-    Create a new generic type for the application instance.
-
-    Type Args:
-        T_app: Either `Flask` or `FlaskApp`
-    """
-
-    @deprecated("`App.create` is deprecated. Use `ApplicationBuilder`.")
-    @staticmethod
-    def create(
-        config_filename: str = "config.toml",
-        # FIXME should be a list of PydanticDataclass
-        application_configs: list[type[AbstractConfig]] | None = None,
-        application_modules: list[Module | type[Module]] | None = None,
-    ) -> CreateAppResult[T_app]:
-        """
-        Bootstrap the Flask applcation.
-
-        Args:
-            config_filename: The name of the TOML file to load configuration information from.
-            application_config: A list of Pydantic objects to store configuration information from the TOML file.
-            application_modules: Modules the application will use for the application lifetime.
-        """
-        return cast(
-            CreateAppResult[T_app],
-            _create_app(config_filename, application_configs, application_modules),
-        )
 
 
 class UseConfigurationCallback(Protocol[TConfig]):
@@ -296,82 +330,14 @@ class ApplicationConfigBuilderCallback(Protocol[TAppConfig]):
 
 
 @final
-class ApplicationBuilder(Generic[T_app]):
-    def __init__(self) -> None:
-        self._modules: list[Module | type[Module]] = []
-        self._config_overrides: dict[str, Any] = {}
-
-    _APPLICATION_CONFIG_BUILDER_PROPERTY_NAME: str = "__application_config_builder"
-
-    @property
-    def _application_config_builder(self) -> ApplicationConfigBuilder[Config]:
-        builder = getattr(
-            self, ApplicationBuilder._APPLICATION_CONFIG_BUILDER_PROPERTY_NAME, None
-        )
-
-        if builder is None:
-            builder = ApplicationConfigBuilder[Config]()
-            self._application_config_builder = builder.with_root_config_type(Config)
-
-        return builder
-
-    @_application_config_builder.setter
-    def _application_config_builder(self, value: ApplicationConfigBuilder[Config]):
-        setattr(
-            self, ApplicationBuilder._APPLICATION_CONFIG_BUILDER_PROPERTY_NAME, value
-        )
-
-    @overload
-    def with_module(self, module: Module) -> Self: ...
-    @overload
-    def with_module(self, module: type[Module]) -> Self: ...
-    def with_module(self, module: Module | type[Module]) -> Self:
-        module_type = type(module) if isinstance(module, Module) else module
-        if issubclass(module_type, ConfigurableModule):
-            _ = self._application_config_builder.with_config_type(
-                module_type.get_config_type()
-            )
-
-        self._modules.append(module)
-        return self
-
-    def with_modules(self, modules: list[Module | type[Module]] | None) -> Self:
-        if modules is not None:
-            for module in modules:
-                _ = self.with_module(module)
-        return self
-
-    @overload
-    def use_configuration(
+class ApplicationBuilder(GenericApplicationBuilder[T_app]):
+    def __init__(
         self,
-        __application_config_builder_callback: ApplicationConfigBuilderCallback[Config],
-    ) -> Self:
-        """
-        Execute changes to the builder's `ApplicationConfigBuilder[TAppConfig]` instance.
-
-        `__builder_callback` can return `None`, or the instance of `ApplicationConfigBuilder[TAppConfig]` passed to its `config_builder` argument.
-        This allowance is so lambdas can be used; `ApplicationBuilder[T_app, TAppConfig]` does not use the return value.
-        """
-        ...
-
-    @overload
-    def use_configuration(
-        self, __application_config_builder: ApplicationConfigBuilder[Config]
-    ) -> Self:
-        """Replace the builder's default `ApplicationConfigBuilder[TAppConfig]` instance, or any instance previously assigned."""
-        ...
-
-    def use_configuration(
-        self,
-        application_config_builder: ApplicationConfigBuilderCallback[Config]
-        | ApplicationConfigBuilder[Config],
-    ) -> Self:
-        if callable(application_config_builder):
-            _ = application_config_builder(self._application_config_builder)
-        else:
-            self._application_config_builder = application_config_builder
-
-        return self
+        exec: type[T_app] | Callable[..., T_app],
+        import_name: str,
+        **kwargs: dict[str, Any],
+    ) -> None:
+        super().__init__(exec=exec, import_name=import_name, **kwargs)
 
     def with_flask_app_name(self, value: str | None) -> Self:
         self._config_overrides["app_name"] = value
@@ -381,6 +347,7 @@ class ApplicationBuilder(Generic[T_app]):
         self._config_overrides["env"] = value
         return self
 
+    @override
     def build(self) -> CreateAppResult[T_app]:
         config_overrides: NestedDict[str, Any] = defaultdict(dict)
 
@@ -397,23 +364,9 @@ class ApplicationBuilder(Generic[T_app]):
         _ = self._application_config_builder.with_config_value_overrides(
             config_overrides
         )
-        try:
-            config = self._application_config_builder.build()
-        except InvalidBuilderStateError as e:
-            raise BuilderBuildError(
-                f"`{ApplicationBuilder[T_app].__name__}` failed to build the application configuration because the `{ApplicationConfigBuilder[Config].__name__}` instance was improperly configured. \
-Review the exception raised from `{ApplicationConfigBuilder[Config].__name__}` and apply fixes through this `{ApplicationBuilder[T_app].__name__}` instance's `{ApplicationBuilder[T_app].use_configuration.__name__}` method."
-            ) from e
-        except BuilderBuildError as e:
-            raise BuilderBuildError(
-                f"`{ApplicationBuilder[T_app].__name__}` failed to build the application configuration due to an error when creating the application configuration. \
-Review the exception raised from `{ApplicationConfigBuilder[Config].__name__}` and apply fixes through this `{ApplicationBuilder[T_app].__name__}` instance's `{ApplicationBuilder[T_app].use_configuration.__name__}` method."
-            ) from e
 
-        if config is None:
-            raise BuilderBuildError(
-                f"The application configuration failed to load for an unknown reason. Review the `{ApplicationConfigBuilder[Config].__name__}` instance's configuration."
-            )
+        config = cast(Config, self._build_config())
+        self._register_config_modules(config)
 
         if config.flask is None:
             raise ConfigInvalidError(
@@ -424,8 +377,6 @@ Review the exception raised from `{ApplicationConfigBuilder[Config].__name__}` a
             raise ConfigInvalidError(
                 "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar. Review the documentation for the Ligare.web TOML format and requirements."
             )
-
-        app: T_app
 
         if config.flask.openapi is not None:
             openapi = configure_openapi(config)
@@ -438,61 +389,14 @@ Review the exception raised from `{ApplicationConfigBuilder[Config].__name__}` a
         _ = register_api_response_handlers(app)
         _ = register_context_middleware(app)
 
-        application_modules = [
-            ConfigModule(config, type(config))
-            for (_, config) in cast(
-                Generator[tuple[str, AbstractConfig], None, None], config
-            )
-        ] + (self._modules if self._modules else [])
-        # The `config` module cannot be overridden unless the application
-        # IoC container is fiddled with. `config` is the instance registered
-        # to `AbstractConfig`.
-        modules = application_modules + [ConfigModule(config, Config)]
+        modules = self._build_application_modules()
+
         flask_injector = configure_dependencies(app, application_modules=modules)
 
         flask_app = app.app if isinstance(app, FlaskApp) else app
         return CreateAppResult[T_app](
             flask_app, AppInjector[T_app](app, flask_injector)
         )
-
-
-@deprecated("`create_app` is deprecated. Use `ApplicationBuilder`.")
-def create_app(
-    config_filename: str = "config.toml",
-    # FIXME should be a list of PydanticDataclass
-    application_configs: list[type[AbstractConfig]] | None = None,
-    application_modules: list[Module | type[Module]] | None = None,
-) -> CreateAppResult[TApp]:
-    """
-    Do not use this method directly. Instead, use `App[T_app].create()` or `ApplicationBuilder[TApp, TConfig]()`
-    """
-    return _create_app(config_filename, application_configs, application_modules)
-
-
-def _create_app(
-    config_filename: str = "config.toml",
-    # FIXME should be a list of PydanticDataclass
-    application_configs: list[type[AbstractConfig]] | None = None,
-    application_modules: list[Module | type[Module]] | None = None,
-) -> CreateAppResult[TApp]:
-    # set up the default configuration as soon as possible
-    # also required to call before json_logging.config_root_logger()
-    logging.basicConfig(force=True)
-
-    application_builder = (
-        ApplicationBuilder[TApp]()
-        .with_flask_app_name(environ.get("FLASK_APP", None))
-        .with_flask_env(environ.get("FLASK_ENV", None))
-        .with_modules(application_modules)
-        .use_configuration(
-            lambda config_builder: config_builder.enable_ssm(True)
-            .with_config_filename(config_filename)
-            .with_root_config_type(Config)
-            .with_config_types(application_configs)
-        )
-    )
-    app = application_builder.build()
-    return app
 
 
 def configure_openapi(config: Config, name: Optional[str] = None):

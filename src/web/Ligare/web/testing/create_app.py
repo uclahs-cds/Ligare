@@ -401,9 +401,11 @@ class CreateFlaskApp(CreateApp[Flask]):
                 settings=SAML2Config(relay_state="", metadata_url="", metadata=""),
             )
 
-        _ = mocker.patch("Ligare.web.application.load_config", return_value=config)
         _ = mocker.patch(
-            "Ligare.web.application.SSMParameters",
+            "Ligare.programming.application.load_config", return_value=config
+        )
+        _ = mocker.patch(
+            "Ligare.programming.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=config)),
         )
 
@@ -418,7 +420,10 @@ class CreateFlaskApp(CreateApp[Flask]):
         logging.basicConfig(force=True)
 
         application_builder = (
-            ApplicationBuilder[Flask]()
+            ApplicationBuilder[Flask](
+                Flask,
+                import_name=getattr(config.flask, "app_name", None) or self.app_name,
+            )
             .with_modules(application_modules)
             .use_configuration(
                 lambda config_builder: config_builder.enable_ssm(True)
@@ -535,9 +540,11 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
                 "[openapi] not set in config. Cannot create OpenAPI test client."
             )
 
-        _ = mocker.patch("Ligare.web.application.load_config", return_value=config)
         _ = mocker.patch(
-            "Ligare.web.application.SSMParameters",
+            "Ligare.programming.application.load_config", return_value=config
+        )
+        _ = mocker.patch(
+            "Ligare.AWS.ssm.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=config)),
         )
 
@@ -559,8 +566,15 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         if app_init_hook is not None:
             app_init_hook(_application_configs, _application_modules)
 
+        from Ligare.web.config import Config as FConfig
+
+        _application_configs.append(FConfig)
+
         application_builder = (
-            ApplicationBuilder[FlaskApp]()
+            ApplicationBuilder(
+                FlaskApp,
+                import_name=getattr(config.flask, "app_name", None) or self.app_name,
+            )
             .with_modules(_application_modules)
             .use_configuration(
                 lambda config_builder: config_builder.enable_ssm(True)
