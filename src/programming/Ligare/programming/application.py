@@ -41,14 +41,32 @@ TAppConfig = TypeVar("TAppConfig", bound=AbstractConfig)
 
 
 class ApplicationBase(abc.ABC):
+    """
+    The base interface for all types of applications built with `ApplicationBuilder`.
+
+    This class is intended for use with Injector in order to resolve an instance
+    of the running application. That application may or may not actually inherit this
+    base class, but it must contain the methods defined in this base class.
+    """
+
     @abc.abstractmethod
     def run(self, *args: Any, **kwargs: Any):
-        pass
+        """
+        Start the application. This method should block and only return
+        when execution is complete.
+        """
 
 
 class ApplicationBaseProtocol(Protocol):
+    """
+    The "shape" of all types of applications built with `ApplicationBuilder.`
+    """
+
     def run(self, *args: Any, **kwargs: Any):
-        pass
+        """
+        Start the application. This method should block and only return
+        when execution is complete.
+        """
 
 
 TApp = TypeVar(
@@ -57,6 +75,10 @@ TApp = TypeVar(
 
 
 class AppModule(BatchModule, Generic[TApp]):
+    """
+    An Injector module used for instantiating an `ApplicationBase` application.
+    """
+
     def __init__(
         self,
         exec: type[TApp] | Callable[..., TApp] | None = None,
@@ -64,6 +86,17 @@ class AppModule(BatchModule, Generic[TApp]):
         *args: tuple[Any, Any],
         **kwargs: dict[str, Any],
     ) -> None:
+        """
+        Create an Injector module used for instantiating an `ApplicationBase` application.
+
+        `kwargs` is used by `AppModule.configure` when instantiating the application.
+        Pass any additional arguments to `__init__` that should be passed to `exec`.
+
+        :param type[TApp] | Callable[..., TApp] | None exec: A type or callback used to instantiate the application. The type must not be a Python builtin type. If this variable is `None`, no application instantiator will be registered.
+        :param str | None app_name: The name of the application. If this is `None`, the application will be named `"app"`.
+        :raises Exception: If `exec` is a Python built.
+        """
+
         super().__init__(dict({(arg[0], arg[1]) for arg in args}))
         self._kwargs = kwargs
 
@@ -80,6 +113,14 @@ class AppModule(BatchModule, Generic[TApp]):
 
     @override
     def configure(self, binder: Binder) -> None:
+        """
+        Instantiate the application and bind it to a type.
+        This method also registers a `LoggerModule` with the name of the application.
+
+        * If `exec` is a type, the result of `exec(**kwargs)` is registered to the type `exec`.
+        * If `exec` is a function, the result of `exec(**kwargs)` is registered to the type of the result of the function call.
+        * If `exec` is an instance of `TApp`, it is registered to the type of the instance.
+        """
         super().configure(binder)
 
         to: TApp
@@ -102,6 +143,10 @@ class AppModule(BatchModule, Generic[TApp]):
 
 
 class CreateAppResultProtocol(Protocol[TApp]):
+    """
+    The "shape" of the result of an application created with `ApplicationBuilder.build`.
+    """
+
     @property
     def app(self) -> TApp: ...
 
@@ -125,6 +170,11 @@ class CreateAppResult(Generic[TApp]):
     injector: Injector
 
     def run(self) -> None:
+        """
+        Start the application instance of `app`.
+
+        :return None: Returns `None` when the application has finished execution.
+        """
         return self.injector.call_with_injection(self.app.run)
 
 
@@ -154,6 +204,11 @@ class UseConfigurationCallback(Protocol[TConfig]):
 
 @final
 class ApplicationConfigBuilder(Generic[TConfig]):
+    """
+    A builder used to build and hydrate an `AbstractConfig` instance
+    from multiple configuration types for an `ApplicationBase` instance.
+    """
+
     _DEFAULT_CONFIG_FILENAME: str = "config.toml"
 
     def __init__(self) -> None:
@@ -164,36 +219,80 @@ class ApplicationConfigBuilder(Generic[TConfig]):
         self._use_ssm: bool = False
 
     def with_config_builder(self, config_builder: ConfigBuilder[TConfig]) -> Self:
+        """
+        A `ConfigBuilder` instance that is used to create the `AbstractConfig`
+        instance that the application will use.
+
+        :param ConfigBuilder[TConfig] config_builder: The configuration builder
+        :return Self:
+        """
         self._config_builder = config_builder
         return self
 
     def with_root_config_type(self, config_type: type[TConfig]) -> Self:
+        """
+        The `AbstractConfig` type that forms the root of the entire
+        type-safe configuration. If this option is not set, the first
+        `AbstractConfig` registered with `with_config_types` or
+        `with_config_type` will be the root `AbstractConfig` type.
+
+        :param type[TConfig] config_type:
+        :return Self:
+        """
         _ = self._config_builder.with_root_config(config_type)
         return self
 
     def with_config_types(self, configs: list[type[AbstractConfig]] | None) -> Self:
+        """
+        Additional `AbstractConfig` types that are registered as properties
+        on the root `AbstractConfig` type.
+
+        :param list[type[AbstractConfig]] | None configs:
+        :return Self:
+        """
         _ = self._config_builder.with_configs(configs)
         return self
 
     def with_config_type(self, config_type: type[AbstractConfig]) -> Self:
+        """
+        An additional `AbstractConfig` type that is registered as a property
+        on the root `AbstractConfig` type.
+
+        :param type[AbstractConfig] config_type: _description_
+        :return Self: _description_
+        """
         _ = self._config_builder.with_config(config_type)
         return self
 
     def with_config_value_overrides(self, values: dict[str, Any]) -> Self:
+        """
+        A dictionary of any depth used to override values that are hydrated
+        into the built `AbstractConfig` instance. Any values supplied here
+        are used, ignoring values from other sources.
+
+        :param dict[str, Any] values:
+        :return Self:
+        """
         self._config_value_overrides = values
         return self
 
     def with_config_filename(self, filename: str) -> Self:
+        """
+        Use and load configuration values from a TOML file.
+
+        :param str filename: The TOML filename from which to load configuration values.
+        :return Self:
+        """
         self._config_filename = filename
         self._use_filename = True
         return self
 
     def enable_ssm(self, value: bool) -> Self:
         """
-        Try to load config from AWS SSM. If `use_filename` was configured,
-        a failed attempt to load from SSM will instead attempt to load from
-        the configured filename. If `use_filename` is not configured and SSM
-        fails, an exception is raised. If SSM succeeds, `build` will not
+        Try to load configuration values from AWS SSM. If `use_filename` was
+        configured, a failed attempt to load from SSM will instead attempt to
+        load from the configured filename. If `use_filename` is not configured
+        and SSM fails, an exception is raised. If SSM succeeds, `build` will not
         load from the configured filename.
 
         :param bool value: Whether to use SSM
@@ -202,7 +301,14 @@ class ApplicationConfigBuilder(Generic[TConfig]):
         self._use_ssm = value
         return self
 
-    def build(self) -> TConfig | None:
+    def build(self) -> TConfig:
+        """
+        Build the configured `AbstractConfig` instance and hydrate values.
+
+        :raises InvalidBuilderStateError: The builder has not been configured correctly.
+        :raises BuilderBuildError: The builder failed due to an unexpected error outside the control of this builder.
+        :return TConfig: The type-safe `AbstractConfig` instance, with hydrated values.
+        """
         if not (self._use_ssm or self._use_filename):
             raise InvalidBuilderStateError(
                 f"Cannot build the application config without either `{ApplicationConfigBuilder[TConfig].enable_ssm.__name__}` or `{ApplicationConfigBuilder[TConfig].with_config_filename.__name__}` having been configured."
@@ -239,23 +345,55 @@ class ApplicationConfigBuilder(Generic[TConfig]):
             else:
                 full_config = load_config(config_type, self._config_filename)
 
-        return full_config
+        # `full_config` is not `None` by this point because the builder
+        # ensures one of either `_use_ssm` or `_use_file` is true, and
+        # either a value is returned or an exception is raised.
+        return cast(TConfig, full_config)
 
 
 class ApplicationConfigBuilderCallback(Protocol[TAppConfig]):
     def __call__(
         self,
         config_builder: ApplicationConfigBuilder[TAppConfig],
-    ) -> "None | ApplicationConfigBuilder[TAppConfig]": ...
+    ) -> "None | ApplicationConfigBuilder[TAppConfig]":
+        """
+        A method used to configure an `ApplicationConfigBuilder`.
+        Call the builder methods on `config_builder` to set the
+        desired options.
+
+        **Do not call `build()`** as it is called by the `ApplicationBuilder`.
+
+        :param ApplicationConfigBuilder[TAppConfig] config_builder:
+        :return None | ApplicationConfigBuilder[TAppConfig]: Any return value is ignored.
+        """
+        ...
 
 
 class ApplicationBuilder(Generic[TApp]):
+    """
+    A builder used to build an application.
+    """
+
+    # TODO is `type[TApp]` meant to be in all these methods?
     @overload
-    def __init__(self, exec: type[TApp] | Callable[[], TApp]) -> None: ...
+    def __init__(self, exec: type[TApp] | Callable[[], TApp]) -> None:
+        """
+        Create a builder for an application whose instantiation method is
+        either a `type[TApp]` or is called with no parameters.
+
+        :param type[TApp] | Callable[[], TApp] exec:
+        """
+
     @overload
-    def __init__(
-        self, exec: type[TApp] | Callable[..., TApp], **kwargs: Any
-    ) -> None: ...
+    def __init__(self, exec: type[TApp] | Callable[..., TApp], **kwargs: Any) -> None:
+        """
+        Create a builder for an application whose instantiation method is
+        either a `type[TApp]` or is called with any number of arbitrary parameters.
+        For this kind of application instantiation, `kwargs` must be specified.
+
+        :param type[TApp] | Callable[..., TApp] exec:
+        :param Any kwargs:
+        """
 
     def __init__(self, exec: type[TApp] | Callable[..., TApp], **kwargs: Any) -> None:
         super().__init__()
@@ -285,11 +423,33 @@ class ApplicationBuilder(Generic[TApp]):
         )
 
     @overload
-    def with_module(self, module: Module) -> Self: ...
+    def with_module(self, module: Module) -> Self:
+        """
+        Add the specified Injector module instance to the list of modules
+        registered during application instantiation.
+        This instance cannot be an `AppModule`.
+
+        :param Module module:
+        :return Self:
+        """
+
     @overload
-    def with_module(self, module: type[Module]) -> Self: ...
+    def with_module(self, module: type[Module]) -> Self:
+        """
+        Add the specified Injector module type to the list of modules
+        that are instantiated and registered during application instantiation.
+        This type cannot be an `AppModule`.
+
+        :param type[Module] module:
+        :return Self:
+        """
+
     def with_module(self, module: Module | type[Module]) -> Self:
-        if isinstance(module, AppModule):
+        if (
+            isinstance(module, AppModule)
+            or module is AppModule
+            or issubclass(type(module), AppModule)
+        ):
             raise Exception(
                 "Cannot add a module of type `AppModule`. This module is added when `ApplicationBuilder` is instantiated."
             )
