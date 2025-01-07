@@ -30,7 +30,7 @@ PYPI_REPO ?= testpypi
 REPORTS_DIR ?= reports
 BANDIT_REPORT := bandit.sarif
 PYTEST_REPORT := pytest
-PYTEST_TARGET ?= .
+PYTEST_TARGET ?= 'src test'
 TOX_DIR := .tox
 
 
