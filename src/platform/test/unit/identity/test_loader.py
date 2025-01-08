@@ -11,6 +11,7 @@ from Ligare.platform.identity.user_loader import (
     UserLoader,
     UserMixin,
 )
+from sqlalchemy.ext.declarative import DeclarativeMeta
 from typing_extensions import override
 
 
@@ -24,10 +25,10 @@ def test__UserLoaderModule__uses_application_loader_mixin():
             self._roles = roles
             super().__init__(user_id, roles)
 
-    class UserTable(DbUser):
+    class UserTable(DbUser[DeclarativeMeta]):
         pass
 
-    class RoleTable(DbRole):
+    class RoleTable(DbRole[DeclarativeMeta]):
         pass
 
     user_loader_module = UserLoaderModule(

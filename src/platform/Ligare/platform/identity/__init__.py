@@ -1,5 +1,4 @@
-from abc import ABC
-from typing import List, Type, cast
+from typing import List, Protocol, TypeVar
 
 from Ligare.database.schema.metabase import get_schema_from_metabase
 from sqlalchemy import Column, ForeignKey, Integer, Unicode
@@ -7,8 +6,10 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import RelationshipProperty, relationship
 from typing_extensions import override
 
+TMetaBase = TypeVar("TMetaBase", bound=DeclarativeMeta, covariant=True)
 
-class Role(ABC):
+
+class Role(Protocol[TMetaBase]):
     __tablename__: str
 
     def __init__(  # pyright: ignore[reportMissingSuperCall]
@@ -16,56 +17,56 @@ class Role(ABC):
         /,
         role_id: int = 0,
         role_name: str = "",
-        users: "list[User]" = [],  # pyright: ignore[reportCallInDefaultInitializer]
+        users: "list[User[DeclarativeMeta]]" = [],  # pyright: ignore[reportCallInDefaultInitializer]
     ) -> None:
         raise NotImplementedError(
-            f"`{Role.__class__.__name__}` should only be used for type checking."
+            f"`{Role.__name__}` should only be used for type checking."
         )
 
     role_id: int
     role_name: str
-    users: "list[User]"
+    users: "list[User[DeclarativeMeta]]"
 
 
-class User(ABC):
+class User(Protocol[TMetaBase]):
     def __init__(  # pyright: ignore[reportMissingSuperCall]
         self,
         /,
         user_id: int = 0,
         username: str = "",
-        roles: "list[Role]" = [],  # pyright: ignore[reportCallInDefaultInitializer]
+        roles: "list[Role[DeclarativeMeta]]" = [],  # pyright: ignore[reportCallInDefaultInitializer]
     ) -> None:
         raise NotImplementedError(
-            f"`{User.__class__.__name__}` should only be used for type checking."
+            f"`{User.__name__}` should only be used for type checking."
         )
 
     __tablename__: str
     user_id: int
     username: str
-    roles: "list[Role]"
+    roles: "list[Role[DeclarativeMeta]]"
 
 
-class UserRole(ABC):
+class UserRole(Protocol[TMetaBase]):
     def __init__(  # pyright: ignore[reportMissingSuperCall]
         self, /, user_id: int = 0, role_id: int = 0
     ) -> None:
         raise NotImplementedError(
-            f"`{UserRole.__class__.__name__}` should only be used for type checking."
+            f"`{UserRole.__name__}` should only be used for type checking."
         )
 
     user_id: int
     role_id: int
 
 
-def get_table_str(tablename: str, base: Type[DeclarativeMeta]):
+def get_table_str(tablename: str, base: DeclarativeMeta):
     schema = get_schema_from_metabase(base)
     schema_str = f"{schema}." if schema else ""
     return f"{schema_str}{tablename}"
 
 
 class RoleTable:
-    def __new__(cls, base: Type[DeclarativeMeta]) -> type[Role]:
-        class _Role(base):
+    def __new__(cls, base: TMetaBase) -> type[Role[TMetaBase]]:
+        class _Role(base):  # pyright: ignore[reportUntypedBaseClass]
             """
             Roles that may be used for access validation.
             """
@@ -88,18 +89,18 @@ class RoleTable:
                     self.role_name,
                 )
 
-        return cast(type[Role], _Role)
+        return _Role
 
 
 class UserTable:
-    def __new__(cls, base: Type[DeclarativeMeta]) -> type[User]:
-        class _User(base):
+    def __new__(cls, base: TMetaBase) -> type[User[TMetaBase]]:
+        class _User(base):  # pyright: ignore[reportUntypedBaseClass]
             __tablename__ = "user"
 
             user_id = Column("user_id", Integer, primary_key=True)
             username = Column("username", Unicode, nullable=False, unique=True)
 
-            roles: "List[Role] | RelationshipProperty[List[Role]]" = relationship(
+            roles: "List[Role[DeclarativeMeta]] | RelationshipProperty[List[Role[DeclarativeMeta]]]" = relationship(
                 "_Role",
                 secondary=get_table_str("user_role", base),
                 back_populates="users",
@@ -112,12 +113,12 @@ class UserTable:
                     self.username,
                 )
 
-        return cast(type[User], _User)
+        return _User
 
 
 class UserRoleTable:
-    def __new__(cls, base: Type[DeclarativeMeta]) -> type[UserRole]:
-        class _UserRole(base):
+    def __new__(cls, base: TMetaBase) -> type[UserRole[TMetaBase]]:
+        class _UserRole(base):  # pyright: ignore[reportUntypedBaseClass]
             __tablename__ = "user_role"
 
             user_id = Column(
@@ -140,4 +141,4 @@ class UserRoleTable:
                     self.role_id,
                 )
 
-        return cast(type[UserRole], _UserRole)
+        return _UserRole

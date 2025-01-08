@@ -1,9 +1,14 @@
-from typing import Any, Type
+from typing import Any
 
 from sqlalchemy.ext.declarative import DeclarativeMeta
+from typing_extensions import overload
 
 
-def get_schema_from_metabase(base: Type[DeclarativeMeta]):
+@overload
+def get_schema_from_metabase(base: DeclarativeMeta) -> str: ...
+@overload
+def get_schema_from_metabase(base: type[DeclarativeMeta]) -> str: ...
+def get_schema_from_metabase(base: DeclarativeMeta | type[DeclarativeMeta]) -> str:
     table_args: dict[str, Any] | None
     schema_str: str = ""
     if table_args := getattr(base, "__table_args__", None):
