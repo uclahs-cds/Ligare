@@ -37,7 +37,7 @@ dependencies = [
     "Flask == 3.1.0",
     "flask-injector",
     "flask-login",
-    "connexion == 3.1.0",
+    "connexion == 3.2.0",
     "connexion[uvicorn]",
     "uvicorn-worker",
     "swagger_ui_bundle",
