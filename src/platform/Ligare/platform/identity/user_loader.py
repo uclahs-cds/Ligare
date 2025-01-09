@@ -4,6 +4,8 @@ from logging import Logger
 from typing import Generic, Protocol, Sequence, Type, TypeVar, cast
 
 from injector import inject
+from Ligare.platform.identity import TMetaBase
+from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import class_mapper  # pyright: ignore[reportUnknownVariableType]
 from sqlalchemy.orm import ColumnProperty, RelationshipProperty
 from sqlalchemy.orm.mapper import Mapper
@@ -54,8 +56,8 @@ class UserLoader(Generic[TUserMixin]):
         self,
         loader: type[TUserMixin],
         roles: Type[Enum],
-        user_table: Type[DbUser],
-        role_table: Type[DbRole],
+        user_table: Type[DbUser[TMetaBase]],
+        role_table: Type[DbRole[TMetaBase]],
         scoped_session: ScopedSession,
         log: Logger,
     ) -> None:
@@ -105,7 +107,7 @@ class UserLoader(Generic[TUserMixin]):
                     Mapper, class_mapper(self._user_table)
                 )
                 user_table_properties = cast(
-                    "list[RelationshipProperty[DbRole] | ColumnProperty]",
+                    "list[RelationshipProperty[DbRole[DeclarativeMeta]] | ColumnProperty]",
                     user_table_property_mapper.iterate_properties,  # pyright: ignore[reportUnknownMemberType]
                 )
                 # Only extract the secondary join table (user_role).

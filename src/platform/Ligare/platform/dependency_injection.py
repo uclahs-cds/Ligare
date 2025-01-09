@@ -5,6 +5,7 @@ from injector import Binder, Module, provider
 from Ligare.database.dependency_injection import ScopedSessionModule
 from Ligare.database.types import MetaBase
 from Ligare.platform.identity import Role as DbRole
+from Ligare.platform.identity import TMetaBase
 from Ligare.platform.identity import User as DbUser
 from Ligare.platform.identity.user_loader import Role, UserLoader, UserMixin
 from Ligare.programming.patterns.dependency_injection import LoggerModule
@@ -19,8 +20,8 @@ class UserLoaderModule(Module):
         self,
         loader: type[UserMixin[Role]],
         roles: type[Role],
-        user_table: type[DbUser],
-        role_table: type[DbRole],
+        user_table: type[DbUser[TMetaBase]],
+        role_table: type[DbRole[TMetaBase]],
         bases: list[MetaBase | type[MetaBase]] | None = None,
     ) -> None:
         self._loader = loader
