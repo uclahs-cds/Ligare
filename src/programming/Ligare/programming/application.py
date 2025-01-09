@@ -517,7 +517,7 @@ Review the exception raised from `{ApplicationConfigBuilder[AbstractConfig].__na
 Review the exception raised from `{ApplicationConfigBuilder[AbstractConfig].__name__}` and apply fixes through this `{ApplicationBuilder[TApp].__name__}` instance's `{ApplicationBuilder[TApp].use_configuration.__name__}` method."
             ) from e
 
-        if config is None:
+        if config is None:  # pyright: ignore[reportUnnecessaryComparison]
             raise BuilderBuildError(
                 f"The application configuration failed to load for an unknown reason. Review the `{ApplicationConfigBuilder[AbstractConfig].__name__}` instance's configuration."
             )
