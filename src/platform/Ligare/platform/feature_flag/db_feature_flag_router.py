@@ -1,7 +1,6 @@
-from abc import ABC
 from dataclasses import dataclass
 from logging import Logger
-from typing import Sequence, Type, TypeVar, cast, overload
+from typing import Protocol, Sequence, TypeVar, cast, overload
 
 from injector import inject
 from sqlalchemy import Boolean, Column, String, Unicode
@@ -14,6 +13,8 @@ from .caching_feature_flag_router import CachingFeatureFlagRouter
 from .feature_flag_router import FeatureFlag as FeatureFlagBaseData
 from .feature_flag_router import FeatureFlagChange
 
+TMetaBase = TypeVar("TMetaBase", bound=DeclarativeMeta, covariant=True)
+
 
 @dataclass(frozen=True)
 class FeatureFlag(FeatureFlagBaseData):
@@ -23,7 +24,7 @@ class FeatureFlag(FeatureFlagBaseData):
 TFeatureFlag = TypeVar("TFeatureFlag", bound=FeatureFlag, covariant=True)
 
 
-class FeatureFlagTableBase(ABC):
+class FeatureFlagTableBase(Protocol[TMetaBase]):
     __tablename__: str
 
     def __init__(  # pyright: ignore[reportMissingSuperCall]
@@ -34,7 +35,7 @@ class FeatureFlagTableBase(ABC):
         enabled: bool | None = False,
     ) -> None:
         raise NotImplementedError(
-            f"`{FeatureFlagTableBase.__class__.__name__}` should only be used for type checking."
+            f"`{FeatureFlagTableBase.__name__}` should only be used for type checking."
         )
 
     __tablename__: str
@@ -46,8 +47,8 @@ class FeatureFlagTableBase(ABC):
 class FeatureFlagTable:
     __table_args__ = {"schema": "platform"}
 
-    def __new__(cls, base: Type[DeclarativeMeta]) -> type[FeatureFlagTableBase]:
-        class _FeatureFlag(base):
+    def __new__(cls, base: TMetaBase) -> type[FeatureFlagTableBase[TMetaBase]]:
+        class _FeatureFlag(base):  # pyright: ignore[reportUntypedBaseClass]
             """
             A feature flag.
             """
@@ -68,14 +69,14 @@ class FeatureFlagTable:
             def __repr__(self) -> str:
                 return "<FeatureFlag %s>" % (self.name)
 
-        return cast(type[FeatureFlagTableBase], _FeatureFlag)
+        return _FeatureFlag
 
 
 class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
     @inject
     def __init__(
         self,
-        feature_flag: type[FeatureFlagTableBase],
+        feature_flag: type[FeatureFlagTableBase[DeclarativeMeta]],
         scoped_session: ScopedSession,
         logger: Logger,
     ) -> None:
@@ -102,7 +103,7 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
         if not name:
             raise ValueError("`name` parameter is required and cannot be empty.")
 
-        feature_flag: FeatureFlagTableBase
+        feature_flag: FeatureFlagTableBase[DeclarativeMeta]
         with self._scoped_session() as session:
             try:
                 feature_flag = (
@@ -193,7 +194,7 @@ class DBFeatureFlagRouter(CachingFeatureFlagRouter[TFeatureFlag]):
         :return tuple[TFeatureFlag]: An immutable sequence (a tuple) of feature flags.
         If `names` is `None` this sequence contains _all_ feature flags in the database. Otherwise, the list is filtered.
         """
-        db_feature_flags: list[FeatureFlagTableBase]
+        db_feature_flags: list[FeatureFlagTableBase[DeclarativeMeta]]
         with self._scoped_session() as session:
             if names is None:
                 db_feature_flags = session.query(self._feature_flag).all()
