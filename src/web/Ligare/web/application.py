@@ -41,7 +41,7 @@ from Ligare.programming.config.exceptions import (
     ConfigBuilderStateError,
     ConfigInvalidError,
 )
-from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
+from Ligare.programming.exception import BuilderBuildError, InvalidBuilderStateError
 from typing_extensions import Self, override
 
 from .config import Config, FlaskConfig

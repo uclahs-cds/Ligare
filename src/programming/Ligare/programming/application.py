@@ -3,6 +3,7 @@ The framework API for creating applications.
 """
 
 import abc
+import importlib.util
 import logging
 from dataclasses import dataclass
 from types import FunctionType
@@ -19,7 +20,6 @@ from typing import (
 )
 
 from injector import Binder, Injector, Module
-from Ligare.AWS.ssm import SSMParameters
 from Ligare.programming.config import (
     AbstractConfig,
     Config,
@@ -29,13 +29,18 @@ from Ligare.programming.config import (
 )
 from Ligare.programming.config.exceptions import ConfigBuilderStateError
 from Ligare.programming.dependency_injection import ConfigModule
+from Ligare.programming.exception import BuilderBuildError, InvalidBuilderStateError
 from Ligare.programming.patterns.dependency_injection import (
     BatchModule,
     ConfigurableModule,
     LoggerModule,
 )
-from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
 from typing_extensions import Self, override
+
+_ligare_aws_is_installed = importlib.util.find_spec("Ligare.AWS")
+
+if _ligare_aws_is_installed:
+    from Ligare.AWS.ssm import SSMParameters
 
 TAppConfig = TypeVar("TAppConfig", bound=AbstractConfig)
 
@@ -323,10 +328,10 @@ class ApplicationConfigBuilder(Generic[TConfig]):
 
         full_config: TConfig | None = None
         SSM_FAIL_ERROR_MSG = "Unable to load configuration. SSM parameter load failed and the builder is configured not to load from a file."
-        if self._use_ssm:
+        if _ligare_aws_is_installed and self._use_ssm:
             try:
                 # requires that aws-ssm.ini exists and is correctly configured
-                ssm_parameters = SSMParameters()
+                ssm_parameters = SSMParameters()  # pyright: ignore[reportPossiblyUnboundVariable] This is guarded by _ligare_aws_is_installed
                 full_config = ssm_parameters.load_config(config_type)
 
                 if not self._use_filename and full_config is None:
