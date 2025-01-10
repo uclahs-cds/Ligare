@@ -14,6 +14,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 
 ## [0.3.0] - 2024-10-04
 ### Added
+* Removed `ApplicationBuilder` from Ligare.web and put it in Ligare.programming
+
+## [0.3.0] - 2024-10-04
+### Added
 * Added `ConfigurableModule` to support automatic inclusion of `Config` classes for Injector `Module`s
 
 ### Changed

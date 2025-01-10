@@ -12,6 +12,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.4.0] - 2025-01-09
+### Fixed
+* Changed the base type of Identity tables to resolve type problems with Pyright
+
 ## [0.3.1] - 2024-10-11
 ### Changed
 * Cleaned up output of `ligare-alembic`
