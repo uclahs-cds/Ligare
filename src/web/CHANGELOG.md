@@ -11,6 +11,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.5.1] - 2025-01-10
+### Changed
+* Updated Feature Flag middleware to resolve new Pyright issues
+
 ## [0.5.0] - 2025-01-09
 ### Changed
 * Updated to Flask 3.1.0 and Connexion 3.2.0

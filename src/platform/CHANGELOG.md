@@ -12,6 +12,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.7.0] - 2025-01-10
+### Fixed
+* Changed the base type of FeatureFlag tables to resolve type problems with Pyright
+
 ## [0.6.0] - 2025-01-09
 ### Fixed
 * Changed the base type of Identity tables to resolve type problems with Pyright
