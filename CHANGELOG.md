@@ -27,8 +27,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## `Ligare.platform` [0.6.0] - 2025-01-09
 * [Ligare.platform v0.6.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.platform-v0.6.0/src/platform/CHANGELOG.md#060---2025-01-09)
 
-## `Ligare.programming` [0.3.0] - 2025-01-09
-* [Ligare.programming v0.3.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.programming-v0.3.0/src/programming/CHANGELOG.md#030---2025-01-09)
+## `Ligare.programming` [0.4.0] - 2025-01-09
+* [Ligare.programming v0.4.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.programming-v0.4.0/src/programming/CHANGELOG.md#040---2025-01-09)
 
 ## `Ligare.web` [0.5.0] - 2025-01-09
 * [Ligare.web v0.5.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.5.0/src/web/CHANGELOG.md#050---2025-01-09)
