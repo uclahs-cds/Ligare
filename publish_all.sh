@@ -92,15 +92,15 @@ declare -a packages=( \
 
 initialize
 
-for package in ${packages[@]}; do
-    build $package
+for package in "${packages[@]}"; do
+    build "$package"
 done
 
 # default to testpypi
 [ -n "$1" ] && repository="$1" || repository="testpypi"
 
 tput init 2> /dev/null
-for package in ${packages[@]}; do
-    publish $package $repository
+for package in "${packages[@]}"; do
+    publish "$package" "$repository"
 done
 
