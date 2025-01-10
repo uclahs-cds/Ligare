@@ -8,6 +8,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 ## Unreleased
 
+# `Ligare.all` [0.7.0] - 2025-01-10
+### Changed
+* Updated Feature Flag middleware in Ligare.web to resolve new Pyright issues
+
+### Fixed
+* Changed the base type of FeatureFlag tables to resolve type problems with Pyright
+
+## `Ligare.platform` [0.7.0] - 2025-01-10
+* [Ligare.platform v0.7.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.platform-v0.7.0/src/platform/CHANGELOG.md#070---2025-01-10)
+
+## `Ligare.web` [0.5.1] - 2025-01-10
+* [Ligare.web v0.5.1](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.5.1/src/web/CHANGELOG.md#051---2025-01-10)
+
+
 # `Ligare.all` [0.6.0] - 2025-01-09
 ### Changed
 * Updated to Flask 3.1.0 and Connexion 3.2.0
