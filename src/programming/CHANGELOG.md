@@ -12,7 +12,7 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
-## [0.3.0] - 2024-10-04
+## [0.4.0] - 2025-01-09
 ### Added
 * Removed `ApplicationBuilder` from Ligare.web and put it in Ligare.programming
 
