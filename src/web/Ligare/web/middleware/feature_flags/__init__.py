@@ -112,7 +112,7 @@ class FeatureFlagRouterModule(ConfigurableModule, Generic[TFeatureFlag]):
 class DBFeatureFlagRouterModule:
     def __new__(
         cls,
-        feature_flag_table: type[FeatureFlagTableBase],
+        feature_flag_table: type[FeatureFlagTableBase[MetaBase]],
         bases: list[MetaBase | type[MetaBase]] | None = None,
     ):
         """
@@ -124,7 +124,9 @@ class DBFeatureFlagRouterModule:
         """
 
         class _DBFeatureFlagRouterModule(FeatureFlagRouterModule[DBFeatureFlag]):
-            _feature_flag_table: type[FeatureFlagTableBase] = feature_flag_table
+            _feature_flag_table: type[FeatureFlagTableBase[MetaBase]] = (
+                feature_flag_table
+            )
             _bases: list[MetaBase | type[MetaBase]] | None = bases
 
             def __init__(self) -> None:
@@ -150,7 +152,7 @@ class DBFeatureFlagRouterModule:
             @provider
             def _provide_db_feature_flag_router_table_base(
                 self,
-            ) -> type[FeatureFlagTableBase]:
+            ) -> type[FeatureFlagTableBase[MetaBase]]:
                 """
                 Provide the base table type of the Feature Flag table.
                 """
