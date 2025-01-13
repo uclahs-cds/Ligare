@@ -428,7 +428,6 @@ class CreateFlaskApp(CreateApp[Flask]):
             .use_configuration(
                 lambda config_builder: config_builder.enable_ssm(True)
                 .with_config_filename("config.toml")
-                .with_root_config_type(Config)
                 .with_config_types(application_configs)
             )
         )
@@ -579,7 +578,6 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
             .use_configuration(
                 lambda config_builder: config_builder.enable_ssm(True)
                 .with_config_filename("config.toml")
-                .with_root_config_type(Config)
                 .with_config_types(_application_configs)
             )
         )

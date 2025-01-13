@@ -31,16 +31,8 @@ from Ligare.programming.application import (
     ApplicationBuilder as GenericApplicationBuilder,
 )
 from Ligare.programming.collections.dict import NestedDict
-from Ligare.programming.config import (
-    AbstractConfig,
-    ConfigBuilder,
-    TConfig,
-    load_config,
-)
-from Ligare.programming.config.exceptions import (
-    ConfigBuilderStateError,
-    ConfigInvalidError,
-)
+from Ligare.programming.config import AbstractConfig, ConfigBuilder, load_config
+from Ligare.programming.config.exceptions import ConfigInvalidError
 from Ligare.programming.exception import BuilderBuildError, InvalidBuilderStateError
 from typing_extensions import Self, override
 
@@ -208,47 +200,43 @@ FlaskAppResult = CreateAppResult[Flask]
 OpenAPIAppResult = CreateAppResult[FlaskApp]
 
 
-class UseConfigurationCallback(Protocol[TConfig]):
+class UseConfigurationCallback(Protocol[TAppConfig]):
     """
     The callback for configuring an application's configuration.
 
-    :param TConfig Protocol: The AbstractConfig type to be configured.
+    :param TAppConfig Protocol: The AbstractConfig type to be configured.
     """
 
     def __call__(
         self,
-        config_builder: ConfigBuilder[TConfig],
+        config_builder: ConfigBuilder[TAppConfig],
         config_overrides: dict[str, Any],
-    ) -> "None | ConfigBuilder[TConfig]":
+    ) -> "None | ConfigBuilder[TAppConfig]":
         """
         Set up parameters for the application's configuration.
 
-        :param ConfigBuilder[TConfig] config_builder: The ConfigBuilder instance.
+        :param ConfigBuilder[TAppConfig] config_builder: The ConfigBuilder instance.
         :param dict[str, Any] config_overrides: A dictionary of key/values that are applied over all keys that might exist in an instantiated config.
         :raises InvalidBuilderStateError: Upon a call to `build()`, the builder is misconfigured.
         :raises BuilderBuildError: Upon a call to `build()`, a failure occurred during the instantiation of the configuration.
         :raises Exception: Upon a call to `build()`, an unknown error occurred.
-        :return None | ConfigBuilder[TConfig]: The callback may return `None` or the received `ConfigBuilder` instance so as to support the use of lambdas. This return value is not used.
+        :return None | ConfigBuilder[TAppConfig]: The callback may return `None` or the received `ConfigBuilder` instance so as to support the use of lambdas. This return value is not used.
         """
 
 
 @final
-class ApplicationConfigBuilder(Generic[TConfig]):
+class ApplicationConfigBuilder(Generic[TAppConfig]):
     _DEFAULT_CONFIG_FILENAME: str = "config.toml"
 
     def __init__(self) -> None:
         self._config_value_overrides: dict[str, Any] = {}
-        self._config_builder: ConfigBuilder[TConfig] = ConfigBuilder[TConfig]()
+        self._config_builder: ConfigBuilder[TAppConfig] = ConfigBuilder[TAppConfig]()
         self._config_filename: str = ApplicationConfigBuilder._DEFAULT_CONFIG_FILENAME
         self._use_filename: bool = False
         self._use_ssm: bool = False
 
-    def with_config_builder(self, config_builder: ConfigBuilder[TConfig]) -> Self:
+    def with_config_builder(self, config_builder: ConfigBuilder[TAppConfig]) -> Self:
         self._config_builder = config_builder
-        return self
-
-    def with_root_config_type(self, config_type: type[TConfig]) -> Self:
-        _ = self._config_builder.with_root_config(config_type)
         return self
 
     def with_config_types(self, configs: list[type[AbstractConfig]] | None) -> Self:
@@ -282,20 +270,17 @@ class ApplicationConfigBuilder(Generic[TConfig]):
         self._use_ssm = value
         return self
 
-    def build(self) -> TConfig | None:
+    def build(self) -> TAppConfig | None:
+        _ = self._config_builder.with_root_config(Config)  # pyright: ignore[reportArgumentType]
+
         if not (self._use_ssm or self._use_filename):
             raise InvalidBuilderStateError(
-                f"Cannot build the application config without either `{ApplicationConfigBuilder[TConfig].enable_ssm.__name__}` or `{ApplicationConfigBuilder[TConfig].with_config_filename.__name__}` having been configured."
+                f"Cannot build the application config without either `{ApplicationConfigBuilder[TAppConfig].enable_ssm.__name__}` or `{ApplicationConfigBuilder[TAppConfig].with_config_filename.__name__}` having been configured."
             )
 
-        try:
-            config_type = self._config_builder.build()
-        except ConfigBuilderStateError as e:
-            raise BuilderBuildError(
-                f"A root config must be specified using `{ApplicationConfigBuilder[TConfig].with_root_config_type.__name__}`, `{ApplicationConfigBuilder[TConfig].with_config_type.__name__}`, or `{ApplicationConfigBuilder[TConfig].with_config_types.__name__}` before calling `{ApplicationConfigBuilder[TConfig].build.__name__}`."
-            ) from e
+        config_type = self._config_builder.build()
 
-        full_config: TConfig | None = None
+        full_config: TAppConfig | None = None
         SSM_FAIL_ERROR_MSG = "Unable to load configuration. SSM parameter load failed and the builder is configured not to load from a file."
         if self._use_ssm:
             try:
@@ -326,7 +311,18 @@ class ApplicationConfigBuilderCallback(Protocol[TAppConfig]):
     def __call__(
         self,
         config_builder: ApplicationConfigBuilder[TAppConfig],
-    ) -> "None | ApplicationConfigBuilder[TAppConfig]": ...
+    ) -> "None | ApplicationConfigBuilder[TAppConfig]":
+        """
+        A method used to configure an `ApplicationConfigBuilder`.
+        Call the builder methods on `config_builder` to set the
+        desired options.
+
+        **Do not call `build()`** as it is called by the `ApplicationBuilder`.
+
+        :param ApplicationConfigBuilder[TAppConfig] config_builder:
+        :return None | ApplicationConfigBuilder[TAppConfig]: Any return value is ignored.
+        """
+        ...
 
 
 @final
@@ -348,6 +344,20 @@ class ApplicationBuilder(GenericApplicationBuilder[T_app]):
         return self
 
     @override
+    def use_configuration(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        __application_config_builder_callback: ApplicationConfigBuilderCallback[Config],
+    ) -> Self:
+        """
+        Execute changes to the builder's `ApplicationConfigBuilder[TAppConfig]` instance.
+
+        `__builder_callback` can return `None`, or the instance of `ApplicationConfigBuilder[TAppConfig]` passed to its `config_builder` argument.
+        This allowance is so lambdas can be used; `ApplicationBuilder[T_app, TAppConfig]` does not use the return value.
+        """
+        super().use_configuration(__application_config_builder_callback)  # pyright: ignore[reportCallIssue,reportArgumentType]
+        return self
+
+    @override
     def build(self) -> CreateAppResult[T_app]:
         config_overrides: NestedDict[str, Any] = defaultdict(dict)
 
@@ -361,9 +371,9 @@ class ApplicationBuilder(GenericApplicationBuilder[T_app]):
         ) is not None and override_env != "":
             config_overrides["flask"]["env"] = override_env
 
-        _ = self._application_config_builder.with_config_value_overrides(
-            config_overrides
-        )
+        _ = self._application_config_builder.with_root_config_type(
+            Config
+        ).with_config_value_overrides(config_overrides)
 
         config = cast(Config, self._build_config())
         self._register_config_modules(config)
