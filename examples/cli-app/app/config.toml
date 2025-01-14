@@ -1,2 +1,2 @@
 [app]
-foo="bar"
+message = "Hello, world!"
