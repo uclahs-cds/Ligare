@@ -49,10 +49,7 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
         )
 
         toml_filename = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__create_app__loads_config_from_toml.__name__}-config.toml"
-        application_builder = ApplicationBuilder(
-            Flask,
-            import_name=getattr(basic_config.flask, "app_name", None) or "test_app",
-        ).use_configuration(
+        application_builder = ApplicationBuilder(Flask).use_configuration(
             lambda config_builder: config_builder.with_config_filename(toml_filename)
         )
         _ = application_builder.build()

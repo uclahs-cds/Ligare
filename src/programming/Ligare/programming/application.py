@@ -88,8 +88,8 @@ class AppModule(BatchModule, Generic[TApp]):
         self,
         exec: type[TApp] | Callable[..., TApp] | None = None,
         app_name: str | None = None,
-        *args: tuple[Any, Any],
-        **kwargs: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         """
         Create an Injector module used for instantiating an `ApplicationBase` application.
@@ -379,30 +379,28 @@ class ApplicationBuilder(Generic[TApp]):
     A builder used to build an application.
     """
 
-    # TODO is `type[TApp]` meant to be in all these methods?
     @overload
-    def __init__(self, exec: type[TApp] | Callable[[], TApp]) -> None:
+    def __init__(self, exec: type[TApp]) -> None:
         """
-        Create a builder for an application whose instantiation method is
-        either a `type[TApp]` or is called with no parameters.
+        Create a builder for an application whose instantiation
+        method is a `type[TApp]`
 
-        :param type[TApp] | Callable[[], TApp] exec:
+        :param type[TApp] exec:
         """
 
     @overload
-    def __init__(self, exec: type[TApp] | Callable[..., TApp], **kwargs: Any) -> None:
+    def __init__(self, exec: Callable[..., TApp]) -> None:
         """
-        Create a builder for an application whose instantiation method is
-        either a `type[TApp]` or is called with any number of arbitrary parameters.
-        For this kind of application instantiation, `kwargs` must be specified.
+        Create a builder for an application whose instantiation
+        method is called with any number of arbitrary parameters.
 
-        :param type[TApp] | Callable[..., TApp] exec:
-        :param Any kwargs:
+        :param Callable[..., TApp] exec:
         """
 
-    def __init__(self, exec: type[TApp] | Callable[..., TApp], **kwargs: Any) -> None:
+    def __init__(self, exec: type[TApp] | Callable[..., TApp]) -> None:
         super().__init__()
-        self._modules: list[Module | type[Module]] = [AppModule(exec, None, **kwargs)]
+        self._exec = exec
+        self._modules: list[Module | type[Module]] = []
         self._config_overrides: dict[str, Any] = {}
 
     _APPLICATION_CONFIG_BUILDER_PROPERTY_NAME: str = "__application_config_builder"
@@ -449,17 +447,26 @@ class ApplicationBuilder(Generic[TApp]):
         :return Self:
         """
 
+    _app_module_set = False
+
     def with_module(self, module: Module | type[Module]) -> Self:
         if (
             isinstance(module, AppModule)
             or module is AppModule
             or issubclass(type(module), AppModule)
         ):
-            raise Exception(
-                "Cannot add a module of type `AppModule`. This module is added when `ApplicationBuilder` is instantiated."
-            )
+            if self._app_module_set:
+                raise Exception(
+                    "A module of type `AppModule` has already been added. A second `AppModule` cannot be added."
+                )
+            else:
+                # make pyright happy because it can't infer `TApp``,
+                # but it know `module` is an `AppModule`
+                module = cast(AppModule[TApp], module)
+                self._app_module_set = True
 
         module_type = type(module) if isinstance(module, Module) else module
+
         if issubclass(module_type, ConfigurableModule):
             _ = self._application_config_builder.with_config_type(
                 module_type.get_config_type()
@@ -556,6 +563,9 @@ Review the exception raised from `{ApplicationConfigBuilder[AbstractConfig].__na
         ]
 
     def build(self) -> CreateAppResultProtocol[TApp]:
+        if not self._app_module_set:
+            _ = self.with_module(AppModule(self._exec, None))
+
         config = self._build_config()
 
         self._register_config_modules(config)

@@ -30,6 +30,7 @@ from Ligare.programming.application import ApplicationBase
 from Ligare.programming.application import (
     ApplicationBuilder as GenericApplicationBuilder,
 )
+from Ligare.programming.application import AppModule
 from Ligare.programming.collections.dict import NestedDict
 from Ligare.programming.config import AbstractConfig, ConfigBuilder, load_config
 from Ligare.programming.config.exceptions import ConfigInvalidError
@@ -330,10 +331,8 @@ class ApplicationBuilder(GenericApplicationBuilder[T_app]):
     def __init__(
         self,
         exec: type[T_app] | Callable[..., T_app],
-        import_name: str,
-        **kwargs: dict[str, Any],
     ) -> None:
-        super().__init__(exec=exec, import_name=import_name, **kwargs)
+        super().__init__(exec=exec)
 
     def with_flask_app_name(self, value: str | None) -> Self:
         self._config_overrides["app_name"] = value
@@ -386,6 +385,11 @@ class ApplicationBuilder(GenericApplicationBuilder[T_app]):
         if not config.flask.app_name:
             raise ConfigInvalidError(
                 "You must set the Flask application name in the [flask.app_name] config or FLASK_APP envvar. Review the documentation for the Ligare.web TOML format and requirements."
+            )
+
+        if not self._app_module_set:
+            _ = self.with_module(
+                AppModule(self._exec, None, import_name=config.flask.app_name)
             )
 
         if config.flask.openapi is not None:

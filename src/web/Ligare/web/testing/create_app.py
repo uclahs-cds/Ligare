@@ -420,10 +420,7 @@ class CreateFlaskApp(CreateApp[Flask]):
         logging.basicConfig(force=True)
 
         application_builder = (
-            ApplicationBuilder[Flask](
-                Flask,
-                import_name=getattr(config.flask, "app_name", None) or self.app_name,
-            )
+            ApplicationBuilder[Flask](Flask)
             .with_modules(application_modules)
             .use_configuration(
                 lambda config_builder: config_builder.enable_ssm(True)
@@ -570,10 +567,7 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         _application_configs.append(FConfig)
 
         application_builder = (
-            ApplicationBuilder(
-                FlaskApp,
-                import_name=getattr(config.flask, "app_name", None) or self.app_name,
-            )
+            ApplicationBuilder(FlaskApp)
             .with_modules(_application_modules)
             .use_configuration(
                 lambda config_builder: config_builder.enable_ssm(True)
