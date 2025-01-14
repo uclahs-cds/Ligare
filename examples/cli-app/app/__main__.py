@@ -19,11 +19,12 @@ class Application(ApplicationBase):
 builder = ApplicationBuilder(Application)
 
 builder.use_configuration(
-    lambda config_builder: \
-        config_builder \
-            .with_config_type(AppConfig) \
-            .with_config_filename("app/config.toml")
+    lambda config_builder: config_builder.with_config_type(
+        AppConfig
+    ).with_config_filename("app/config.toml")
 )
 
 application = builder.build()
-application.run()
+
+if __name__ == "__main__":
+    application.run()

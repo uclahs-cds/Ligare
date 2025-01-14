@@ -6,7 +6,7 @@ paths:
   /:
     get:
       description: Say "Hello, World!"
-      operationId: root.get
+      operationId: app.root.get
       responses:
         "200":
           content:
