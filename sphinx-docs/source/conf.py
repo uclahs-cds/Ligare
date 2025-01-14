@@ -6,6 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import fnmatch
 import os
 import sys
 import zipfile
@@ -23,7 +24,7 @@ author = "Aaron Holmes"
 master_doc = "index"
 
 templates_path = ["_templates"]
-exclude_patterns = []
+exclude_patterns = ["**/.venv", "**/.github-venv"]
 
 html_theme = "sphinx_rtd_theme"
 pygments_style = "one-dark"
@@ -131,7 +132,19 @@ def create_zips_for_examples(app: Sphinx, exception: Exception | None):
         with zipfile.ZipFile(
             Path(output_dir, f"{example_path.name}.zip"), "w", zipfile.ZIP_DEFLATED
         ) as zip_file:
-            for root, _, files in os.walk(examples_dir):
+            for root, dirs, files in os.walk(examples_dir):
+                # skip anything based on the Sphinx exclude_patterns list
+                should_skip = any(
+                    fnmatch.fnmatch(str(Path(root, _dir)), pat)
+                    for _dir in dirs
+                    for pat in exclude_patterns
+                )
+
+                if should_skip:
+                    # ensures the loop won't look at directories in the skipped directory
+                    dirs.clear()
+                    continue
+
                 for file in files:
                     file_path = Path(root, file)
                     arcname = Path.relative_to(file_path, examples_dir)
