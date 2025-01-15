@@ -427,6 +427,14 @@ def configure_openapi(config: Config, name: Optional[str] = None):
             "OpenAPI configuration is empty. Review the `openapi` section of your application's `config.toml`."
         )
 
+    if config.flask.openapi.use_swagger and config.flask.openapi.swagger_url in [
+        "/",
+        "",
+    ]:
+        raise Exception(
+            f'The configured Swagger URL "{config.flask.openapi.swagger_url}" cannot be used. Remove `flask.openapi.swagger_url` from your configuration, or change the value to something else.'
+        )
+
     exec_dir = _get_exec_dir()
 
     connexion_app = FlaskApp(
@@ -453,16 +461,9 @@ def configure_openapi(config: Config, name: Optional[str] = None):
 
     app.logger.setLevel(environ.get("LOGLEVEL", "INFO").upper())
 
-    options: dict[str, bool | str] = {
-        "swagger_ui": config.flask.openapi.use_swagger,
-        "swagger_url": config.flask.openapi.swagger_url or "/",
-    }
-
     _ = connexion_app.add_api(
         f"{config.flask.app_name}/{config.flask.openapi.spec_path}",
-        # base_path="/",
         validate_responses=config.flask.openapi.validate_responses,
-        options=options,
     )
 
     # FIXME what's the new way to get this URL?
