@@ -1,3 +1,7 @@
+"""
+Dialect specifics for PostgreSQL.
+"""
+
 from typing import final
 
 from Ligare.database.schema.dialect import DialectBase

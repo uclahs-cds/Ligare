@@ -56,7 +56,7 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 exclude = ["build*"]
 
 [tool.setuptools.package-data]
-"Ligare.database" = ["py.typed"]
+"Ligare.database" = ["Ligare/database/py.typed"]
 
 [project.scripts]
 ligare-alembic = "Ligare.database.migrations.alembic.__main__:ligare_alembic"

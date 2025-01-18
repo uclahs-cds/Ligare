@@ -1,3 +1,7 @@
+"""
+`Injector <https://pypi.org/project/injector/>`_ dependency injection modules for extension by other modules.
+"""
+
 import logging
 import sys
 from typing import Callable, TypeVar
@@ -7,6 +11,7 @@ from Ligare.programming.config import AbstractConfig
 from typing_extensions import override
 
 
+# FIXME move somewhere else?
 class LoggerModule(Module):
     def __init__(
         self,

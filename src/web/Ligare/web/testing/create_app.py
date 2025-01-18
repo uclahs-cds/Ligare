@@ -1,3 +1,7 @@
+"""
+Fixtures for testing :ref:`Ligare.web`, Flask, and Connexion/OpenAPI applications.
+"""
+
 import importlib
 import logging
 import sys
@@ -100,13 +104,14 @@ class ClientInjectorConfigurable(Protocol[T_app, T_flask_client]):
     """
     Get a Flask test client using the specified application configuration.
 
-    Args
-    ------
-        config: `Config` The custom application configuration used to instantiate the Flask app.
+    Parameters
+    ----------
+    config : Config
+        The custom application configuration used to instantiate the Flask app.
 
     Returns
-    ------
-        `FlaskClientInjector[T_flask_client]`
+    -------
+    FlaskClientInjector[T_flask_client]
     """
 
     def __call__(
@@ -134,16 +139,19 @@ class RequestConfigurable(Protocol):
 
     This creates the Flask test client using the `ClientConfigurable` fixture.
 
-    Args
-    ------
-        config: `Config` The custom application configuration used to instantiate the Flask app.
-        request_context_args: `dict[Any, Any] | None = None` The optional request context arguments
-            set up in the request context. These may contain, for example, request headers,
-            authentication credentials, etc.
+    Parameters
+    ----------
+    config : Config
+        The custom application configuration used to instantiate the Flask app.
+
+    request_context_args : dict[Any, Any] | None, optional
+        The optional request context arguments set up in the request context.
+        These may contain, for example, request headers, authentication
+        credentials, etc.
 
     Returns
-    ------
-        `RequestContext`
+    -------
+    RequestContext
     """
 
     def __call__(
@@ -184,20 +192,21 @@ class OpenAPIMockController(MockController):
     `openapi_mock.end()` is called after the test finishes, and may also
     be explicitly called in the test.
 
-    Args
-    ------
-        `Callable[[], Response]` A method used as the request handler for GET requests set to `/`.
-        This parameter is set through parametrization:
+    Parameters
+    ----------
+    request_handler : Callable[[], Response]
+        A method used as the request handler for GET requests set to `/`.
+        This parameter is set through parametrization, as shown in the example:
 
-        ```python
-        @pytest.mark.parametrize("openapi_mock", lambda: {}, indirect=["openapi_mock"])
-        def test_my_test(openapi_mock: OpenAPIMockController):
-            ...
-        ```
+        .. code-block:: python
+
+            @pytest.mark.parametrize("openapi_mock", lambda: {}, indirect=["openapi_mock"])
+            def test_my_test(openapi_mock: OpenAPIMockController):
+                ...
 
     Returns
-    ------
-        `RequestContext`
+    -------
+    RequestContext
     """
 
 
@@ -392,9 +401,11 @@ class CreateFlaskApp(CreateApp[Flask]):
                 settings=SAML2Config(relay_state="", metadata_url="", metadata=""),
             )
 
-        _ = mocker.patch("Ligare.web.application.load_config", return_value=config)
         _ = mocker.patch(
-            "Ligare.web.application.SSMParameters",
+            "Ligare.programming.application.load_config", return_value=config
+        )
+        _ = mocker.patch(
+            "Ligare.programming.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=config)),
         )
 
@@ -409,12 +420,11 @@ class CreateFlaskApp(CreateApp[Flask]):
         logging.basicConfig(force=True)
 
         application_builder = (
-            ApplicationBuilder[Flask]()
+            ApplicationBuilder[Flask](Flask)
             .with_modules(application_modules)
             .use_configuration(
                 lambda config_builder: config_builder.enable_ssm(True)
                 .with_config_filename("config.toml")
-                .with_root_config_type(Config)
                 .with_config_types(application_configs)
             )
         )
@@ -526,9 +536,11 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
                 "[openapi] not set in config. Cannot create OpenAPI test client."
             )
 
-        _ = mocker.patch("Ligare.web.application.load_config", return_value=config)
         _ = mocker.patch(
-            "Ligare.web.application.SSMParameters",
+            "Ligare.programming.application.load_config", return_value=config
+        )
+        _ = mocker.patch(
+            "Ligare.AWS.ssm.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=config)),
         )
 
@@ -550,13 +562,16 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         if app_init_hook is not None:
             app_init_hook(_application_configs, _application_modules)
 
+        from Ligare.web.config import Config as FConfig
+
+        _application_configs.append(FConfig)
+
         application_builder = (
-            ApplicationBuilder[FlaskApp]()
+            ApplicationBuilder(FlaskApp)
             .with_modules(_application_modules)
             .use_configuration(
                 lambda config_builder: config_builder.enable_ssm(True)
                 .with_config_filename("config.toml")
-                .with_root_config_type(Config)
                 .with_config_types(_application_configs)
             )
         )

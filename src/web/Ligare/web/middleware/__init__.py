@@ -1,3 +1,7 @@
+"""
+Middleware functionality for handing HTTP requests and responses.
+"""
+
 import json
 from logging import Logger
 from typing import Awaitable, Callable, TypeAlias, TypeVar

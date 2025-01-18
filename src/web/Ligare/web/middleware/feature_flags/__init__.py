@@ -1,3 +1,7 @@
+"""
+:ref:`Ligare.web`'s integration with :ref:`Ligare.platform.feature_flag`.
+"""
+
 from dataclasses import dataclass
 from functools import wraps
 from logging import Logger

@@ -1,3 +1,8 @@
+"""
+Libraries, fixtures, mocks, and other utilities
+for tests using SQLAlchemy, Alembic, or :ref:`Ligare.database`.
+"""
+
 from typing import Any as Any
 from typing import Generator, cast
 from unittest.mock import AsyncMock, MagicMock, NonCallableMagicMock

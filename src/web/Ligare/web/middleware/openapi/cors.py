@@ -1,3 +1,7 @@
+"""
+Extensions for CORS middleware.
+"""
+
 from connexion import FlaskApp
 from connexion.middleware import MiddlewarePosition
 from injector import Module, inject
