@@ -18,7 +18,7 @@ class BarConfig(BaseModel):
     bar_value: str
 
 
-class BazConfig(BaseModel, AbstractConfig):
+class BazConfig(AbstractConfig):
     @override
     def post_load(self) -> None:
         return super().post_load()
@@ -26,7 +26,7 @@ class BazConfig(BaseModel, AbstractConfig):
     baz_value: str
 
 
-class TestConfig(BaseModel, AbstractConfig):
+class TestConfig(AbstractConfig):
     @override
     def post_load(self) -> None:
         return super().post_load()
@@ -35,7 +35,7 @@ class TestConfig(BaseModel, AbstractConfig):
     bar: BarConfig | None = None
 
 
-class InvalidConfigClass(BaseModel, AbstractConfig):
+class InvalidConfigClass(AbstractConfig):
     @override
     def post_load(self) -> None:
         return super().post_load()

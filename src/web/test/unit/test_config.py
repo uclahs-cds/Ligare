@@ -4,7 +4,6 @@ from Ligare.programming.config import AbstractConfig, load_config
 from Ligare.programming.exception import BuilderBuildError, InvalidBuilderStateError
 from Ligare.web.application import ApplicationConfigBuilder
 from Ligare.web.config import Config
-from pydantic import BaseModel
 from pytest_mock import MockerFixture
 from typing_extensions import override
 
@@ -125,7 +124,7 @@ def test__ApplicationConfigBuilder__build__applies_additional_configs(
     _ = mocker.patch("io.open")
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
 
-    class TestConfig(BaseModel, AbstractConfig):
+    class TestConfig(AbstractConfig):
         @override
         def post_load(self) -> None:
             return super().post_load()

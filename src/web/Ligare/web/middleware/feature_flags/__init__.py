@@ -51,7 +51,7 @@ class FeatureFlagConfig(BaseModel):
     access_role_name: str | bool | None = None
 
 
-class Config(BaseModel, AbstractConfig):
+class Config(AbstractConfig):
     @override
     def post_load(self) -> None:
         return super().post_load()

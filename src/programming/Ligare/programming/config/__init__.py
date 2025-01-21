@@ -14,11 +14,11 @@ from Ligare.programming.config.exceptions import (
     ConfigInvalidError,
     NotEndsWithConfigError,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, create_model
 from typing_extensions import Self, override
 
 
-class AbstractConfig(abc.ABC):
+class AbstractConfig(BaseModel, abc.ABC):
     """
     The base type for all pluggable config types.
     """
@@ -30,7 +30,7 @@ class AbstractConfig(abc.ABC):
         """
 
 
-class Config(BaseModel, AbstractConfig):
+class Config(AbstractConfig):
     @override
     def post_load(self) -> None:
         return super().post_load()
@@ -130,13 +130,14 @@ class ConfigBuilder(Generic[TConfig]):
             attrs[config_name] = None
 
         attrs["__annotations__"] = annotations
+
         # make one type that has the names of the config objects
         # as attributes, and the class as their type
-        _new_type = cast(
-            "type[TConfig]", type("GeneratedConfig", (_new_type_base,), attrs)
+        generated_model = create_model(
+            "GeneratedConfig", __base__=_new_type_base, **attrs
         )
 
-        return _new_type
+        return cast(type[TConfig], generated_model)
 
 
 def load_config(

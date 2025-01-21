@@ -151,7 +151,7 @@ class FlaskConfig(BaseModel):
         flask_app_config.from_object(ConfigObject)
 
 
-class Config(BaseModel, AbstractConfig):
+class Config(AbstractConfig):
     logging: LoggingConfig = LoggingConfig()
     web: WebConfig = WebConfig()
     flask: FlaskConfig | None = None
