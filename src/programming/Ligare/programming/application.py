@@ -566,9 +566,13 @@ Review the exception raised from `{ApplicationConfigBuilder[AbstractConfig].__na
         if not self._app_module_set:
             _ = self.with_module(AppModule(self._exec, None))
 
-        config = self._build_config()
+        try:
+            config = self._build_config()
 
-        self._register_config_modules(config)
+            self._register_config_modules(config)
+        except BuilderBuildError as e:
+            logger = logging.getLogger()
+            logger.debug(e)
 
         modules = self._build_application_modules()
 
