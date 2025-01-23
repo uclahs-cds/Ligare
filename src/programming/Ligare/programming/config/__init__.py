@@ -119,22 +119,20 @@ class ConfigBuilder(Generic[TConfig]):
 
         test_type_name(_new_type_base)
 
-        attrs: dict[Any, Any] = {}
         annotations: dict[str, Any] = {}
 
         for config in self._configs:
             test_type_name(config)
 
             config_name = config.__name__[: config.__name__.rindex("Config")].lower()
-            annotations[config_name] = config
-            attrs[config_name] = None
-
-        attrs["__annotations__"] = annotations
+            annotations[config_name] = (config, None)
 
         # make one type that has the names of the config objects
         # as attributes, and the class as their type
         generated_model = create_model(
-            "GeneratedConfig", __base__=_new_type_base, **attrs
+            "GeneratedConfig",
+            __base__=_new_type_base,
+            **annotations,
         )
 
         return cast(type[TConfig], generated_model)
