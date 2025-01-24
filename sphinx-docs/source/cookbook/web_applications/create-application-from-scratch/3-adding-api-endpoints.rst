@@ -13,64 +13,64 @@ Adding an API endpoint to a `FlaskApp` application requires two things:
 The Python functions are regular functions that you're already familiar with.
 The specification is an `OpenAPI specification <https://swagger.io/specification/>`_ written in a YAML file.
 
-Modifying the Existing Application
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-We need to have your application load the OpenAPI specification file, which is used to control the details of your API.
-
-Let's modify the application config file ``app/config.toml`` to add the ``flask.openapi`` section.
-
-.. code-block:: shell-session
-
-   user@: my-ligare-app $ cat >> app/config.toml << EOF
-   [flask.openapi]
-   spec_path = 'openapi.yaml'
-
-   EOF
-
-Your file will look like this.
-
-.. literalinclude:: ../../../../../examples/web-api/app/config.toml
-  :language: toml
-  :caption: :example:`web-api/app/config.toml`
-
 Adding Endpoints
 ^^^^^^^^^^^^^^^^
 
-With these preliminary adjustments completed, we can add a new endpoint.
-
-We're going to add an endpoint to handle requests made to the root URL, ``/``, of the application.
-This means accessing http://localhost:5000 will show the "Hello, World!" message we're expecting.
+In the previous guide, we added an endpoint to handle requests to the URL ``/``. Here we
+will see how to add an endpoint URL named ``/greet/name`` that will show the text "Hello, name!"
 
 The ``openapi.yaml`` File
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Create a new file at ``app/openapi.yaml`` and add this content.
+Create a new entry nested in ``paths`` in the ``app/openapi.yaml`` file.
 
-.. literalinclude:: ../../../../../examples/web-api/app/openapi.yaml
-   :language: yaml
-   :caption: :example:`web-api/app/openapi.yaml`
+.. code-block:: yaml
 
-This OpenAPI specification states that there is an HTTP GET endpoint at
-``/`` that returns an HTTP 200 status, and a JSON string for its content.
+   paths:
+      ...
+      /greet/{name}:
+         get:
+            description: Say "Hello, name!"
+            parameters:
+               - in: path
+               name: name
+               schema:
+                  type: string
+               required: true
+               description: The name to greet
+            operationId: app.greet.get
+            responses:
+               "200":
+               content:
+                  application/json:
+                     schema:
+                     type: string
+               description: Said "Hello, name!" successfully
 
-Pay special attention to the ``operationId`` property. This tells Connexion
-that it can find a function named ``get`` in the Python module named ``root``.
+There is a little bit more going on here. Because we want to greet someone other than "world,"
+this specification states there is a parameter ``name`` that is a string in the path. Otherwise,
+this matches the URL endpoint specification for ``/``.
+
 
 The Endpoint Handler
 ~~~~~~~~~~~~~~~~~~~~
 
-Finally, let's create the Python module and function that will handle requests
-for this endpoint.
+Just like ``app.root.get``, we need to create a Python module and method matching the ``operationId``.
 
-Create the file ``app/root.py`` and add this to it.
+Create the file ``app/greet.py`` with this content.
 
-.. literalinclude:: ../../../../../examples/web-api/app/root.py
-   :language: python
-   :caption: :example:`web-api/app/root.py`
+.. code-block:: python
 
-The function named ``get`` is the same one specified for the ``operationId`` property.
-This is all you need to do to return data through your API endpoint!
+   import re
 
-Now you can start the application with ``python app/__init__.py``. Once it's running,
-open http://localhost:5000/ and you should see "Hello, World!"
+   def get(name: str):
+      name_safe = re.sub(r"[^a-zA-Z0-9]", "", name)
+      return f"Hello, {name_safe}!"
+
+.. important::
+
+   **Never** trust input in your application! Here, we ensure that the name we display
+   only contains alphanumeric characters. Otherwise, we could end up with an `XSS <https://owasp.org/www-community/attacks/xss/>`_
+   vulnerability or worse!
+
+Now we can start our application and visit `<http://localhost:5000/greet/example>`_ to see "Hello, example!"

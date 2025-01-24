@@ -7,7 +7,8 @@ Creating the Application
 
 Now that we're set up to create a Ligare application, let's find out how to actually create one.
 
-We will follow a structure that lets us write the application as a single Python "module," similar to how `python-guide.org <https://docs.python-guide.org/writing/structure/>`_ demonstrates.
+We will follow a structure that lets us write the application as a single Python "module," similar
+to how `python-guide.org <https://docs.python-guide.org/writing/structure/>`_ demonstrates.
 
 First create the module.
 
@@ -191,8 +192,8 @@ With these changes, your application should resemble the Ligare example CLI appl
    :language: python
    :caption: :example:`cli-app/app/__main__.py`
 
-Creating the Config File
-^^^^^^^^^^^^^^^^^^^^^^^^
+Creating the Application Configuration File
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 There is one last thing to do, which is to create the configuration file and store our message in it.
 

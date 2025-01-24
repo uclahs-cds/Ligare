@@ -23,37 +23,19 @@ The following commands are executed with the virtual environment activated.
 
 Now we can create a minimal ``pyproject.toml`` file that lets us create our application, and install ``Ligare.web``.
 
-First we need to ensure compatibility with Python 3.10.
-
 .. code-block:: shell-session
 
    user@: my-ligare-app $ cat > pyproject.toml << EOF
    [project]
    requires-python = ">= 3.10"
 
-   EOF
-
-Next we set the name of our application.
-
-.. code-block:: shell-session
-
-   user@: my-ligare-app $ echo 'name = "my-ligare-app"' >> pyproject.toml
-
-Then we set an initial version.
-
-.. code-block:: shell-session
-
-   user@: my-ligare-app $ echo 'version = "0.0.1"' >> pyproject.toml
-
-Finally, we include ``Ligare.web`` as a dependency of our application.
-
-.. code-block:: shell-session
-
-   user@: my-ligare-app $ cat >> pyproject.toml << EOF
+   name = "web-api"
+   version = "0.0.1"
 
    dependencies = [
       "Ligare.web"
    ]
+
    EOF
 
 Once completed, our ``pyproject.toml`` should look like this.
@@ -64,8 +46,10 @@ Once completed, our ``pyproject.toml`` should look like this.
 
 Now we can install everything necessary to create a Ligare application.
 
+.. note::
+
+   We use ``-e`` here so changes to our application can run without requiring a reinstall.
+
 .. code-block:: shell-session
 
    user@: my-ligare-app $ pip install -e .
-
-We use ``-e`` here because this allows the application to run our changes to code without requiring that we reinstall the application every time we change something.
