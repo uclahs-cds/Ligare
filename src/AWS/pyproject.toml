@@ -50,4 +50,4 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 exclude = ["build*"]
 
 [tool.setuptools.package-data]
-"Ligare.AWS" = ["py.typed", "aws-ssm.ini"]
+"Ligare.AWS" = ["Ligare/AWS/py.typed", "aws-ssm.ini"]

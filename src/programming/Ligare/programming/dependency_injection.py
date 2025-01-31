@@ -1,3 +1,7 @@
+"""
+`Injector <https://pypi.org/project/injector/>`_ dependency injection modules for :ref:`Ligare.programming.config`.
+"""
+
 from injector import Binder, Module
 from Ligare.programming.config import AbstractConfig
 from typing_extensions import override

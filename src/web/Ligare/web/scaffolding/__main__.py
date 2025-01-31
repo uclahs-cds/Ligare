@@ -1,3 +1,7 @@
+"""
+The scaffolder application main entry point.
+"""
+
 import logging
 import sys
 from argparse import ArgumentParser, Namespace
