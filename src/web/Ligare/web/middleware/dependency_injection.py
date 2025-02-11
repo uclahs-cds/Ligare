@@ -2,6 +2,7 @@
 :ref:`Ligare.web`'s integration with `Injector <https://pypi.org/project/injector/>`_ and `Flask Injector <https://pypi.org/project/Flask-Injector/>`_.
 """
 
+import logging
 from functools import partial
 from typing import Any, Callable, Protocol, Tuple, Type, cast
 
@@ -12,7 +13,12 @@ from flask import Config as Config
 from flask import Flask
 from flask_injector import FlaskInjector, wrap_function
 from injector import Binder, Injector, Module
-from Ligare.programming.patterns.dependency_injection import LoggerModule
+from Ligare.programming.dependency_injection import ConfigModule
+from Ligare.programming.patterns.dependency_injection import (
+    JSONLoggerModule,
+    LoggerModule,
+)
+from Ligare.web.application import Config as AppConfig
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import override
 
@@ -43,7 +49,16 @@ class AppModule(Module):
     def configure(self, binder: Binder) -> None:
         binder.bind(Flask, to=self._flask_app)
         binder.bind(Config, to=self._flask_app.config)
-        binder.install(LoggerModule(self._flask_app.name))
+
+        app_config = binder.injector.get(AppConfig)
+        log_level = app_config.logging.log_level.upper()
+        if app_config.logging.format == "JSON":
+            binder.install(JSONLoggerModule(self._flask_app.name, log_level))
+        else:
+            binder.install(LoggerModule(self._flask_app.name, log_level))
+
+        self._flask_app.logger = logging.getLogger(self._flask_app.name)  # pyright: ignore[reportAttributeAccessIssue] app.logger can actually be assigned to
+        self._flask_app.logger.setLevel(log_level)
 
         for dependency in self._other_dependencies:
             binder.bind(dependency[0], to=dependency[1])
@@ -63,14 +78,35 @@ def configure_dependencies(
     else:
         flask_app = app
 
-    modules = [
-        (module if isinstance(module, Module) else module())
-        for module in [AppModule(app)]
-        + (application_modules if application_modules else [])
-    ]
+    modules = None
+    if application_modules:
+        config_modules = list(
+            filter(lambda m: isinstance(m, ConfigModule), application_modules)
+        )
+        application_modules = list(
+            filter(lambda m: not isinstance(m, ConfigModule), application_modules)
+        )
 
-    # bootstrap the flask application and its dependencies
-    flask_injector = FlaskInjector(flask_app, modules)
+        if config_modules:
+            # create an Injector for ConfigModules so other modules
+            # can use their instances (and read the application configuration)
+            config_module_injector = Injector(config_modules)
+            app_module_injector = Injector(
+                AppModule(app), parent=config_module_injector
+            )
+        else:
+            app_module_injector = Injector(AppModule(app))
+
+        modules = [
+            (module if isinstance(module, Module) else module())
+            for module in application_modules
+        ]
+
+        # bootstrap the flask application and its dependencies
+        flask_injector = FlaskInjector(flask_app, modules, app_module_injector)
+    else:
+        app_module_injector = Injector(AppModule(app))
+        flask_injector = FlaskInjector(flask_app, injector=app_module_injector)
 
     flask_injector.injector.binder.bind(Injector, flask_injector.injector)
 
@@ -86,14 +122,15 @@ def configure_dependencies(
         # OpenAPIEndpointDependencyInjectionMiddleware, other Middlewares
         # can alter routing information.
         # TODO this needs to happen in some form for plain Flask applications too.
-        for module in modules:
-            register_callback: RegisterMiddlewareCallback | None = getattr(
-                module, "register_middleware", None
-            )
-            if register_callback is not None and callable(register_callback):
-                flask_injector.injector.call_with_injection(
-                    register_callback, kwargs={"app": app}
+        if modules:
+            for module in modules:
+                register_callback: RegisterMiddlewareCallback | None = getattr(
+                    module, "register_middleware", None
                 )
+                if register_callback is not None and callable(register_callback):
+                    flask_injector.injector.call_with_injection(
+                        register_callback, kwargs={"app": app}
+                    )
 
         # this binds all Ligare middlewares with Injector
         _configure_openapi_middleware_dependencies(app, flask_injector)
