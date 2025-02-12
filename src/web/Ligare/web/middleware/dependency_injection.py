@@ -78,7 +78,8 @@ def configure_dependencies(
     else:
         flask_app = app
 
-    modules = None
+    modules: list[Module] | None = None
+    config_module_injector: Injector | None = None
     if application_modules:
         config_modules = list(
             filter(lambda m: isinstance(m, ConfigModule), application_modules)
@@ -91,11 +92,8 @@ def configure_dependencies(
             # create an Injector for ConfigModules so other modules
             # can use their instances (and read the application configuration)
             config_module_injector = Injector(config_modules)
-            app_module_injector = Injector(
-                AppModule(app), parent=config_module_injector
-            )
-        else:
-            app_module_injector = Injector(AppModule(app))
+
+        app_module_injector = Injector(AppModule(app), parent=config_module_injector)
 
         modules = [
             (module if isinstance(module, Module) else module())

@@ -144,7 +144,9 @@ class AppModule(BatchModule, Generic[TApp]):
 
             binder.bind(ApplicationBase, to=to)
 
-        binder.install(LoggerModule(self._name))
+        # do not re-bind Logger if something has already bound it
+        if not binder.has_binding_for(logging.Logger):
+            binder.install(LoggerModule(self._name))
 
 
 class CreateAppResultProtocol(Protocol[TApp]):

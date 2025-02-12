@@ -5,7 +5,7 @@ The framework API for creating Flask and Connexion applications.
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from os import environ, path
+from os import path
 from typing import (
     Any,
     Callable,
@@ -18,7 +18,7 @@ from typing import (
     overload,
 )
 
-import json_logging
+import json_logging.util
 from connexion import FlaskApp
 from connexion.options import SwaggerUIOptions
 from flask import Blueprint, Flask
@@ -449,23 +449,13 @@ def configure_openapi(config: Config, name: Optional[str] = None):
     app = connexion_app.app
     config.update_flask_config(app.config)
 
-    enable_json_logging = config.logging.format == "JSON"
-    if enable_json_logging:
-        json_logging.init_connexion(  # pyright: ignore[reportUnknownMemberType]
-            enable_json=enable_json_logging
-        )
-        json_logging.init_request_instrument(  # pyright: ignore[reportUnknownMemberType]
-            connexion_app
-        )
-        json_logging.config_root_logger()  # pyright: ignore[reportUnknownMemberType]
-
-    app.logger.setLevel(environ.get("LOGLEVEL", "INFO").upper())
-
     _ = connexion_app.add_api(
         f"{config.flask.app_name}/{config.flask.openapi.spec_path}",
         validate_responses=config.flask.openapi.validate_responses,
     )
 
+    # enable_json_logging = config.logging.format == "JSON"
+    # if enable_json_logging:
     # FIXME what's the new way to get this URL?
     # if config.flask.openapi.use_swagger:
     #    # App context needed for url_for.
