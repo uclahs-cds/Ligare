@@ -76,7 +76,7 @@ class JSONFormatter(logging.Formatter):
         KeyError is raised if an unknown attribute is provided in the fmt_dict.
         """
         return {
-            fmt_key: record.__dict__[fmt_val]
+            fmt_key: record.__dict__.get(fmt_val, None)
             for fmt_key, fmt_val in self.fmt_dict.items()
         }
 
@@ -118,22 +118,24 @@ class JSONLoggerModule(LoggerModule):
         name: str | None = None,
         log_level: int | str = logging.INFO,
         log_to_stdout: bool = False,
+        formatter: JSONFormatter | None = None,
     ) -> None:
         super().__init__(name, log_level, log_to_stdout)
 
-        formatter = JSONFormatter({
-            "level": "levelname",
-            "message": "message",
-            "file": "pathname",
-            "func": "funcName",
-            "line": "lineno",
-            "loggerName": "name",
-            "processName": "processName",
-            "processID": "process",
-            "threadName": "threadName",
-            "threadID": "thread",
-            "timestamp": "asctime",
-        })
+        if not formatter:
+            formatter = JSONFormatter({
+                "level": "levelname",
+                "message": "message",
+                "file": "pathname",
+                "func": "funcName",
+                "line": "lineno",
+                "loggerName": "name",
+                "processName": "processName",
+                "processID": "process",
+                "threadName": "threadName",
+                "threadID": "thread",
+                "timestamp": "asctime",
+            })
 
         handler = logging.StreamHandler()
         handler.formatter = formatter

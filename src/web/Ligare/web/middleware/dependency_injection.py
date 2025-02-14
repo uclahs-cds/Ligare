@@ -15,14 +15,66 @@ from flask_injector import FlaskInjector, wrap_function
 from injector import Binder, Injector, Module
 from Ligare.programming.dependency_injection import ConfigModule
 from Ligare.programming.patterns.dependency_injection import (
+    JSONFormatter,
     JSONLoggerModule,
     LoggerModule,
 )
 from Ligare.web.application import Config as AppConfig
+from Ligare.web.middleware.openapi import (
+    CorrelationIdMiddleware,
+    RequestIdMiddleware,
+    get_trace_id,
+)
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import override
 
 from . import RegisterMiddlewareCallback, TFlaskApp
+
+
+class WebJSONFormatter(JSONFormatter):
+    @override
+    def __init__(
+        self,
+        fmt_dict: dict[str, str] | None = None,
+        time_format: str = "%Y-%m-%dT%H:%M:%S",
+        msec_format: str = "%s.%03dZ",
+    ):
+        super().__init__(fmt_dict, time_format, msec_format)
+
+    @override
+    def formatMessage(self, record: logging.LogRecord) -> dict[str, Any]:
+        format = super().formatMessage(record)
+        correlation_ids = get_trace_id()
+        format["correlationId"] = correlation_ids.CorrelationId
+        format["requestId"] = correlation_ids.RequestId
+        return format
+
+
+class WebJSONLoggerModule(JSONLoggerModule):
+    @override
+    def __init__(
+        self,
+        name: str | None = None,
+        log_level: int | str = logging.INFO,
+        log_to_stdout: bool = False,
+        formatter: JSONFormatter | None = None,
+    ) -> None:
+        formatter = WebJSONFormatter({
+            "level": "levelname",
+            "message": "message",
+            "file": "pathname",
+            "func": "funcName",
+            "line": "lineno",
+            "loggerName": "name",
+            "processName": "processName",
+            "processID": "process",
+            "threadName": "threadName",
+            "threadID": "thread",
+            "timestamp": "asctime",
+            "correlationId": "correlationId",
+            "requestId": "requestId",
+        })
+        super().__init__(name, log_level, log_to_stdout, formatter)
 
 
 class MiddlewareRoutine(Protocol):
@@ -53,7 +105,7 @@ class AppModule(Module):
         app_config = binder.injector.get(AppConfig)
         log_level = app_config.logging.log_level.upper()
         if app_config.logging.format == "JSON":
-            binder.install(JSONLoggerModule(self._flask_app.name, log_level))
+            binder.install(WebJSONLoggerModule(self._flask_app.name, log_level))
         else:
             binder.install(LoggerModule(self._flask_app.name, log_level))
 
@@ -110,6 +162,8 @@ def configure_dependencies(
 
     if isinstance(app, FlaskApp):
         app.add_middleware(OpenAPIEndpointDependencyInjectionMiddleware(flask_injector))
+        app.add_middleware(CorrelationIdMiddleware)
+        app.add_middleware(RequestIdMiddleware)
 
         # For every module registered, check if any are "middleware" type modules.
         # if they are, they need to be registered with the application.

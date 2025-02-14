@@ -17,7 +17,6 @@ from injector import inject
 from ...config import Config
 from ..consts import (
     CONTENT_SECURITY_POLICY_HEADER,
-    CORRELATION_ID_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_METHODS_HEADER,
     CORS_ACCESS_CONTROL_ALLOW_ORIGIN_HEADER,
@@ -26,6 +25,7 @@ from ..consts import (
     ORIGIN_HEADER,
     OUTGOING_RESPONSE_MESSAGE,
     REQUEST_COOKIE_HEADER,
+    REQUEST_ID_HEADER,
     RESPONSE_COOKIE_HEADER,
 )
 
@@ -81,7 +81,7 @@ def _get_correlation_id(log: Logger) -> str:
 
 def _get_correlation_id_from_headers(log: Logger) -> str:
     try:
-        correlation_id = request.headers.get(CORRELATION_ID_HEADER)
+        correlation_id = request.headers.get(REQUEST_ID_HEADER)
 
         if correlation_id:
             # validate format
@@ -89,13 +89,13 @@ def _get_correlation_id_from_headers(log: Logger) -> str:
         else:
             correlation_id = str(uuid4())
             log.info(
-                f'Generated new UUID "{correlation_id}" for {CORRELATION_ID_HEADER} request header.'
+                f'Generated new UUID "{correlation_id}" for {REQUEST_ID_HEADER} request header.'
             )
 
         return correlation_id
 
     except ValueError as e:
-        log.warning(f"Badly formatted {CORRELATION_ID_HEADER} received in request.")
+        log.warning(f"Badly formatted {REQUEST_ID_HEADER} received in request.")
         raise e
 
 
@@ -107,11 +107,11 @@ def _get_correlation_id_from_json_logging(log: Logger) -> str | None:
         _ = uuid.UUID(correlation_id)
         return correlation_id
     except ValueError as e:
-        log.warning(f"Badly formatted {CORRELATION_ID_HEADER} received in request.")
+        log.warning(f"Badly formatted {REQUEST_ID_HEADER} received in request.")
         raise e
     except Exception as e:
         log.debug(
-            f"Error received when getting {CORRELATION_ID_HEADER} header from `json_logging`. Possibly `json_logging` is not configured, and this is not an error.",
+            f"Error received when getting {REQUEST_ID_HEADER} header from `json_logging`. Possibly `json_logging` is not configured, and this is not an error.",
             exc_info=e,
         )
 
@@ -195,7 +195,7 @@ def _wrap_all_api_responses(response: Response, config: Config, log: Logger):
         config.web.security.cors.allow_methods
     )
 
-    response.headers[CORRELATION_ID_HEADER] = correlation_id
+    response.headers[REQUEST_ID_HEADER] = correlation_id
 
     if config.web.security.csp:
         response.headers[CONTENT_SECURITY_POLICY_HEADER] = config.web.security.csp
