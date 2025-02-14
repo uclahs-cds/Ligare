@@ -137,10 +137,10 @@ class JSONLoggerModule(LoggerModule):
                 "timestamp": "asctime",
             })
 
-        handler = logging.StreamHandler()
-        handler.formatter = formatter
+        json_handler = logging.StreamHandler()
+        json_handler.formatter = formatter
         if logging.lastResort is None:
-            logging.lastResort = handler
+            logging.lastResort = json_handler
         else:
             logging.lastResort.setFormatter(formatter)
 
@@ -149,11 +149,13 @@ class JSONLoggerModule(LoggerModule):
         def force_json_format(*args: Any, **kwargs: Any):
             logger = original_get_logger(*args, **kwargs)
 
-            if handler in logger.handlers:
+            if json_handler in logger.handlers:
                 return logger
 
-            logger.handlers.clear()
-            logger.addHandler(handler)
+            for handler in logger.handlers:
+                handler.setFormatter(formatter)
+
+            logger.addHandler(json_handler)
             return logger
 
         logging.getLogger = force_json_format

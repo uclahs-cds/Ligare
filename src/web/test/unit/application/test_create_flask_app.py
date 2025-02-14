@@ -26,7 +26,6 @@ class TestCreateFlaskApp(CreateFlaskApp):
     def test__CreateFlaskApp__configure_blueprint_routes__creates_flask_app_using_config(
         self, mocker: MockerFixture
     ):
-        _ = mocker.patch("Ligare.web.application.json_logging")
         flask_mock = mocker.patch("Ligare.web.application.Flask")
 
         app_name = f"{TestCreateFlaskApp.test__CreateFlaskApp__configure_blueprint_routes__creates_flask_app_using_config.__name__}-app_name"

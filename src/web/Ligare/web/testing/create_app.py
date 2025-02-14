@@ -23,7 +23,6 @@ from typing import (
 )
 from unittest.mock import AsyncMock, MagicMock, NonCallableMagicMock
 
-import json_logging
 import pytest
 from _pytest.fixtures import SubRequest
 from connexion import FlaskApp
@@ -40,6 +39,7 @@ from Ligare.platform.identity import Role, User
 from Ligare.platform.identity.user_loader import TRole, UserId, UserMixin
 from Ligare.programming.collections.dict import NestedDict
 from Ligare.programming.config import AbstractConfig, ConfigBuilder
+from Ligare.programming.patterns.dependency_injection import JSONFormatter
 from Ligare.programming.str import get_random_str
 from Ligare.web.application import (
     ApplicationBuilder,
@@ -340,16 +340,11 @@ class CreateApp(Generic[T_app]):
     # then tells pytest to use it for every test in the class
     @pytest.fixture(autouse=True)
     def setup_method_fixture(self, mocker: MockerFixture):
-        setup_artifacts = self._pre_test_setup(mocker)
+        self._pre_test_setup(mocker)
         yield
-        self._post_test_teardown(setup_artifacts)
+        self._post_test_teardown()
 
     def _pre_test_setup(self, mocker: MockerFixture):
-        # the pytest log formatters need to be restored
-        # in the event json_logging changes them, otherwise
-        # some tests may fail
-        log_formatters = [handler.formatter for handler in logging.getLogger().handlers]
-
         self._automatic_mocks = {}
 
         mock_targets: list[tuple[str] | tuple[str, Any]] = [
@@ -372,18 +367,16 @@ class CreateApp(Generic[T_app]):
 
                 self._automatic_mocks[target_name] = mock
 
-        return log_formatters
-
-    def _post_test_teardown(self, log_formatters: list[logging.Formatter | None]):
+    def _post_test_teardown(self):
         self._automatic_mocks = {}
 
-        for i, handler in enumerate(logging.getLogger().handlers):
-            # this assumes handlers are in the same order
-            # so is prone to breakage
-            handler.formatter = log_formatters[i]
-
-        # json_logging relies on global, so they must be reset between each test
-        _ = importlib.reload(json_logging)
+        handlers = logging.getLogger().handlers
+        for handler in [
+            handler
+            for handler in handlers
+            if isinstance(handler.formatter, JSONFormatter)
+        ]:
+            handlers.remove(handler)
 
 
 class CreateFlaskApp(CreateApp[Flask]):
@@ -476,6 +469,9 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
             )
 
             yield ClientInjector(client, result.app_injector.flask_injector)
+
+    def get_app(self, flask_app_getter: AppGetter[Flask]):
+        return next(self._flask_client(flask_app_getter))
 
     @pytest.fixture()
     def flask_client(self, _get_basic_flask_app: FlaskAppResult) -> FlaskClientInjector:
@@ -585,7 +581,6 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         mocker: MockerFixture,
         openapi_mock_controller: OpenAPIMockController,
     ) -> OpenAPIAppResult:
-        _ = mocker.patch("Ligare.web.application.json_logging")
         openapi_mock_controller.begin()
         return next(self._get_real_openapi_app(openapi_config, mocker))
 
@@ -678,8 +673,6 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
     def openapi_client_configurable(
         self, mocker: MockerFixture
     ) -> OpenAPIClientInjectorConfigurable:
-        # FIXME some day json_logging needs to be fixed
-        _ = mocker.patch("Ligare.web.application.json_logging")
         return self._client_configurable(
             mocker, self._get_real_openapi_app, self._openapi_client
         )

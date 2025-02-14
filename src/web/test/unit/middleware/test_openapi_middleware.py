@@ -13,7 +13,7 @@ from Ligare.programming.config import AbstractConfig
 from Ligare.web.application import OpenAPIAppResult
 from Ligare.web.config import Config
 from Ligare.web.middleware import bind_errorhandler
-from Ligare.web.middleware.consts import CORRELATION_ID_HEADER
+from Ligare.web.middleware.consts import REQUEST_ID_HEADER
 from Ligare.web.middleware.flask import (
     _get_correlation_id,  # pyright: ignore[reportPrivateUsage]
 )
@@ -44,8 +44,8 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
 
         response = flask_client.client.get("/")
 
-        assert response.headers[CORRELATION_ID_HEADER]
-        _ = uuid.UUID(response.headers[CORRELATION_ID_HEADER])
+        assert response.headers[REQUEST_ID_HEADER]
+        _ = uuid.UUID(response.headers[REQUEST_ID_HEADER])
 
     @pytest.mark.parametrize("format", ["plaintext", "JSON"])
     def test___register_api_response_handlers__sets_correlation_id_response_header_when_set_in_request_header(
@@ -60,10 +60,10 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
         flask_client = next(openapi_client_configurable(openapi_config))
         correlation_id = str(uuid.uuid4())
         response = flask_client.client.get(
-            "/", headers={CORRELATION_ID_HEADER: correlation_id}
+            "/", headers={REQUEST_ID_HEADER: correlation_id}
         )
 
-        assert response.headers[CORRELATION_ID_HEADER] == correlation_id
+        assert response.headers[REQUEST_ID_HEADER] == correlation_id
 
     @pytest.mark.parametrize("format", ["plaintext", "JSON"])
     def test___register_api_response_handler__validates_correlation_id_when_set_in_request_headers(
@@ -79,7 +79,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
         flask_client = next(openapi_client_configurable(openapi_config))
 
         response = flask_client.client.get(
-            "/", headers={CORRELATION_ID_HEADER: correlation_id}
+            "/", headers={REQUEST_ID_HEADER: correlation_id}
         )
 
         assert response.status_code == 500
@@ -96,7 +96,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
         correlation_id = "abc123"
         openapi_mock_controller.begin()
         with openapi_request_configurable(
-            openapi_config, {"headers": {CORRELATION_ID_HEADER: correlation_id}}
+            openapi_config, {"headers": {REQUEST_ID_HEADER: correlation_id}}
         ):
             with pytest.raises(
                 ValueError, match="^badly formed hexadecimal UUID string$"
@@ -115,7 +115,7 @@ class TestOpenAPIMiddleware(CreateOpenAPIApp):
         correlation_id = str(uuid.uuid4())
         openapi_mock_controller.begin()
         with openapi_request_configurable(
-            openapi_config, {"headers": {CORRELATION_ID_HEADER: correlation_id}}
+            openapi_config, {"headers": {REQUEST_ID_HEADER: correlation_id}}
         ):
             returned_correlation_id = _get_correlation_id(MagicMock())
             assert correlation_id == returned_correlation_id

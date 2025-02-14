@@ -18,7 +18,6 @@ class TestCreateOpenAPIApp(CreateOpenAPIApp):
     def test__CreateOpenAPIApp__configure_openapi__creates_flask_app_using_config(
         self, mocker: MockerFixture
     ):
-        _ = mocker.patch("Ligare.web.application.json_logging")
         connexion_mock = mocker.patch("Ligare.web.application.FlaskApp")
 
         app_name = f"{TestCreateOpenAPIApp.test__CreateOpenAPIApp__configure_openapi__creates_flask_app_using_config.__name__}-app_name"

@@ -8,11 +8,11 @@ from logging import Logger
 from typing import Awaitable, Callable, Dict, TypeAlias, TypeVar
 from uuid import uuid4
 
-import json_logging
 from connexion import FlaskApp
 from flask import Flask, Request, Response, request
 from flask.typing import ResponseReturnValue
 from injector import inject
+from Ligare.web.middleware.context import get_trace_id
 
 from ...config import Config
 from ..consts import (
@@ -71,7 +71,7 @@ def bind_requesthandler(
 
 
 def _get_correlation_id(log: Logger) -> str:
-    correlation_id = _get_correlation_id_from_json_logging(log)
+    correlation_id = get_trace_id().CorrelationId
 
     if not correlation_id:
         correlation_id = _get_correlation_id_from_headers(log)
@@ -97,23 +97,6 @@ def _get_correlation_id_from_headers(log: Logger) -> str:
     except ValueError as e:
         log.warning(f"Badly formatted {REQUEST_ID_HEADER} received in request.")
         raise e
-
-
-def _get_correlation_id_from_json_logging(log: Logger) -> str | None:
-    correlation_id: None | str
-    try:
-        correlation_id = json_logging.get_correlation_id(request)
-        # validate format
-        _ = uuid.UUID(correlation_id)
-        return correlation_id
-    except ValueError as e:
-        log.warning(f"Badly formatted {REQUEST_ID_HEADER} received in request.")
-        raise e
-    except Exception as e:
-        log.debug(
-            f"Error received when getting {REQUEST_ID_HEADER} header from `json_logging`. Possibly `json_logging` is not configured, and this is not an error.",
-            exc_info=e,
-        )
 
 
 @inject

@@ -6,19 +6,9 @@ import re
 import uuid
 from collections.abc import Iterable
 from contextlib import ExitStack
-from contextvars import ContextVar, Token
+from contextvars import Token
 from logging import Logger
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Literal,
-    NamedTuple,
-    NewType,
-    TypeAlias,
-    TypeVar,
-    cast,
-)
+from typing import Any, Awaitable, Callable, Literal, TypeAlias, TypeVar, cast
 from uuid import uuid4
 
 import starlette
@@ -34,6 +24,7 @@ from flask.typing import ResponseReturnValue
 from flask_login import AnonymousUserMixin, current_user
 from injector import inject
 from Ligare.programming.collections.dict import AnyDict, merge
+from Ligare.web.middleware.context import get_trace_id
 from starlette.datastructures import Address
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import TypedDict, final
@@ -123,148 +114,19 @@ MiddlewareResponseDict = TypedDict(
     },
 )
 
-CorrelationId = NewType("CorrelationId", str)
-RequestId = NewType("RequestId", str)
 
-CORRELATION_ID_CTX_KEY = "correlationId"
-REQUEST_ID_CTX_KEY = "requestId"
-
-_correlation_id_ctx_var: ContextVar[CorrelationId | None] = ContextVar(
-    CORRELATION_ID_CTX_KEY, default=None
-)
-_request_id_ctx_var: ContextVar[RequestId | None] = ContextVar(
-    REQUEST_ID_CTX_KEY, default=None
-)
-
-
-class TraceId(NamedTuple):
-    CorrelationId: CorrelationId | None
-    RequestId: RequestId | None
-
-
-def get_trace_id() -> TraceId:
-    return TraceId(_correlation_id_ctx_var.get(), _request_id_ctx_var.get())
-
-
-@final
-class CorrelationIdMiddleware:
-    """
-    Generate a Correlation ID for each request.
-
-    https://github.com/encode/starlette/issues/420
-    """
-
-    def __init__(
-        self,
-        app: ASGIApp,
-    ) -> None:
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] not in ["http", "websocket"]:
-            await self.app(scope, receive, send)
-            return
-
-        correlation_id = _correlation_id_ctx_var.set(CorrelationId(str(uuid4())))
-
-        await self.app(scope, receive, send)
-
-        _correlation_id_ctx_var.reset(correlation_id)
-
-
-@final
-class RequestIdMiddleware:
-    """
-    Generate a Trace ID for each request.
-    If X-Correlation-Id is set in the request headers, that ID is used instead.
-    """
-
-    _app: ASGIApp
-
-    def __init__(self, app: ASGIApp):
-        super().__init__()
-        self._app = app
-
-    @inject
-    async def __call__(
-        self, scope: Scope, receive: Receive, send: Send, log: Logger
-    ) -> None:
-        if scope["type"] not in ["http", "websocket"]:
-            return await self._app(scope, receive, send)
-
-        # extract the request ID from the request headers if it is set
-
-        request = cast(MiddlewareRequestDict, scope)
-        request_headers = request.get("headers")
-
-        content_type = utils.extract_content_type(request_headers)
-        _, encoding = utils.split_content_type(content_type)
-        if encoding is None:
-            encoding = "utf-8"
-
-        try:
-            request_id_header_encoded = REQUEST_ID_HEADER.lower().encode(encoding)
-
-            request_id: bytes | None = next(
-                (
-                    request_id
-                    for (header, request_id) in request_headers
-                    if header == request_id_header_encoded
-                ),
-                None,
-            )
-
-            if request_id:
-                # validate format
-                request_id_decoded = request_id.decode(encoding)
-                _ = uuid.UUID(request_id_decoded)
-                request_id_token = _request_id_ctx_var.set(
-                    RequestId(request_id_decoded)
-                )
-            else:
-                request_id_decoded = str(uuid4())
-                request_id = request_id_decoded.encode(encoding)
-                request_headers.append((
-                    request_id_header_encoded,
-                    request_id,
-                ))
-                request_id_token = _request_id_ctx_var.set(
-                    RequestId(request_id_decoded)
-                )
-                log.info(
-                    f'Generated new UUID "{request_id}" for {REQUEST_ID_HEADER} request header.'
-                )
-        except ValueError as e:
-            log.warning(f"Badly formatted {REQUEST_ID_HEADER} received in request.")
-            raise e
-
-        async def wrapped_send(message: Any) -> None:
-            nonlocal scope
-            nonlocal send
-
-            if message["type"] != "http.response.start":
-                return await send(message)
-
-            # include the request ID in response headers
-
-            response = cast(MiddlewareResponseDict, message)
-            response_headers = response["headers"]
-
-            content_type = utils.extract_content_type(response_headers)
-            _, encoding = utils.split_content_type(content_type)
-            if encoding is None:
-                encoding = "utf-8"
-
-            response_headers.append((
-                request_id_header_encoded,
-                request_id,
-            ))
-
-            return await send(message)
-
-        await self._app(scope, receive, wrapped_send)
-
-        _request_id_ctx_var.reset(request_id_token)
+def headers_as_dict(
+    request_response: MiddlewareRequestDict | MiddlewareResponseDict,
+) -> dict[str, str]:
+    if (
+        isinstance(request_response, dict)  # pyright: ignore[reportUnnecessaryIsInstance]
+        and "headers" in request_response.keys()
+    ):
+        return {
+            key: value for (key, value) in decode_headers(request_response["headers"])
+        }
+    else:
+        raise Exception("Unable to extract headers from request when logging request.")
 
 
 def _get_correlation_id(
@@ -281,11 +143,11 @@ def _get_correlation_id_from_headers(
     request: MiddlewareRequestDict, response: MiddlewareResponseDict, log: Logger
 ) -> str:
     try:
-        headers = _headers_as_dict(request)
+        headers = headers_as_dict(request)
         correlation_id = headers.get(REQUEST_ID_HEADER.lower())
 
         if not correlation_id:
-            headers = _headers_as_dict(response)
+            headers = headers_as_dict(response)
             correlation_id = headers.get(REQUEST_ID_HEADER.lower())
 
         if correlation_id:
@@ -304,20 +166,6 @@ def _get_correlation_id_from_headers(
         raise e
 
 
-def _headers_as_dict(
-    request_response: MiddlewareRequestDict | MiddlewareResponseDict,
-):
-    if (
-        isinstance(request_response, dict)  # pyright: ignore[reportUnnecessaryIsInstance]
-        and "headers" in request_response.keys()
-    ):
-        return {
-            key: value for (key, value) in decode_headers(request_response["headers"])
-        }
-    else:
-        raise Exception("Unable to extract headers from request when logging request.")
-
-
 @inject
 def _log_all_api_requests(
     request: MiddlewareRequestDict,
@@ -325,7 +173,7 @@ def _log_all_api_requests(
     config: Config,
     log: Logger,
 ):
-    request_headers_safe: dict[str, str] = _headers_as_dict(request)
+    request_headers_safe: dict[str, str] = headers_as_dict(request)
 
     correlation_id = get_trace_id().CorrelationId
 
@@ -367,7 +215,7 @@ def _log_all_api_requests(
 
 def _wrap_all_api_responses(response: MiddlewareResponseDict, config: Config):
     correlation_id = get_trace_id().CorrelationId
-    response_headers = _headers_as_dict(response)
+    response_headers = headers_as_dict(response)
 
     response_headers[REQUEST_ID_HEADER] = str(correlation_id)
 
@@ -392,7 +240,7 @@ def _log_all_api_responses(
     config: Config,
     log: Logger,
 ):
-    response_headers_safe: dict[str, str] = _headers_as_dict(response)
+    response_headers_safe: dict[str, str] = headers_as_dict(response)
 
     correlation_id = _get_correlation_id(request, response, log)
 

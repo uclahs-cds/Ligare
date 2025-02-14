@@ -18,7 +18,6 @@ from typing import (
     overload,
 )
 
-import json_logging.util
 from connexion import FlaskApp
 from connexion.options import SwaggerUIOptions
 from flask import Blueprint, Flask
@@ -454,8 +453,6 @@ def configure_openapi(config: Config, name: Optional[str] = None):
         validate_responses=config.flask.openapi.validate_responses,
     )
 
-    # enable_json_logging = config.logging.format == "JSON"
-    # if enable_json_logging:
     # FIXME what's the new way to get this URL?
     # if config.flask.openapi.use_swagger:
     #    # App context needed for url_for.
@@ -482,16 +479,6 @@ def configure_blueprint_routes(
 
     app = Flask(config.flask.app_name)
     config.update_flask_config(app.config)
-
-    enable_json_logging = config.logging.format == "JSON"
-    if enable_json_logging:
-        json_logging.init_flask(  # pyright: ignore[reportUnknownMemberType]
-            enable_json=enable_json_logging
-        )
-        json_logging.init_request_instrument(  # pyright: ignore[reportUnknownMemberType]
-            app
-        )
-        json_logging.config_root_logger()  # pyright: ignore[reportUnknownMemberType]
 
     blueprint_modules = _import_blueprint_modules(app, blueprint_import_subdir)
     _register_blueprint_modules(app, blueprint_modules)
