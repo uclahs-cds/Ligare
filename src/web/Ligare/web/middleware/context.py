@@ -2,14 +2,60 @@ import uuid
 from collections.abc import Collection
 from contextvars import ContextVar
 from logging import Logger
-from typing import Any, NamedTuple, NewType, cast
+from typing import Any, Callable, Literal, NamedTuple, NewType, TypedDict, cast
 from uuid import uuid4
 
+from connexion import ConnexionMiddleware
 from injector import inject
-from Ligare.web.middleware.consts import REQUEST_ID_HEADER
-from Ligare.web.middleware.openapi import MiddlewareRequestDict, MiddlewareResponseDict
+from Ligare.programming.collections.dict import AnyDict
+from Ligare.web.middleware.consts import CORRELATION_ID_HEADER
 from starlette.types import ASGIApp, Receive, Scope, Send
 from typing_extensions import final
+
+MiddlewareRequestDict = TypedDict(
+    "MiddlewareRequestDict",
+    {
+        "type": Literal["http"],
+        "http_version": str,
+        "method": Literal[
+            "GET",
+            "POST",
+            "PATCH",
+            "PUT",
+            "DELETE",
+            "OPTIONS",
+            "HEAD",
+            "CONNECT",
+            "TRACE",
+        ],
+        "path": str,
+        "raw_path": bytes,
+        "root_path": str,
+        "scheme": str,
+        "query_string": bytes,
+        "headers": list[tuple[bytes, bytes]],
+        "client": list[
+            str | int
+        ],  # this is actually a 2-item list whose first item is a str and second item is an int
+        "server": list[str | int],  # same here
+        "extensions": dict[str, dict[str, str]],
+        "state": AnyDict,
+        "app": ConnexionMiddleware,
+        "starlette.exception_handlers": tuple[
+            dict[type[Any], Callable[..., Any]], dict[Any, Any]
+        ],
+        "path_params": dict[Any, Any],
+    },
+)
+
+MiddlewareResponseDict = TypedDict(
+    "MiddlewareResponseDict",
+    {
+        "type": Literal["http.response.start"],
+        "status": int,
+        "headers": list[tuple[bytes, bytes]],
+    },
+)
 
 
 # copied from connexion.utils
@@ -67,17 +113,17 @@ def split_content_type(content_type: str | None) -> tuple[str | None, str | None
     return mime_type, encoding
 
 
-CorrelationId = NewType("CorrelationId", str)
 RequestId = NewType("RequestId", str)
+CorrelationId = NewType("CorrelationId", str)
 
-CORRELATION_ID_CTX_KEY = "correlationId"
 REQUEST_ID_CTX_KEY = "requestId"
+CORRELATION_ID_CTX_KEY = "correlationId"
 
-_correlation_id_ctx_var: ContextVar[CorrelationId | None] = ContextVar(
-    CORRELATION_ID_CTX_KEY, default=None
-)
 _request_id_ctx_var: ContextVar[RequestId | None] = ContextVar(
     REQUEST_ID_CTX_KEY, default=None
+)
+_correlation_id_ctx_var: ContextVar[CorrelationId | None] = ContextVar(
+    CORRELATION_ID_CTX_KEY, default=None
 )
 
 
@@ -147,7 +193,7 @@ class RequestIdMiddleware:
             encoding = "utf-8"
 
         try:
-            request_id_header_encoded = REQUEST_ID_HEADER.lower().encode(encoding)
+            request_id_header_encoded = CORRELATION_ID_HEADER.lower().encode(encoding)
 
             request_id: bytes | None = next(
                 (
@@ -176,10 +222,10 @@ class RequestIdMiddleware:
                     RequestId(request_id_decoded)
                 )
                 log.info(
-                    f'Generated new UUID "{request_id}" for {REQUEST_ID_HEADER} request header.'
+                    f'Generated new UUID "{request_id}" for {CORRELATION_ID_HEADER} request header.'
                 )
         except ValueError as e:
-            log.warning(f"Badly formatted {REQUEST_ID_HEADER} received in request.")
+            log.warning(f"Badly formatted {CORRELATION_ID_HEADER} received in request.")
             raise e
 
         async def wrapped_send(message: Any) -> None:

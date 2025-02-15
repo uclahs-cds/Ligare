@@ -8,13 +8,13 @@ from collections.abc import Iterable
 from contextlib import ExitStack
 from contextvars import Token
 from logging import Logger
-from typing import Any, Awaitable, Callable, Literal, TypeAlias, TypeVar, cast
+from typing import Any, Awaitable, Callable, TypeAlias, TypeVar, cast
 from uuid import uuid4
 
 import starlette
 import starlette.datastructures
 import starlette.requests
-from connexion import ConnexionMiddleware, FlaskApp, context, utils
+from connexion import FlaskApp, context, utils
 from connexion.middleware import MiddlewarePosition
 from flask import Flask, Request, Response, request
 from flask.ctx import AppContext
@@ -23,20 +23,24 @@ from flask.globals import current_app
 from flask.typing import ResponseReturnValue
 from flask_login import AnonymousUserMixin, current_user
 from injector import inject
-from Ligare.programming.collections.dict import AnyDict, merge
-from Ligare.web.middleware.context import get_trace_id
+from Ligare.programming.collections.dict import merge
+from Ligare.web.middleware.context import (
+    MiddlewareRequestDict,
+    MiddlewareResponseDict,
+    get_trace_id,
+)
 from starlette.datastructures import Address
 from starlette.types import ASGIApp, Receive, Scope, Send
-from typing_extensions import TypedDict, final
+from typing_extensions import final
 from werkzeug.local import LocalProxy
 
 from ...config import Config
 from ..consts import (
     CONTENT_SECURITY_POLICY_HEADER,
+    CORRELATION_ID_HEADER,
     INCOMING_REQUEST_MESSAGE,
     OUTGOING_RESPONSE_MESSAGE,
     REQUEST_COOKIE_HEADER,
-    REQUEST_ID_HEADER,
     RESPONSE_COOKIE_HEADER,
 )
 
@@ -69,52 +73,6 @@ TFlaskApp = Flask | FlaskApp
 T_flask_app = TypeVar("T_flask_app", bound=TFlaskApp)
 
 
-MiddlewareRequestDict = TypedDict(
-    "MiddlewareRequestDict",
-    {
-        "type": Literal["http"],
-        "http_version": str,
-        "method": Literal[
-            "GET",
-            "POST",
-            "PATCH",
-            "PUT",
-            "DELETE",
-            "OPTIONS",
-            "HEAD",
-            "CONNECT",
-            "TRACE",
-        ],
-        "path": str,
-        "raw_path": bytes,
-        "root_path": str,
-        "scheme": str,
-        "query_string": bytes,
-        "headers": list[tuple[bytes, bytes]],
-        "client": list[
-            str | int
-        ],  # this is actually a 2-item list whose first item is a str and second item is an int
-        "server": list[str | int],  # same here
-        "extensions": dict[str, dict[str, str]],
-        "state": AnyDict,
-        "app": ConnexionMiddleware,
-        "starlette.exception_handlers": tuple[
-            dict[type[Any], Callable[..., Any]], dict[Any, Any]
-        ],
-        "path_params": dict[Any, Any],
-    },
-)
-
-MiddlewareResponseDict = TypedDict(
-    "MiddlewareResponseDict",
-    {
-        "type": Literal["http.response.start"],
-        "status": int,
-        "headers": list[tuple[bytes, bytes]],
-    },
-)
-
-
 def headers_as_dict(
     request_response: MiddlewareRequestDict | MiddlewareResponseDict,
 ) -> dict[str, str]:
@@ -144,11 +102,11 @@ def _get_correlation_id_from_headers(
 ) -> str:
     try:
         headers = headers_as_dict(request)
-        correlation_id = headers.get(REQUEST_ID_HEADER.lower())
+        correlation_id = headers.get(CORRELATION_ID_HEADER.lower())
 
         if not correlation_id:
             headers = headers_as_dict(response)
-            correlation_id = headers.get(REQUEST_ID_HEADER.lower())
+            correlation_id = headers.get(CORRELATION_ID_HEADER.lower())
 
         if correlation_id:
             # validate format
@@ -156,13 +114,13 @@ def _get_correlation_id_from_headers(
         else:
             correlation_id = str(uuid4())
             log.info(
-                f'Generated new UUID "{correlation_id}" for {REQUEST_ID_HEADER} request header.'
+                f'Generated new UUID "{correlation_id}" for {CORRELATION_ID_HEADER} request header.'
             )
 
         return correlation_id
 
     except ValueError as e:
-        log.warning(f"Badly formatted {REQUEST_ID_HEADER} received in request.")
+        log.warning(f"Badly formatted {CORRELATION_ID_HEADER} received in request.")
         raise e
 
 
@@ -217,7 +175,7 @@ def _wrap_all_api_responses(response: MiddlewareResponseDict, config: Config):
     correlation_id = get_trace_id().CorrelationId
     response_headers = headers_as_dict(response)
 
-    response_headers[REQUEST_ID_HEADER] = str(correlation_id)
+    response_headers[CORRELATION_ID_HEADER] = str(correlation_id)
 
     if config.web.security.csp:
         response_headers[CONTENT_SECURITY_POLICY_HEADER] = config.web.security.csp
