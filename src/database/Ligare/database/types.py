@@ -1,3 +1,7 @@
+"""
+Static types for use in type hinting.
+"""
+
 from abc import ABC
 from typing import Any, Callable, Protocol, TypedDict, TypeVar
 

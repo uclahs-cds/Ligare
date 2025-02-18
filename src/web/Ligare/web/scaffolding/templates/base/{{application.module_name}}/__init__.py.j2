@@ -28,7 +28,6 @@ def create_app():
         .use_configuration(
             lambda config_builder: config_builder
             .with_config_filename("{{application.module_name}}/config.toml")
-            .with_root_config_type(Config)
         )
     )
     result = application_builder.build()
