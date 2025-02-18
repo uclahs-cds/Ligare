@@ -144,18 +144,22 @@ class JSONLoggerModule(LoggerModule):
         else:
             logging.lastResort.setFormatter(formatter)
 
-        original_get_logger = logging.getLogger
+        original_getLogger = logging.getLogger
 
         def force_json_format(*args: Any, **kwargs: Any):
-            logger = original_get_logger(*args, **kwargs)
+            logger = original_getLogger(*args, **kwargs)
 
-            if json_handler in logger.handlers:
+            original_addHandler = logger.addHandler
+            if hasattr(original_addHandler, "__overridden__"):
                 return logger
 
-            for handler in logger.handlers:
-                handler.setFormatter(formatter)
+            def addHandler(hdlr: logging.Handler):
+                hdlr.setFormatter(formatter)
+                return original_addHandler(hdlr)
 
-            logger.addHandler(json_handler)
+            setattr(addHandler, "__overridden__", True)
+
+            logger.addHandler = addHandler
             return logger
 
         logging.getLogger = force_json_format

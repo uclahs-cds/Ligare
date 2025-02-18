@@ -19,7 +19,7 @@ from Ligare.programming.patterns.dependency_injection import (
     JSONLoggerModule,
     LoggerModule,
 )
-from Ligare.web.application import Config as AppConfig
+from Ligare.web.config import Config as AppConfig
 from Ligare.web.middleware.context import (
     CorrelationIdMiddleware,
     RequestIdMiddleware,
