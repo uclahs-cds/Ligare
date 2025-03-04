@@ -118,7 +118,7 @@ class FlaskSessionConfig(BaseModel):
 
 class FlaskConfig(BaseModel):
     app_name: str = "app"
-    env: str = "Development"
+    env: Literal["development", "testing", "production"] | str = "development"
     host: str = "localhost"
     port: str = "5000"
     openapi: FlaskOpenApiConfig | None = None
