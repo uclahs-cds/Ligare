@@ -22,7 +22,7 @@ class TestApp(CreateApp):
     def test__{{application.module_name}}__application_starts(self):
         _app = self.get_app(create_app)
 
-        assert _app.client.app.app.name == "{{application.module_name}}"
+        assert _app.client.application.name == "{{application.module_name}}"
 
 {% if {'module_name': 'database'} in modules %} 
     def test__{{meta.operation.module_name}}__post__stores_data_in_{{meta.operation.module_name}}_table(self, use_inmemory_database: UseInmemoryDatabaseResult):

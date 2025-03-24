@@ -43,3 +43,15 @@ exclude = [
     "**/__pycache__",
 ]
 typeCheckingMode = "basic"
+
+{% if 'test' in module %}
+[tool.pytest.ini_options]
+pythonpath = [
+    "."
+]
+testpaths = [
+    "{{application.module_name}}/modules/test"
+]
+python_files = "test_*.py"
+norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv"
+{% endif %}
