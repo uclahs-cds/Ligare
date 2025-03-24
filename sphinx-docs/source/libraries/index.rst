@@ -15,6 +15,8 @@ or extending existing applications.
    :glob:
 
    */index
+   structure
+
 
 Why Use Ligare?
 ----------------

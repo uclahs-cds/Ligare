@@ -98,7 +98,8 @@ dev-dependencies = [
     "sphinx_toolbox",
     "sphinx-rtd-theme",
     "sphinx-copybutton",
-    "sphinx-autobuild"
+    "sphinx-autobuild",
+    "sphinxcontrib-plantuml"
 ]
 
 # Install if you want to use the Esbonio extension

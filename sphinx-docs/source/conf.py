@@ -42,6 +42,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.viewcode",
     "sphinx.ext.extlinks",
+    "sphinxcontrib.plantuml",
 ]
 
 autosummary_generate = True
