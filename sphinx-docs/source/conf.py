@@ -81,6 +81,12 @@ extlinks = {
     ),
 }
 
+plantuml = "docker run \
+        -i \
+        ghcr.io/uclahs-cds/plantuml-github-action:v2.0.0 \
+        -DPLANTUML_LIMIT_SIZE=8192 \
+        -v -p -tpng"
+
 
 def skip_member(
     app: Sphinx, what: str, name: str, obj: Any, skip: bool, options: Options
