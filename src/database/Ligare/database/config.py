@@ -1,3 +1,7 @@
+"""
+:ref:`Ligare.database`'s integration with :ref:`Ligare.programming.config`.
+"""
+
 from typing import Any
 
 from Ligare.programming.config import AbstractConfig
@@ -27,7 +31,7 @@ class SQLiteDatabaseConnectArgsConfig(DatabaseConnectArgsConfig):
     model_config = ConfigDict(extra="ignore")
 
 
-class DatabaseConfig(BaseModel, AbstractConfig):
+class DatabaseConfig(AbstractConfig):
     def __init__(self, **data: Any):
         super().__init__(**data)
 
@@ -48,7 +52,7 @@ class DatabaseConfig(BaseModel, AbstractConfig):
     connect_args: DatabaseConnectArgsConfig | None = None
 
 
-class Config(BaseModel, AbstractConfig):
+class Config(AbstractConfig):
     @override
     def post_load(self) -> None:
         return super().post_load()

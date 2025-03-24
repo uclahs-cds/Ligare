@@ -1,3 +1,7 @@
+"""
+Libraries for use with `argparse <https://docs.python.org/3/library/argparse.html>`_.
+"""
+
 from argparse import (
     Action,
     ArgumentError,

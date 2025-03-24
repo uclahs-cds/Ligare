@@ -1,3 +1,7 @@
+"""
+:ref:`Ligare.web`'s integration with :ref:`Ligare.programming.config`.
+"""
+
 from dataclasses import field
 from os import environ
 from typing import Literal, Sequence, cast
@@ -114,7 +118,7 @@ class FlaskSessionConfig(BaseModel):
 
 class FlaskConfig(BaseModel):
     app_name: str = "app"
-    env: str = "Development"
+    env: Literal["development", "testing", "production"] | str = "development"
     host: str = "localhost"
     port: str = "5000"
     openapi: FlaskOpenApiConfig | None = None
@@ -147,7 +151,7 @@ class FlaskConfig(BaseModel):
         flask_app_config.from_object(ConfigObject)
 
 
-class Config(BaseModel, AbstractConfig):
+class Config(AbstractConfig):
     logging: LoggingConfig = LoggingConfig()
     web: WebConfig = WebConfig()
     flask: FlaskConfig | None = None

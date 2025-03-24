@@ -1,0 +1,8 @@
+[logging]
+format = 'plaintext'
+
+[flask]
+app_name = 'app'
+
+[flask.openapi]
+spec_path = 'openapi.yaml'

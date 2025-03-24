@@ -1,12 +1,9 @@
 import pytest
-from flask import Flask
 from Ligare.programming.collections.dict import AnyDict
 from Ligare.programming.config import AbstractConfig, load_config
-from Ligare.programming.config.exceptions import ConfigBuilderStateError
-from Ligare.web.application import ApplicationBuilder, ApplicationConfigBuilder
+from Ligare.programming.exception import BuilderBuildError, InvalidBuilderStateError
+from Ligare.web.application import ApplicationConfigBuilder
 from Ligare.web.config import Config
-from Ligare.web.exception import BuilderBuildError, InvalidBuilderStateError
-from pydantic import BaseModel
 from pytest_mock import MockerFixture
 from typing_extensions import override
 
@@ -59,9 +56,7 @@ def test__ApplicationConfigBuilder__build__succeeds_with_either_ssm_or_filename(
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
     _ = mocker.patch("Ligare.AWS.ssm.SSMParameters.load_config")
 
-    application_config_builder = ApplicationConfigBuilder[
-        Config
-    ]().with_root_config_type(Config)
+    application_config_builder = ApplicationConfigBuilder[Config]()
 
     if mode == "ssm":
         _ = application_config_builder.enable_ssm(True)
@@ -113,34 +108,13 @@ def test__ApplicationConfigBuilder__build__uses_filename_when_ssm_fails(
     )
     toml_mock = mocker.patch("toml.load")
 
-    application_config_builder = (
-        ApplicationConfigBuilder[Config]()
-        .with_root_config_type(Config)
-        .with_config_filename("foo.toml")
-    )
-
-    _ = application_config_builder.build()
-
-    assert toml_mock.called
-
-
-def test__ApplicationConfigBuilder__build__requires_root_config(
-    mocker: MockerFixture,
-):
-    _ = mocker.patch("io.open")
-    _ = mocker.patch("toml.decoder.loads")
-
     application_config_builder = ApplicationConfigBuilder[
         Config
     ]().with_config_filename("foo.toml")
 
-    with pytest.raises(
-        BuilderBuildError,
-        match="A root config must be specified",
-    ) as e:
-        _ = application_config_builder.build()
+    _ = application_config_builder.build()
 
-    assert isinstance(e.value.__cause__, ConfigBuilderStateError)
+    assert toml_mock.called
 
 
 def test__ApplicationConfigBuilder__build__applies_additional_configs(
@@ -150,7 +124,7 @@ def test__ApplicationConfigBuilder__build__applies_additional_configs(
     _ = mocker.patch("io.open")
     _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
 
-    class TestConfig(BaseModel, AbstractConfig):
+    class TestConfig(AbstractConfig):
         @override
         def post_load(self) -> None:
             return super().post_load()
@@ -159,7 +133,6 @@ def test__ApplicationConfigBuilder__build__applies_additional_configs(
 
     application_config_builder = (
         ApplicationConfigBuilder[Config]()
-        .with_root_config_type(Config)
         .with_config_type(TestConfig)
         .with_config_filename("foo.toml")
     )
@@ -180,7 +153,6 @@ def test__ApplicationConfigBuilder__build__applies_config_overrides(
 
     application_config_builder = (
         ApplicationConfigBuilder[Config]()
-        .with_root_config_type(Config)
         .with_config_value_overrides({"logging": {"log_level": "INFO"}})
         .with_config_filename("foo.toml")
     )
@@ -190,22 +162,3 @@ def test__ApplicationConfigBuilder__build__applies_config_overrides(
     assert hasattr(config, "logging")
     assert hasattr(getattr(config, "logging"), "log_level")
     assert getattr(getattr(config, "logging"), "log_level") == "INFO"
-
-
-# FIXME move to application tests
-def test__ApplicationBuilder__build__something(mocker: MockerFixture):
-    fake_config_dict = {"logging": {"log_level": "DEBUG"}, "flask": {"app_name": "app"}}
-    _ = mocker.patch("io.open")
-    _ = mocker.patch("toml.decoder.loads", return_value=fake_config_dict)
-
-    application_builder = ApplicationBuilder[Flask]().use_configuration(
-        lambda config_builder: config_builder.with_root_config_type(
-            Config
-        ).with_config_filename("foo.toml")
-    )
-
-    _ = (
-        application_builder.with_flask_app_name("overridden_app")
-        .with_flask_env("overridden_dev")
-        .build()
-    )

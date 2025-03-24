@@ -1,3 +1,7 @@
+"""
+Libraries for working with strings.
+"""
+
 from random import choices
 from string import ascii_letters
 

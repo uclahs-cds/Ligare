@@ -29,7 +29,8 @@ classifiers = [
 
 dependencies = [
     "injector",
-    "pydantic"
+    "pydantic",
+    "toml"
 ]
 
 dynamic = ["version", "readme"]
@@ -43,6 +44,11 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 "Repository" = "https://github.com/uclahs-cds/Ligare.git"
 "Changelog" = "https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md"
 
+[project.optional-dependencies]
+AWS = [
+    "Ligare.AWS"
+]
+
 [tool.setuptools.package-dir]
 "Ligare.programming" = "Ligare/programming"
 
@@ -50,4 +56,4 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 exclude = ["build*"]
 
 [tool.setuptools.package-data]
-"Ligare.programming" = ["py.typed"]
+"Ligare.programming" = ["Ligare/programming/py.typed"]

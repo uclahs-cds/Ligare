@@ -26,7 +26,7 @@ class SAML2Config(SSOSettingsConfig):
     https_acs_url: str | None = None
 
 
-class SSOConfig(BaseModel, AbstractConfig):
+class SSOConfig(AbstractConfig):
     def __init__(self, **data: Any):
         super().__init__(**data)
 
@@ -44,7 +44,7 @@ class SSOConfig(BaseModel, AbstractConfig):
     settings: SSOSettingsConfig | None = None
 
 
-class Config(BaseModel, AbstractConfig):
+class Config(AbstractConfig):
     @override
     def post_load(self) -> None:
         return super().post_load()

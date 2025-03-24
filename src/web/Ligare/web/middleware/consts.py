@@ -1,3 +1,7 @@
+"""
+String constants used by :ref:`Ligare.web`.
+"""
+
 CORRELATION_ID_HEADER = "X-Correlation-Id"
 REQUEST_COOKIE_HEADER = "Cookie"
 RESPONSE_COOKIE_HEADER = "Set-Cookie"

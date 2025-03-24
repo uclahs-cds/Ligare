@@ -92,7 +92,20 @@ dev-dependencies = [
     "pyright == 1.1.397",
     "isort >= 5.13,< 7.0",
     "ruff ~= 0.3",
-    "bandit[sarif,toml] ~= 1.7"
+    "bandit[sarif,toml] ~= 1.7",
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx_toolbox",
+    "sphinx-rtd-theme",
+    "sphinx-copybutton",
+    "sphinx-autobuild",
+    "sphinxcontrib-plantuml"
+]
+
+# Install if you want to use the Esbonio extension
+# in VSCode to write reStructuredText documents.
+vscode-sphinx = [
+    "esbonio"
 ]
 
 [tool.pyright]
@@ -113,7 +126,11 @@ exclude = [
     ".git",
     "**/typings",
     "**/node_modules",
-    "**/__pycache__"
+    "**/__pycache__",
+    "docs",
+    "sphinx-docs",
+    "examples",
+    "Ligare.wiki"
 ]
 
 extraPaths = [
@@ -191,7 +208,7 @@ addopts = [
 
 python_files = "test_*.py"
 
-norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv .github-venv"
+norecursedirs = "__pycache__ build .pytest_cache *.egg-info .venv .github-venv docs sphinx-docs examples Ligare.wiki"
 
 [tool.tox]
 legacy_tox_ini = """
@@ -242,7 +259,11 @@ omit = [
     "*/typings/*",
     "node_modules/*",
     "__pycache__/*",
-    "*/__pycache__/*"
+    "*/__pycache__/*",
+    "docs/*",
+    "sphinx-docs",
+    "examples",
+    "Ligare.wiki"
 ]
 branch = true
 
@@ -256,9 +277,16 @@ exclude_dirs = [
     "./__pycache__/*",
     "./.github/*",
     "./.venv/*",
+    ".venv", # ignore any deeper .venv dirs too
+    "./.tox/*",
+    ".git",
     "./.git/*",
     "./test/*/test*.py",
-    "./src/*/test/*/test*.py"
+    "./src/*/test/*/test*.py",
+    "./docs/*",
+    "./sphinx-docs/*",
+    "./examples/*",
+    "./Ligare.wiki/*"
 ]
 
 [tool.ruff]

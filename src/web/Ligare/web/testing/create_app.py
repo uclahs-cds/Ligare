@@ -1,3 +1,7 @@
+"""
+Fixtures for testing :ref:`Ligare.web`, Flask, and Connexion/OpenAPI applications.
+"""
+
 import importlib
 import logging
 import sys
@@ -19,7 +23,6 @@ from typing import (
 )
 from unittest.mock import AsyncMock, MagicMock, NonCallableMagicMock
 
-import json_logging
 import pytest
 from _pytest.fixtures import SubRequest
 from connexion import FlaskApp
@@ -36,6 +39,7 @@ from Ligare.platform.identity import Role, User
 from Ligare.platform.identity.user_loader import TRole, UserId, UserMixin
 from Ligare.programming.collections.dict import NestedDict
 from Ligare.programming.config import AbstractConfig, ConfigBuilder
+from Ligare.programming.patterns.dependency_injection import JSONFormatter
 from Ligare.programming.str import get_random_str
 from Ligare.web.application import (
     ApplicationBuilder,
@@ -100,13 +104,14 @@ class ClientInjectorConfigurable(Protocol[T_app, T_flask_client]):
     """
     Get a Flask test client using the specified application configuration.
 
-    Args
-    ------
-        config: `Config` The custom application configuration used to instantiate the Flask app.
+    Parameters
+    ----------
+    config : Config
+        The custom application configuration used to instantiate the Flask app.
 
     Returns
-    ------
-        `FlaskClientInjector[T_flask_client]`
+    -------
+    FlaskClientInjector[T_flask_client]
     """
 
     def __call__(
@@ -134,16 +139,19 @@ class RequestConfigurable(Protocol):
 
     This creates the Flask test client using the `ClientConfigurable` fixture.
 
-    Args
-    ------
-        config: `Config` The custom application configuration used to instantiate the Flask app.
-        request_context_args: `dict[Any, Any] | None = None` The optional request context arguments
-            set up in the request context. These may contain, for example, request headers,
-            authentication credentials, etc.
+    Parameters
+    ----------
+    config : Config
+        The custom application configuration used to instantiate the Flask app.
+
+    request_context_args : dict[Any, Any] | None, optional
+        The optional request context arguments set up in the request context.
+        These may contain, for example, request headers, authentication
+        credentials, etc.
 
     Returns
-    ------
-        `RequestContext`
+    -------
+    RequestContext
     """
 
     def __call__(
@@ -184,20 +192,21 @@ class OpenAPIMockController(MockController):
     `openapi_mock.end()` is called after the test finishes, and may also
     be explicitly called in the test.
 
-    Args
-    ------
-        `Callable[[], Response]` A method used as the request handler for GET requests set to `/`.
-        This parameter is set through parametrization:
+    Parameters
+    ----------
+    request_handler : Callable[[], Response]
+        A method used as the request handler for GET requests set to `/`.
+        This parameter is set through parametrization, as shown in the example:
 
-        ```python
-        @pytest.mark.parametrize("openapi_mock", lambda: {}, indirect=["openapi_mock"])
-        def test_my_test(openapi_mock: OpenAPIMockController):
-            ...
-        ```
+        .. code-block:: python
+
+            @pytest.mark.parametrize("openapi_mock", lambda: {}, indirect=["openapi_mock"])
+            def test_my_test(openapi_mock: OpenAPIMockController):
+                ...
 
     Returns
-    ------
-        `RequestContext`
+    -------
+    RequestContext
     """
 
 
@@ -331,16 +340,11 @@ class CreateApp(Generic[T_app]):
     # then tells pytest to use it for every test in the class
     @pytest.fixture(autouse=True)
     def setup_method_fixture(self, mocker: MockerFixture):
-        setup_artifacts = self._pre_test_setup(mocker)
+        self._pre_test_setup(mocker)
         yield
-        self._post_test_teardown(setup_artifacts)
+        self._post_test_teardown()
 
     def _pre_test_setup(self, mocker: MockerFixture):
-        # the pytest log formatters need to be restored
-        # in the event json_logging changes them, otherwise
-        # some tests may fail
-        log_formatters = [handler.formatter for handler in logging.getLogger().handlers]
-
         self._automatic_mocks = {}
 
         mock_targets: list[tuple[str] | tuple[str, Any]] = [
@@ -363,18 +367,16 @@ class CreateApp(Generic[T_app]):
 
                 self._automatic_mocks[target_name] = mock
 
-        return log_formatters
-
-    def _post_test_teardown(self, log_formatters: list[logging.Formatter | None]):
+    def _post_test_teardown(self):
         self._automatic_mocks = {}
 
-        for i, handler in enumerate(logging.getLogger().handlers):
-            # this assumes handlers are in the same order
-            # so is prone to breakage
-            handler.formatter = log_formatters[i]
-
-        # json_logging relies on global, so they must be reset between each test
-        _ = importlib.reload(json_logging)
+        handlers = logging.getLogger().handlers
+        for handler in [
+            handler
+            for handler in handlers
+            if isinstance(handler.formatter, JSONFormatter)
+        ]:
+            handlers.remove(handler)
 
 
 class CreateFlaskApp(CreateApp[Flask]):
@@ -392,9 +394,11 @@ class CreateFlaskApp(CreateApp[Flask]):
                 settings=SAML2Config(relay_state="", metadata_url="", metadata=""),
             )
 
-        _ = mocker.patch("Ligare.web.application.load_config", return_value=config)
         _ = mocker.patch(
-            "Ligare.web.application.SSMParameters",
+            "Ligare.programming.application.load_config", return_value=config
+        )
+        _ = mocker.patch(
+            "Ligare.programming.application.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=config)),
         )
 
@@ -409,12 +413,11 @@ class CreateFlaskApp(CreateApp[Flask]):
         logging.basicConfig(force=True)
 
         application_builder = (
-            ApplicationBuilder[Flask]()
+            ApplicationBuilder[Flask](Flask)
             .with_modules(application_modules)
             .use_configuration(
                 lambda config_builder: config_builder.enable_ssm(True)
                 .with_config_filename("config.toml")
-                .with_root_config_type(Config)
                 .with_config_types(application_configs)
             )
         )
@@ -466,6 +469,9 @@ Ensure either that [openapi] is not set in the [flask] config, or use the `opena
             )
 
             yield ClientInjector(client, result.app_injector.flask_injector)
+
+    def get_app(self, flask_app_getter: AppGetter[Flask]):
+        return next(self._flask_client(flask_app_getter))
 
     @pytest.fixture()
     def flask_client(self, _get_basic_flask_app: FlaskAppResult) -> FlaskClientInjector:
@@ -526,9 +532,11 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
                 "[openapi] not set in config. Cannot create OpenAPI test client."
             )
 
-        _ = mocker.patch("Ligare.web.application.load_config", return_value=config)
         _ = mocker.patch(
-            "Ligare.web.application.SSMParameters",
+            "Ligare.programming.application.load_config", return_value=config
+        )
+        _ = mocker.patch(
+            "Ligare.AWS.ssm.SSMParameters",
             return_value=MagicMock(load_config=MagicMock(return_value=config)),
         )
 
@@ -550,13 +558,16 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         if app_init_hook is not None:
             app_init_hook(_application_configs, _application_modules)
 
+        from Ligare.web.config import Config as FConfig
+
+        _application_configs.append(FConfig)
+
         application_builder = (
-            ApplicationBuilder[FlaskApp]()
+            ApplicationBuilder(FlaskApp)
             .with_modules(_application_modules)
             .use_configuration(
                 lambda config_builder: config_builder.enable_ssm(True)
                 .with_config_filename("config.toml")
-                .with_root_config_type(Config)
                 .with_config_types(_application_configs)
             )
         )
@@ -570,7 +581,6 @@ class CreateOpenAPIApp(CreateApp[FlaskApp]):
         mocker: MockerFixture,
         openapi_mock_controller: OpenAPIMockController,
     ) -> OpenAPIAppResult:
-        _ = mocker.patch("Ligare.web.application.json_logging")
         openapi_mock_controller.begin()
         return next(self._get_real_openapi_app(openapi_config, mocker))
 
@@ -663,8 +673,6 @@ Ensure either that [openapi] is set in the [flask] config, or use the `flask_cli
     def openapi_client_configurable(
         self, mocker: MockerFixture
     ) -> OpenAPIClientInjectorConfigurable:
-        # FIXME some day json_logging needs to be fixed
-        _ = mocker.patch("Ligare.web.application.json_logging")
         return self._client_configurable(
             mocker, self._get_real_openapi_app, self._openapi_client
         )

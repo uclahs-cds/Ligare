@@ -73,7 +73,7 @@ exclude = ["build*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.j2"]
-"Ligare.web" = ["py.typed"]
+"Ligare.web" = ["Ligare/web/py.typed"]
 
 
 [project.scripts]

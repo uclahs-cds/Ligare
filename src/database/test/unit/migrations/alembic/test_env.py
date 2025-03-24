@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest import mock
 
 import pytest
 from Ligare.database.migrations.alembic.env import run_migrations
@@ -25,7 +26,6 @@ def test__run_migrations__uses_specified_config_filename(mocker: MockerFixture):
     _ = mocker.patch(
         "Ligare.database.migrations.alembic.env.get_database_config_container"
     )
-    config_mock = mocker.patch("Ligare.database.migrations.alembic.env.Config")
     load_config_mock = mocker.patch(
         "Ligare.database.migrations.alembic.env.load_config"
     )
@@ -34,7 +34,7 @@ def test__run_migrations__uses_specified_config_filename(mocker: MockerFixture):
     config_filename = Path(get_random_str())
     run_migrations(MagicMock(), config_filename=config_filename)
 
-    load_config_mock.assert_called_once_with(config_mock, config_filename)
+    load_config_mock.assert_called_once_with(mock.ANY, config_filename)
 
 
 @pytest.mark.parametrize("mode", ["online", "offline"])

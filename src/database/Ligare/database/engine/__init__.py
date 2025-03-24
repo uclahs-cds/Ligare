@@ -1,3 +1,7 @@
+"""
+Integrations with SQLAlchemy's `engine <https://docs.sqlalchemy.org/en/14/core/engines_connections.html>`_ API.
+"""
+
 from Ligare.database.config import DatabaseConnectArgsConfig
 from Ligare.database.types import MetaBase
 

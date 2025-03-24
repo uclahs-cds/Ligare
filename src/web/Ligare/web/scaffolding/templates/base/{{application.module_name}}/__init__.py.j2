@@ -10,35 +10,33 @@ from sqlalchemy import MetaData
 from sqlalchemy.orm import Session
 from {{application.module_name}}.modules.database import Base
 {% endif %}
-from Ligare.web.config import Config
+
 from Ligare.web.application import ApplicationBuilder
+{% if 'database' in module %}
+from Ligare.database.dependency_injection import ScopedSessionModule
+{% endif %}
+
 
 def create_app():
-
-    {% if 'database' in module %}
-    from Ligare.database.dependency_injection import ScopedSessionModule
-    {% endif %}
-
     # fmt: off
-    application_builder = (
-        ApplicationBuilder[AppType]()
-        {% if 'database' in module %}
-        .with_module(ScopedSessionModule())
-        {% endif %}
+    application_builder = ApplicationBuilder(AppType) \
         .use_configuration(
             lambda config_builder: config_builder
             .with_config_filename("{{application.module_name}}/config.toml")
-            .with_root_config_type(Config)
         )
-    )
-    result = application_builder.build()
     # fmt: on
+
+    {% if 'database' in module %}
+    application_builder.with_module(ScopedSessionModule())
+    {% endif %}
+
+    application = application_builder.build()
 
     {% if module.database %}
     # TODO For now, create the database and tables
     # when the application starts. This behavior
     # will be removed when Alembic is integrated.
-    session = result.app_injector.flask_injector.injector.get(Session)
+    session = application.injector.get(Session)
     cast(MetaData, Base.metadata).create_all(session.bind)
 
     {#
@@ -47,10 +45,10 @@ def create_app():
         sending in the dependencies to remove_db.
         For now, just resolve it directly.
     #}
-    @result.flask_app.teardown_request
+    @application.flask_app.teardown_request
     def remove_db(exception: Any):
-        session = result.app_injector.flask_injector.injector.get(Session)
+        session = application.injector.get(Session)
         session.rollback()
     {% endif %}
 
-    return result
+    return application

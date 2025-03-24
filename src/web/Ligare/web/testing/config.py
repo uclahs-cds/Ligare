@@ -1,3 +1,8 @@
+"""
+Fixtures related to :ref:`Ligare.database`.
+"""
+# FIXME this file should perhaps be renamed to be more meaningful regarding the one fixture in here.
+
 from typing import Any, Callable, Generator
 
 import pytest
@@ -11,7 +16,11 @@ from pytest_mock import MockerFixture
 
 TConfigCallable = Callable[[type[TConfig], str, AnyDict | None], TConfig]
 UseInmemoryDatabaseResult = Generator[
-    tuple[UseInmemoryDatabaseLoader, UseInmemoryDatabaseLoader], Any, None
+    tuple[
+        UseInmemoryDatabaseLoader, UseInmemoryDatabaseLoader, UseInmemoryDatabaseLoader
+    ],
+    Any,
+    None,
 ]
 
 
@@ -22,5 +31,6 @@ def use_inmemory_database(
     loader = inmemory_database_config_loader()
     yield (
         mocker.patch("Ligare.web.application.load_config", loader),
+        mocker.patch("Ligare.programming.application.load_config", loader),
         mocker.patch("Ligare.database.migrations.alembic.env.load_config", loader),
     )
