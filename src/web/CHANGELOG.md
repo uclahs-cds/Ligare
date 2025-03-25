@@ -11,6 +11,32 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.6.0] - 2025-03-25
+### Added
+- Integrated Sphinx documentation system.
+- Added documentation for creating scaffolded applications and extending endpoints.
+- Included PlantUML diagrams showing Ligare architecture and dependencies.
+- Added unit tests for `ApplicationBuilder`.
+- Brought scaffolder templates up to date with latest Ligare APIs.
+
+### Changed
+- Replaced `json_logging` with internal context and middleware support compatible with Connexion ≥ 3.x.
+- Web applications now default to JSON-structured logging.
+- Configuration can now be accessed before app startup, enabling config-driven injector behavior.
+- `ApplicationBuilder` now automatically selects the correct config type and is harder to misconfigure.
+- Environment variables such as `FLASK_ENV` are now normalized to lowercase for consistency.
+- Correlation and request IDs were swapped for improved traceability.
+
+### Fixed
+- Swagger URL routing issues resolved when base path is set to `/`.
+- Unit tests now correctly use in-memory databases.
+- Logger formats are protected from modification after initialization.
+- Several static type issues resolved to comply with latest Pyright checks.
+
+### Removed
+- Removed all references to `json_logging`, which is unmaintained and incompatible with Connexion ≥ 3.x.
+- Removed the deprecated `create_app` and `App[T].create_app` entrypoints in favor of `ApplicationBuilder`.
+
 ## [0.5.1] - 2025-01-10
 ### Changed
 * Updated Feature Flag middleware to resolve new Pyright issues

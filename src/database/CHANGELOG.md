@@ -8,9 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/main/CHANGELOG.md) for full monorepo notes.
 
-
 ---
 ## Unreleased
+
+## [0.5.0] - 2025-03-25
+### Added
+- Added module-level documentation for all key components in `Ligare.database`, including engines, migrations, and schema.
+
+### Changed
+- Alembic no longer runs migrations automatically when `env.py` is imported from outside Alembic CLI.
 
 ## [0.4.0] - 2025-01-09
 ### Fixed

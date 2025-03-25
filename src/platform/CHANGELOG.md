@@ -12,6 +12,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.8.0] - 2025-03-25
+### Added
+- Added initial module-level docstrings to `Ligare.platform.__init__` for Sphinx documentation generation.
+
 ## [0.7.0] - 2025-01-10
 ### Fixed
 * Changed the base type of FeatureFlag tables to resolve type problems with Pyright
