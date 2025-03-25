@@ -12,6 +12,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.4.0] - 2025-03-25
+### Added
+- Added initial module-level docstrings to `Ligare.identity.__init__` and configuration modules to improve documentation coverage.
+
 ## [0.3.0] - 2024-10-04
 ### Changed
 * Updated Injector modules to be `ConfigurableModule`s instead of Modules

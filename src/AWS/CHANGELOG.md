@@ -11,6 +11,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.4.0] - 2025-03-25
+### Added
+- Added initial module-level docstrings to `Ligare.AWS.__init__` to support documentation generation.
+
 ## [0.3.0] - 2024-08-09
 ### Fixed
 * Fix error that could crash SSM load in an unexpected way [465f083](https://github.com/uclahs-cds/Ligare/commit/465f0838b58a28ed157f86ce786d52bf755526d2)
