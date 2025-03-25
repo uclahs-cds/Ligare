@@ -14,6 +14,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## `Ligare.all` [0.8.0] - 2025-03-25
 
+`Ligare.all` `v0.8.0` introduces a unified `ApplicationBuilder` for both web and CLI apps, significantly simplifying how applications are constructed, configured, and documented. This release also brings first-class Sphinx documentation, improved logging, and broader static typing support - making Ligare easier to understand, extend, and debug across all environments.
+
 ### Added
 
 * Add Sphinx. This includes configurations for Sphinx and generating Ligare documentation. It also includes a handful of docstring fixes to make Sphinx happy.
