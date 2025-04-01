@@ -195,7 +195,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         # TODO change the release notes to use the changelog
         run: >-
-          echo gh release create
+          gh release create
           '${{ github.ref_name }}'
           --repo '${{ github.repository }}'
           --notes ""
@@ -203,6 +203,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: >-
-          echo gh release upload
+          gh release upload
           '${{ github.ref_name }}' dist/**
           --repo '${{ github.repository }}'
