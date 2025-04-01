@@ -70,7 +70,7 @@ jobs:
         id: validate
         run: |
           printf "Module: %15s\nVersion: %14s\n" "$MODULE_NAME" "$MODULE_VERSION"
-          SOURCE_MODULE_VERSION="$(./.github/workflows/PyPI-scripts/get_module_version.py -m $MODULE_NAME)"
+          SOURCE_MODULE_VERSION="$(./.github/workflows/PyPI-scripts/get-module-version.py -m $MODULE_NAME)"
           if [[ "$MODULE_VERSION" = "$SOURCE_MODULE_VERSION" ]]; then
             echo "Module source version matches requested version."
             echo "Continuing deployment."
@@ -147,8 +147,6 @@ jobs:
     needs:
       - build
     runs-on: ubuntu-latest
-    env:
-      REPOSITORY_URL: ${{ inputs.pypi_url }}
     environment:
       name: pypi
       url: ${{ needs.build.outputs.pypi_package_url }}Ligare.${{ needs.build.outputs.package_name }}
@@ -164,12 +162,11 @@ jobs:
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: $REPOSITORY_URL
+          repository-url: ${{ inputs.pypi_url }}
 
   github-release:
     name: >-
-      Sign the Python 🐍 distribution 📦 with Sigstore
-      and upload them to GitHub Release
+      Release Python 🐍 distribution 📦 on GitHub
     if: |
       contains(fromJSON('["Both", "GitHub"]'), inputs.job)
     needs:
