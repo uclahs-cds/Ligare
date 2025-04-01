@@ -66,14 +66,17 @@ def get_module_version(module_name: str):
         raise Exception("Unable to determine location of Ligare source code.")
 
     module_path_name = module_name.split(".")[1]
-    module_path = Path(
-        working_directory,
-        "src",
-        module_path_name,
-        "Ligare",
-        module_path_name,
-        "__init__.py",
-    )
+    if module_path_name == "all":
+        module_path = Path(working_directory, "src", "__init__.py")
+    else:
+        module_path = Path(
+            working_directory,
+            "src",
+            module_path_name,
+            "Ligare",
+            module_path_name,
+            "__init__.py",
+        )
     spec = importlib.util.spec_from_file_location(module_name, str(module_path))
     if spec is None or not spec.loader:
         raise Exception(f"Could not find module `{module_name}`.")
@@ -92,7 +95,7 @@ def find_ligare_modules() -> list[str]:
 
     module_paths = glob(str(Path(working_directory, "src/*/Ligare/*/__init__.py")))
 
-    return [
+    return ["Ligare.all"] + [
         # turn `f"{working_directory}src/platform/Ligare/platform/__init__.py"`` into `"Ligare.platform"``
         module_path[module_path.rindex("Ligare") : -INIT_NAME_LEN].replace("/", ".")
         for module_path in module_paths
