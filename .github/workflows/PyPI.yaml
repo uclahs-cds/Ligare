@@ -71,7 +71,7 @@ jobs:
         run: |
           printf "Module: %15s\nVersion: %14s\n" "$MODULE" "$MODULE_VERSION"
           SOURCE_MODULE_VERSION="$(./.github/workflows/PyPI-scripts/get_module_version.py -m $MODULE)"
-          if [[ "$MODULE_VERSION" == "$SOURCE_MODULE_VERSION" ]]; then
+          if [[ "$MODULE_VERSION" = "$SOURCE_MODULE_VERSION" ]]; then
             echo "Module source version matches requested version."
             echo "Continuing deployment."
           else
@@ -102,10 +102,20 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Get package details from tag
+      - name: Get package details from workflow event #from tag
         # sets the step outputs package_directory and package_name
         id: package_details
-        run: ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
+
+        env:
+          MODULE: ${{ inputs.module }}
+          MODULE_VERSION: ${{ inputs.module_version }}
+
+        run: |
+          if [[ "${{ github.event }}" = "push" ]]; then
+            ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
+          elif [[ "${{ github.event }}" = "workflow_dispatch" ]]; then
+            GITHUB_REF="$MODULE-v$MODULE_VERSION" ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
