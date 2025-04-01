@@ -194,7 +194,6 @@ jobs:
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          url: ${{ needs.build.outputs.pypi_package_url }}Ligare.${{ needs.build.outputs.package_name }}
           MODULE_NAME: ${{ needs.build.outputs.module_name }}
           MODULE_VERSION: ${{ needs.build.outputs.module_version }}
         # TODO change the release notes to use the changelog
