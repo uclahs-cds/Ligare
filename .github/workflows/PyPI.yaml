@@ -10,7 +10,7 @@ on:
 
   workflow_dispatch:
     inputs:
-      module:
+      module_name:
         description:
           The Ligare module to build and deploy.
         type: choice 
@@ -61,7 +61,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
 
     env:
-      MODULE: ${{ inputs.module }}
+      MODULE_NAME: ${{ inputs.module_name }}
       MODULE_VERSION: ${{ inputs.module_version }}
 
     steps:
@@ -69,13 +69,13 @@ jobs:
       - name: Validate
         id: validate
         run: |
-          printf "Module: %15s\nVersion: %14s\n" "$MODULE" "$MODULE_VERSION"
-          SOURCE_MODULE_VERSION="$(./.github/workflows/PyPI-scripts/get_module_version.py -m $MODULE)"
+          printf "Module: %15s\nVersion: %14s\n" "$MODULE_NAME" "$MODULE_VERSION"
+          SOURCE_MODULE_VERSION="$(./.github/workflows/PyPI-scripts/get_module_version.py -m $MODULE_NAME)"
           if [[ "$MODULE_VERSION" = "$SOURCE_MODULE_VERSION" ]]; then
             echo "Module source version matches requested version."
             echo "Continuing deployment."
           else
-            echo "Module source version for '$MODULE' is '$SOURCE_MODULE_VERSION'."
+            echo "Module source version for '$MODULE_NAME' is '$SOURCE_MODULE_VERSION'."
             echo "Halting deployment."
             exit 1
           fi
@@ -92,6 +92,8 @@ jobs:
     outputs:
       package_name: ${{ steps.package_details.outputs.package_name }}
       package_directory: ${{ steps.package_details.outputs.package_directory }}
+      module_name: ${{ steps.package_details.outputs.module_name }}
+      module_version: ${{ steps.package_details.outputs.module_version }}
       pypi_package_url: | # if workflow_dispatch, and release to pypi, and url is prod, then use prod package url. otherwise, use test package url.
         github.event_name == 'workflow_dispatch' &&
         contains(fromJSON('["Both", "PyPI"]'), inputs.job) &&
@@ -107,14 +109,16 @@ jobs:
         id: package_details
 
         env:
-          MODULE: ${{ inputs.module }}
+          MODULE_NAME: ${{ inputs.module_name }}
           MODULE_VERSION: ${{ inputs.module_version }}
 
         run: |
           if [[ "${{ github.event_name }}" = "push" ]]; then
             ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
           elif [[ "${{ github.event_name }}" = "workflow_dispatch" ]]; then
-            GITHUB_REF="refs/tags/$MODULE-v$MODULE_VERSION" ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
+            GITHUB_REF="refs/tags/$MODULE_NAME-v$MODULE_VERSION" ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
+            echo "module_name=$MODULE_NAME" >> "$GITHUB_OUTPUT"
+            echo "module_version=$MODULE_VERSION" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/setup-python@v5
         with:
@@ -193,16 +197,20 @@ jobs:
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          url: ${{ needs.build.outputs.pypi_package_url }}Ligare.${{ needs.build.outputs.package_name }}
+          MODULE_NAME: ${{ needs.build.outputs.module_name }}
+          MODULE_VERSION: ${{ needs.build.outputs.module_version }}
         # TODO change the release notes to use the changelog
         run: >-
-          gh release create
-          '${{ github.ref_name }}'
+          echo gh release create
+          "$MODULE_NAME-v$MODULE_VERSION"
           --repo '${{ github.repository }}'
           --notes ""
       - name: Upload artifact signatures to GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: >-
-          gh release upload
-          '${{ github.ref_name }}' dist/**
+          echo gh release upload
+          "$MODULE_NAME-v$MODULE_VERSION"
+          dist/**
           --repo '${{ github.repository }}'
