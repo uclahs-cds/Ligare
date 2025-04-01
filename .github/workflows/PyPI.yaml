@@ -209,6 +209,8 @@ jobs:
       - name: Upload artifact signatures to GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          MODULE_NAME: ${{ needs.build.outputs.module_name }}
+          MODULE_VERSION: ${{ needs.build.outputs.module_version }}
         run: >-
           gh release upload
           "$MODULE_NAME-v$MODULE_VERSION"
