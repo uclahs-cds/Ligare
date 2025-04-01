@@ -111,10 +111,10 @@ jobs:
           MODULE_VERSION: ${{ inputs.module_version }}
 
         run: |
-          if [[ "${{ github.event }}" = "push" ]]; then
+          if [[ "${{ github.event_name }}" = "push" ]]; then
             ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
-          elif [[ "${{ github.event }}" = "workflow_dispatch" ]]; then
-            GITHUB_REF="$MODULE-v$MODULE_VERSION" ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
+          elif [[ "${{ github.event_name }}" = "workflow_dispatch" ]]; then
+            GITHUB_REF="refs/tags/$MODULE-v$MODULE_VERSION" ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
           fi
       - uses: actions/setup-python@v5
         with:
