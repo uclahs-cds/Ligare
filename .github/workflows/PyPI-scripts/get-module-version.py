@@ -30,7 +30,7 @@ def get_project_name(path: Path) -> str | None:
         return data.get("project", {}).get("name", None)
 
 
-def get_working_directory() -> Path | None:
+def get_ligare_source_root() -> Path | None:
     if (working_dir := environ.get("GITHUB_WORKSPACE", None)) is not None:
         return Path(working_dir)
 
@@ -39,7 +39,20 @@ def get_working_directory() -> Path | None:
     if GITHUB_WORKFLOWS_PATH in getcwd():
         return Path(cwd[: cwd.index(GITHUB_WORKFLOWS_PATH)])
 
-    def walk_tree(start: Path | None) -> Path | None:
+    def find_ligare_source_root(start: Path | None) -> Path | None:
+        """
+        Starting from the current working directory, search up the directory hierarchy for pyproject.toml files.
+        As each pyproject.toml file found, check for the module with the name "Ligare.all". The directory that
+        the "Ligare.all" module is found in is also the repository source root directory.
+
+        This method is a last resort to determine where the repository root is in the event GITHUB_WORKSPACE
+        is not set (which is always the repository root), or if get-module-version.py is not executed with
+        the CWD under ".github/workflows".
+
+        :param Path | None start: The directory to start searching from
+        :return Path | None: The repository source root directory.
+            If this is `None`, the repository source root could not be found.
+        """
         if start is None:
             return None
 
@@ -54,13 +67,13 @@ def get_working_directory() -> Path | None:
         if project_name == "Ligare.all":
             return closest_pyproject_file.parent
 
-        return walk_tree(closest_pyproject_file.parent.parent)
+        return find_ligare_source_root(closest_pyproject_file.parent.parent)
 
-    return walk_tree(Path(cwd))
+    return find_ligare_source_root(Path(cwd))
 
 
 def get_module_version(module_name: str):
-    working_directory = get_working_directory()
+    working_directory = get_ligare_source_root()
 
     if working_directory is None:
         raise Exception("Unable to determine location of Ligare source code.")
@@ -86,7 +99,7 @@ def get_module_version(module_name: str):
 
 
 def find_ligare_modules() -> list[str]:
-    working_directory = get_working_directory()
+    working_directory = get_ligare_source_root()
     if working_directory is None:
         raise Exception("Unable to determine location of Ligare source code.")
 
