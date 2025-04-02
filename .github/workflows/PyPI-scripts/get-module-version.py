@@ -16,12 +16,12 @@ except ModuleNotFoundError:
 
 
 # https://stackoverflow.com/a/70859914
-def closest_file(start: Path, filename: str) -> None | Path:
+def find_closest_file(start: Path, filename: str) -> None | Path:
     if start == Path(start.root) or start == start.parent:
         return None
 
     fullpath = Path(start, filename)
-    return fullpath if fullpath.exists() else closest_file(start.parent, filename)
+    return fullpath if fullpath.exists() else find_closest_file(start.parent, filename)
 
 
 def get_project_name(path: Path) -> str | None:
@@ -43,7 +43,7 @@ def get_working_directory() -> Path | None:
         if start is None:
             return None
 
-        closest_pyproject_file = closest_file(start, "pyproject.toml")
+        closest_pyproject_file = find_closest_file(start, "pyproject.toml")
         if closest_pyproject_file is None:
             return None
 
