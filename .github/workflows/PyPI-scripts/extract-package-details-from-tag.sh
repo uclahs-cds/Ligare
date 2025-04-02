@@ -2,9 +2,10 @@
 set -eo pipefail
 tag="${GITHUB_REF#refs/*/}"
 
-# This is the package name minus `Ligare.`.
-package_name="$(gawk 'match($0, /Ligare\.?([^-]+)?/, m) { print s m[1]}' <<<"$tag")"
-module_version="$(gawk 'match($0, /Ligare\.?[^v]+v(.+)/, m) { print s m[1]}' <<<"$tag")"
+# This is the package name minus `Ligare.` and the version minus `v`.
+IFS=$'\x1F' package_details=( $(gawk 'match($0, /Ligare\.?(.+)-v(.+?)/, m) { print s m[1]"'$'\x1F''"m[2] }' <<<"$tag") )
+package_name="${package_details[0]}"
+module_version="${package_details[1]}"
 module_name="Ligare.$package_name"
 
 # `all` is the root of the repository and includes all other packages
