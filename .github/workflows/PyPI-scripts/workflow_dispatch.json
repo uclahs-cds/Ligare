@@ -6,6 +6,7 @@
     "module": "Ligare.all",
     "module_version": "0.0.0",
     "job": "Both",
-    "pypi_url": "https://test.pypi.org/legacy/"
+    "pypi_url": "https://test.pypi.org/legacy/",
+    "mark_github_release_as_latest": false
   }
 }

@@ -52,6 +52,13 @@ on:
           - https://upload.pypi.org/legacy/
         required: true
         default: https://test.pypi.org/legacy/
+      mark_github_release_as_latest:
+        description:
+          For the GitHub release, mark the package as the latest
+          Ligare release.
+        type: boolean
+        required: true
+        default: false
 
 jobs:
   validate_workflow_dispatch_inputs:
@@ -199,12 +206,13 @@ jobs:
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        # TODO change the release notes to use the changelog
+          MARK_RELEASE_LATEST: ${{ inputs.mark_github_release_as_latest }}
         run: >-
           gh release create
           "$MODULE_NAME-v$MODULE_VERSION"
           --repo '${{ github.repository }}'
-          --notes ""
+          --generate-notes
+          --latest=$MARK_RELEASE_LATEST
       - name: Upload artifact signatures to GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
