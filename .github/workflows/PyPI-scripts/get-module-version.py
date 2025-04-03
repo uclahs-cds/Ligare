@@ -94,7 +94,22 @@ def get_module_version(module_name: str):
     if spec is None or not spec.loader:
         raise Exception(f"Could not find module `{module_name}`.")
     ligare_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(ligare_module)
+    try:
+        spec.loader.exec_module(ligare_module)
+    except ModuleNotFoundError as e:
+        import logging
+
+        logging.getLogger().error(
+            f"""The `{module_name}` module could not load a required submodule: {e}.
+This likely means the {module_name}-related components are not installed in the current environment.
+
+This error is non-fatal and intentionally suppressed to allow `importlib` to inspect
+and load this module dynamically - even when its dependencies are missing.
+
+Note: Because the import failed, `{module_name}` is not available, and `__all__` is not defined.
+Any attempt to import symbols from this module will fail unless its dependencies are present."""
+        )
+
     return ligare_module.__version__
 
 
