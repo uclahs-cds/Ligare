@@ -140,14 +140,14 @@ class Singleton(type):
                     else:
                         object.__delattr__(self, name)
 
-                _new_type.__setattr__ = __setattr__
-                _new_type.__delattr__ = __delattr__
-                _new_type.__getattribute__ = __getattribute__
+                _new_type.__setattr__ = __setattr__  # pyright: ignore[reportAttributeAccessIssue]
+                _new_type.__delattr__ = __delattr__  # pyright: ignore[reportAttributeAccessIssue]
+                _new_type.__getattribute__ = __getattribute__  # pyright: ignore[reportAttributeAccessIssue]
 
             return _instance
 
         block_change = getattr(_new_type, BLOCK_CHANGE_ATTR_NAME, True)
         _block_change = block_change is None or block_change is not False
         cls._block_change = _block_change
-        _new_type.__new__ = __new__
+        _new_type.__new__ = __new__  # pyright: ignore[reportAttributeAccessIssue]
         return _new_type

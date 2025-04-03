@@ -357,7 +357,7 @@ class ApplicationBuilder(GenericApplicationBuilder[T_app]):
 
     @override
     def build(self) -> CreateAppResult[T_app]:
-        config_overrides: NestedDict[str, Any] = defaultdict(dict)
+        config_overrides = cast(NestedDict[str, Any], defaultdict(dict))
 
         if (
             override_app_name := self._config_overrides.get("app_name", None)
