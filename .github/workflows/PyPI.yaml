@@ -9,22 +9,125 @@ on:
       - "Ligare.*-v*"
 
   workflow_dispatch:
+    inputs:
+      module_name:
+        description:
+          The Ligare module to build and deploy.
+        type: choice
+        options:
+          - Ligare.all
+          - Ligare.AWS
+          - Ligare.database
+          - Ligare.development
+          - Ligare.GitHub
+          - Ligare.identity
+          - Ligare.platform
+          - Ligare.programming
+          - Ligare.testing
+          - Ligare.web
+        required: true
+      module_version:
+        description:
+          The version of the module. This is used to ensure the deployed version of the module
+          matches what is in version control.
+        type: string
+        required: true
+      job:
+        description:
+          The specific job to run, allowing for either a PyPI or GitHub release, or both.
+        type: choice
+        options:
+          - Both
+          - PyPI
+          - GitHub
+        required: true
+        default: Both
+      pypi_url:
+        description:
+          The PyPI repository to submit a PyPI release to.
+          For a workflow dispatch, this defaults to test PyPI.
+        type: choice
+        options:
+          - https://test.pypi.org/legacy/
+          - https://upload.pypi.org/legacy/
+        required: true
+        default: https://test.pypi.org/legacy/
+      mark_github_release_as_latest:
+        description:
+          For the GitHub release, mark the package as the latest
+          Ligare release.
+        type: boolean
+        required: true
+        default: false
 
 jobs:
+  validate_workflow_dispatch_inputs:
+    name: Validate workflow_dispatch inputs
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'workflow_dispatch'
+
+    env:
+      MODULE_NAME: ${{ inputs.module_name }}
+      MODULE_VERSION: ${{ inputs.module_version }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Validate
+        id: validate
+        run: |
+          printf "Module: %15s\nVersion: %14s\n" "$MODULE_NAME" "$MODULE_VERSION"
+          SOURCE_MODULE_VERSION="$(./.github/workflows/PyPI-scripts/get-module-version.py -m $MODULE_NAME)"
+          if [[ "$MODULE_VERSION" = "$SOURCE_MODULE_VERSION" ]]; then
+            echo "Module source version matches requested version."
+            echo "Continuing deployment."
+          else
+            echo "Module source version for '$MODULE_NAME' is '$SOURCE_MODULE_VERSION' which does match the requested version `$MODULE_VERSION`."
+            echo "Halting deployment."
+            exit 1
+          fi
+
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
+    needs:
+      - validate_workflow_dispatch_inputs
+    # only run if either this is not a workflow_dispatch,
+    # or if the workflow_dispatch validation succeeded.
+    if: success() || github.event_name != 'workflow_dispatch'
 
     outputs:
       package_name: ${{ steps.package_details.outputs.package_name }}
       package_directory: ${{ steps.package_details.outputs.package_directory }}
+      module_name: ${{ steps.package_details.outputs.module_name }}
+      module_version: ${{ steps.package_details.outputs.module_version }}
+      pypi_package_url: | # if workflow_dispatch, and release to pypi, and url is prod, then use prod package url. otherwise, use test package url.
+        github.event_name == 'workflow_dispatch' &&
+        contains(fromJSON('["Both", "PyPI"]'), inputs.job) &&
+        inputs.pypi_url == 'https://upload.pypi.org/legacy/' &&
+
+        'https://pypi.org/p/' ||
+        'https://test.pypi.org/p/'
 
     steps:
       - uses: actions/checkout@v4
-      - name: Get package details from tag
+      - name: Get package details from workflow event
         # sets the step outputs package_directory and package_name
         id: package_details
-        run: ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
+
+        env:
+          MODULE_NAME: ${{ inputs.module_name }}
+          MODULE_VERSION: ${{ inputs.module_version }}
+
+        run: |
+          if [[ "${{ github.event_name }}" = "workflow_dispatch" ]]; then
+            GITHUB_REF="refs/tags/$MODULE_NAME-v$MODULE_VERSION" ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
+          else
+            ./.github/workflows/PyPI-scripts/extract-package-details-from-tag.sh
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
@@ -47,12 +150,14 @@ jobs:
 
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
+    if: |
+      contains(fromJSON('["Both", "PyPI"]'), inputs.job)
     needs:
       - build
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/Ligare.${{ needs.build.outputs.package_name }}
+      url: ${{ needs.build.outputs.pypi_package_url }}Ligare.${{ needs.build.outputs.package_name }}
     permissions:
       id-token: write
 
@@ -65,19 +170,26 @@ jobs:
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: https://upload.pypi.org/legacy/
+          repository-url: ${{ inputs.pypi_url }}
 
   github-release:
     name: >-
-      Sign the Python 🐍 distribution 📦 with Sigstore
-      and upload them to GitHub Release
+      Release Python 🐍 distribution 📦 on GitHub
+    if: |
+      contains(fromJSON('["Both", "GitHub"]'), inputs.job)
     needs:
-      - publish-to-pypi
+      - build
     runs-on: ubuntu-latest
+    environment:
+      name: github-release
 
     permissions:
       contents: write
       id-token: write
+
+    env:
+      MODULE_NAME: ${{ needs.build.outputs.module_name }}
+      MODULE_VERSION: ${{ needs.build.outputs.module_version }}
 
     steps:
       - name: Download all the dists
@@ -94,16 +206,18 @@ jobs:
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        # TODO change the release notes to use the changelog
+          MARK_RELEASE_LATEST: ${{ inputs.mark_github_release_as_latest }}
         run: >-
           gh release create
-          '${{ github.ref_name }}'
+          "$MODULE_NAME-v$MODULE_VERSION"
           --repo '${{ github.repository }}'
-          --notes ""
+          --generate-notes
+          --latest=$MARK_RELEASE_LATEST
       - name: Upload artifact signatures to GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: >-
           gh release upload
-          '${{ github.ref_name }}' dist/**
+          "$MODULE_NAME-v$MODULE_VERSION"
+          dist/**
           --repo '${{ github.repository }}'
