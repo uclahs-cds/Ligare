@@ -15,8 +15,15 @@ from typing import Any, Literal, final
 
 from jinja2 import BaseLoader, Environment, PackageLoader, Template
 from Ligare.programming.collections.dict import merge
-from pkg_resources import IResourceProvider, ResourceManager, get_provider
 from typing_extensions import override
+
+# isort: off
+from pkg_resources import (  # pyright: ignore[reportMissingTypeStubs]
+    IResourceProvider,
+    ResourceManager,
+    get_provider,  # pyright: ignore[reportUnknownVariableType]
+)
+# isort: on
 
 
 @dataclass
@@ -265,13 +272,14 @@ class Scaffolder:
             `on_create(config: dict[str, Any], log: Logger) -> None`
         """
         module_hook_path = Path(module_template_directory, "__hook__.py")
-        if self._provider.has_resource(str(module_hook_path)):
+        if self._provider.has_resource(str(module_hook_path)):  # pyright: ignore[reportCallIssue]
             # load the module from its path
             # and execute it
             spec = spec_from_file_location(
                 "__hook__",
-                self._provider.get_resource_filename(
-                    self._manager, str(module_hook_path)
+                self._provider.get_resource_filename(  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
+                    self._manager,
+                    str(module_hook_path),  # pyright: ignore[reportCallIssue]
                 ),
             )
             if spec is None or spec.loader is None:
@@ -353,7 +361,7 @@ class Scaffolder:
             # but only modules with __meta__.j2 control how
             # their own templates are rendered.
             if self._provider.has_resource(
-                str(Path(module_template_directory, "__meta__.j2"))
+                str(Path(module_template_directory, "__meta__.j2"))  # pyright: ignore[reportCallIssue]
             ):
                 module_env = Environment(
                     trim_blocks=True,
