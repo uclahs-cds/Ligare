@@ -96,7 +96,7 @@ class SSMParameters:
             client = cast(Any, session.client("ssm"))  # pyright: ignore[reportUnknownMemberType]
             parameters = cast(
                 list[dict[Any, Any]],
-                client.get_parameters_by_path(  # pyright: ignore[reportUnknownMemberType]
+                client.get_parameters_by_path(
                     Path=SSM_PARAMETERS_PATH, WithDecryption=True, MaxResults=1
                 ).get("Parameters"),
             )
