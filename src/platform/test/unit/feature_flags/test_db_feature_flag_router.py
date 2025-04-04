@@ -32,7 +32,7 @@ class PlatformBase(object):
 from Ligare.database.testing.config import inmemory_database_config
 
 PlatformBase = declarative_base(cls=PlatformBase, metaclass=PlatformMetaBase)
-FeatureFlagTableBase = FeatureFlagTable(PlatformBase)
+FeatureFlagTableBase = FeatureFlagTable(PlatformBase)  # pyright: ignore[reportArgumentType]
 
 
 def get_scoped_session_mock(session: Session | MagicMock):
@@ -72,7 +72,9 @@ def db_feature_flag_router(
 ) -> DBFeatureFlagRouter[FeatureFlag]:
     logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
     return DBFeatureFlagRouter[FeatureFlag](
-        FeatureFlagTableBase, feature_flag_scoped_session, logger
+        FeatureFlagTableBase,  # pyright: ignore[reportArgumentType]
+        feature_flag_scoped_session,
+        logger,
     )
 
 
@@ -80,7 +82,7 @@ def _create_feature_flag(
     session: Session, name: str | None = None, description: str | None = None
 ) -> None:
     session.add(
-        FeatureFlagTableBase(
+        FeatureFlagTableBase(  # pyright: ignore[reportCallIssue]
             name=_FEATURE_FLAG_TEST_NAME if name is None else name,
             description=_FEATURE_FLAG_TEST_DESCRIPTION
             if description is None
@@ -182,7 +184,9 @@ def test__set_feature_is_enabled__caches_flags(enable: bool, mocker: MockerFixtu
 
     logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
     db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
-        FeatureFlagTableBase, scoped_session_mock, logger
+        FeatureFlagTableBase,  # pyright: ignore[reportArgumentType]
+        scoped_session_mock,
+        logger,
     )
 
     _ = db_feature_flag_router.set_feature_is_enabled(_FEATURE_FLAG_TEST_NAME, enable)
@@ -207,7 +211,9 @@ def test__feature_is_enabled__checks_cache(
 
     logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
     db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
-        FeatureFlagTableBase, scoped_session_mock, logger
+        FeatureFlagTableBase,  # pyright: ignore[reportArgumentType]
+        scoped_session_mock,
+        logger,
     )
 
     _ = db_feature_flag_router.feature_is_enabled(
@@ -233,7 +239,9 @@ def test__feature_is_enabled__sets_cache(
 
     logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
     db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
-        FeatureFlagTableBase, scoped_session_mock, logger
+        FeatureFlagTableBase,  # pyright: ignore[reportArgumentType]
+        scoped_session_mock,
+        logger,
     )
 
     _ = db_feature_flag_router.feature_is_enabled(
@@ -254,7 +262,9 @@ def test__set_feature_is_enabled__resets_cache_when_flag_enable_is_set(
 
     logger = logging.getLogger(_FEATURE_FLAG_LOGGER_NAME)
     db_feature_flag_router = DBFeatureFlagRouter[FeatureFlag](
-        FeatureFlagTableBase, scoped_session_mock, logger
+        FeatureFlagTableBase,  # pyright: ignore[reportArgumentType]
+        scoped_session_mock,
+        logger,
     )
 
     _ = db_feature_flag_router.set_feature_is_enabled(_FEATURE_FLAG_TEST_NAME, enable)

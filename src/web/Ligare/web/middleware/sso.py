@@ -16,6 +16,7 @@ from typing import (
     Protocol,
     Sequence,
     TypedDict,
+    TypeGuard,
     TypeVar,
     cast,
     overload,
@@ -82,6 +83,7 @@ class AuthCheckOverrideCallable(Protocol):
 
 P = ParamSpec("P")
 R = TypeVar("R")
+RolesOrCallableType = Sequence[Role | str] | Callable[P, R] | Callable[..., Any] | None
 
 
 @overload
@@ -148,11 +150,21 @@ def login_required(
     """
 
 
+def _is_non_sequence_callable(
+    func: RolesOrCallableType[P, R],
+) -> TypeGuard[Callable[P, R]]:
+    return callable(func)
+
+
+def _is_sequence(seq: RolesOrCallableType[P, R]) -> TypeGuard[Sequence[Role | str]]:
+    return isinstance(seq, list) or isinstance(seq, Sequence)
+
+
 def login_required(
-    roles: Sequence[Role | str] | Callable[P, R] | Callable[..., Any] | None = None,
+    roles: RolesOrCallableType[P, R] = None,
     auth_check_override: AuthCheckOverrideCallable | None = None,
     /,
-) -> Callable[[Callable[P, R]], Callable[P, R]] | Callable[P, R] | Callable[..., Any]:
+) -> RolesOrCallableType[P, R]:
     """
     Require a valid Flask session before calling the decorated function.
 
@@ -194,13 +206,13 @@ def login_required(
 
         # In this case, `roles` is actually a function.
         # It is probably a decorated function.
-        if callable(roles):
+        if _is_non_sequence_callable(roles):
             return flask_login_required(roles)
     else:
         if not callable(auth_check_override):
             raise TypeError("Override must be a callable.")
 
-    if not isinstance(roles, list):
+    if not _is_sequence(roles):
         raise TypeError("Roles must be a list of User Roles.")
 
     login_manager = FlaskLoginManager()
@@ -221,7 +233,7 @@ def login_required(
 
                 # if authorization was overriden and successful, don't check roles
                 if unauthorized:
-                    if not isinstance(roles, list):  # pyright: ignore[reportUnnecessaryIsInstance]
+                    if not _is_sequence(roles):
                         # this should end up raising a 401 exception
                         return login_manager.unauthorized()
 

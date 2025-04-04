@@ -3,7 +3,7 @@ import logging
 from configparser import ConfigParser
 from logging import Logger
 from os import environ
-from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Type, TypeVar, Union, cast
 
 from boto3.session import Session
 from Ligare.programming.collections.dict import AnyDict
@@ -93,10 +93,13 @@ class SSMParameters:
             session = _session(
                 profile_name=AWS_PROFILE_NAME, region_name=AWS_REGION_NAME
             )
-            client: Any = session.client("ssm")  # pyright: ignore[reportUnknownMemberType]
-            parameters = client.get_parameters_by_path(
-                Path=SSM_PARAMETERS_PATH, WithDecryption=True, MaxResults=1
-            ).get("Parameters")
+            client = cast(Any, session.client("ssm"))  # pyright: ignore[reportUnknownMemberType]
+            parameters = cast(
+                list[dict[Any, Any]],
+                client.get_parameters_by_path(
+                    Path=SSM_PARAMETERS_PATH, WithDecryption=True, MaxResults=1
+                ).get("Parameters"),
+            )
         except Exception as _:
             return self._log_and_conditionally_fail(
                 f"Skipping SSM parameter lookup.", logging.WARNING

@@ -24,7 +24,7 @@ from typing import (
 from unittest.mock import AsyncMock, MagicMock, NonCallableMagicMock
 
 import pytest
-from _pytest.fixtures import SubRequest
+from _pytest.fixtures import SubRequest  # pyright: ignore[reportPrivateImportUsage]
 from connexion import FlaskApp
 from flask import Flask, Request, Response, session
 from flask.ctx import RequestContext
