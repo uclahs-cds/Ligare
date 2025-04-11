@@ -473,9 +473,9 @@ def remove_username_cookie_without_session(response: Response, log: Logger):
 
     # if the session has expired but the client still has the username cookie,
     # the username cookie needs to be cleared from the client
-    if not session.get(  # pyright: ignore[reportUnknownMemberType]
-        SESSION_VALUE_NAMES.AUTHENTICATED
-    ) and request.cookies.get(SESSION_VALUE_NAMES.USERNAME):
+    if not session.get(SESSION_VALUE_NAMES.AUTHENTICATED) and request.cookies.get(
+        SESSION_VALUE_NAMES.USERNAME
+    ):
         log.info("Session expired; clearing username cookie.")
         return _delete_username_cookie(response, log)
 

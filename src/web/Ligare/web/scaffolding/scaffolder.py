@@ -70,7 +70,7 @@ class ScaffoldConfig:
     application: Operation
     template_type: Literal["basic", "openapi"] | None = None
     modules: list[ScaffoldModule] | None = None
-    module: dict[str, Any] = field(default_factory=dict)
+    module: dict[str, Any] = field(default_factory=dict[str, Any])
     endpoints: list[ScaffoldEndpoint] | None = None
     mode: str = "create"
 
