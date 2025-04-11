@@ -89,7 +89,7 @@ dev-dependencies = [
     "pytest-cov >= 4.1,< 7.0",
     "coverage ~= 7.4",
     "junit2html >= 30.1,< 32.0",
-    "pyright == 1.1.398",
+    "pyright == 1.1.399",
     "isort >= 5.13,< 7.0",
     "ruff ~= 0.3",
     "bandit[sarif,toml] ~= 1.7",
@@ -204,6 +204,8 @@ addopts = [
     "-o=junit_family=xunit2",
     "--cov-report=xml:reports/pytest/cov.xml",
     "--cov-report=term-missing",
+    "-W=ignore::DeprecationWarning",
+    "--cov-context=test"
 ]
 
 python_files = "test_*.py"
@@ -242,7 +244,6 @@ show_contexts = true
 
 [tool.coverage.run]
 data_file = "reports/pytest/.coverage"
-dynamic_context = "test_function"
 relative_files = true
 omit = [
     ".venv/*",
