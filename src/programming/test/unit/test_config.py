@@ -27,6 +27,8 @@ class BazConfig(AbstractConfig):
 
 
 class TestConfig(AbstractConfig):
+    __test__ = False
+
     @override
     def post_load(self) -> None:
         return super().post_load()
