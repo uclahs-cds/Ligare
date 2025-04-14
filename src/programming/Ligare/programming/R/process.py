@@ -254,7 +254,7 @@ class RProcessStepBuilder:
             This method adds the `READ_FD` environment variable whose value is `str(parameter_read_fd)`.
             This method blocks thread execution until the process completes.
 
-            :param list[str  |  bytes  |  PathLike[str]  |  PathLike[bytes]] args: The argument list to pass to `subprocess.run`.
+            :param list[str|bytes|PathLike[str]|PathLike[bytes]] args: The argument list to pass to `subprocess.run`.
             :param int parameter_read_fd: A file descriptor number from which R will read method parameters.
             :param bytes | None data: Data that is written to the executed process's STDIN.
             :return subprocess.CompletedProcess[bytes]: The completed process.
@@ -316,7 +316,7 @@ class RProcessStepBuilder:
             """
             Execute the configured R script.
 
-            :return CompletedProcess[bytes]: The completed process object from `process.run(...)
+            :return CompletedProcess[bytes]: The completed process object from `process.run(...)`
             """
             This = RProcessStepBuilder.RProcessExecutorStepBuilder
 

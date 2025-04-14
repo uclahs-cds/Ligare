@@ -270,6 +270,7 @@ Sphinx-help: $(VENV) $(DEFAULT_TARGET)
 
 Sphinx: $(VENV) $(DEFAULT_TARGET) Makefile
 	$(MAKE) Sphinx-html
+	$(MAKE) Sphinx-doctest
 
 Sphinx-%: $(VENV) $(DEFAULT_TARGET) Makefile
 	$(ACTIVATE_VENV) && \

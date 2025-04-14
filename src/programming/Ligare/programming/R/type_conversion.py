@@ -138,8 +138,10 @@ def vector_from_parts(
 ) -> None:
     """
     Add a new key to the `parts` dictionary named `new_part_key`.
+
     The value of the new key is:
-    * A Python string representing and R vector `"c(...)"` where each value
+
+    * A Python string representing an R vector ``"c(...)"`` where each value
       comes from the `parts` dictionary for each key in the `existing_part_keys` list.
     * If every value from the `parts` dictionary is `None` or an empty string,
       the new key's value is the values of `default`.
@@ -151,6 +153,67 @@ def vector_from_parts(
     :param list[str] existing_part_keys: The names of the keys from which to create the value of the new key
     :param Any default: The default value of the new key if all key values in `parts` for the keys `existing_part_keys`
       are `None` or an empty string, defaults to "__NULL__"
+
+    ---
+
+    ---------
+    **Usage**
+    ---------
+
+    .. testsetup::
+
+       from Ligare.programming.R.type_conversion import vector_from_parts
+
+    **Convert two keys with values into a single two-item vector.**
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    .. doctest::
+
+       >>> query_params = {
+       ...     "scale.bar.coords.x": 0.5,
+       ...     "scale.bar.coords.y": 1.0
+       ... }
+       >>> vector_from_parts(
+       ...     query_params,
+       ...     "scale.bar.coords",
+       ...     ["scale.bar.coords.x", "scale.bar.coords.y"]
+       ... )
+       >>> query_params
+       {'scale.bar.coords': "c('0.5','1.0')"}
+
+    **Convert two keys into a single two-item vector where one value is `None`**
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    .. doctest::
+
+       >>> query_params = {
+       ...     "scale.bar.coords.x": 0.5,
+       ...     "scale.bar.coords.y": None
+       ... }
+       >>> vector_from_parts(
+       ...     query_params,
+       ...     "scale.bar.coords",
+       ...     ["scale.bar.coords.x", "scale.bar.coords.y"]
+       ... )
+       >>> query_params
+       {'scale.bar.coords': "c('0.5','__NULL__')"}
+
+    **Convert two keys into an empty value where all values are `None`**
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    .. doctest::
+
+       >>> query_params = {
+       ...     "scale.bar.coords.x": None,
+       ...     "scale.bar.coords.y": None
+       ... }
+       >>> vector_from_parts(
+       ...     query_params,
+       ...     "scale.bar.coords",
+       ...     ["scale.bar.coords.x", "scale.bar.coords.y"]
+       ... )
+       >>> query_params
+       {'scale.bar.coords': '__NULL__'}
     """
     part_values: list[str | None] = []
     for part in existing_part_keys:
