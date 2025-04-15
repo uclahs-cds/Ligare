@@ -10,7 +10,7 @@ safe_comma_separated_string_regex = re.compile(SAFE_COMMA_SEPARATED_STRING_PATTE
 
 
 @overload
-def string(value: str) -> str | None:
+def string(value: str | None) -> str | None:
     """
     Remove all characters from a string that are not
     whitelisted in the `SAFE_STRING_PATTERN` regex.
@@ -22,7 +22,7 @@ def string(value: str) -> str | None:
 
 
 @overload
-def string(value: str, *, comma_separated: bool) -> str | None:
+def string(value: str | None, *, comma_separated: bool) -> str | None:
     """
     Remove all characters from a string that are not
     whitelisted in the `SAFE_COMMA_SEPARATED_STRING_PATTERN` regex.
@@ -37,7 +37,7 @@ def string(value: str, *, comma_separated: bool) -> str | None:
     """
 
 
-def string_from_csv(value: str) -> str | None:
+def string_from_csv(value: str | None) -> str | None:
     """
     This method is a pass-through for `string(value, comma_separated=True)`.
 
@@ -54,7 +54,7 @@ def string_from_csv(value: str) -> str | None:
 
 
 @overload
-def string(value: str, *, vector: bool) -> str | None:
+def string(value: str | None, *, vector: bool) -> str | None:
     """
     Remove all characters from a string that are not
     whitelisted in the `SAFE_COMMA_SEPARATED_STRING_PATTERN` regex.
@@ -70,7 +70,7 @@ def string(value: str, *, vector: bool) -> str | None:
     """
 
 
-def vector_from_csv(value: str) -> str | None:
+def vector_from_csv(value: str | None) -> str | None:
     """
     This method is a pass-through for `string(value, vector=True)`.
 
@@ -89,9 +89,9 @@ def vector_from_csv(value: str) -> str | None:
 
 
 def string(
-    value: str, *, comma_separated: bool = False, vector: bool = False
+    value: str | None, *, comma_separated: bool = False, vector: bool = False
 ) -> str | None:
-    if value == "":
+    if value == "" or value is None:
         return value if not vector else "c()"
 
     if comma_separated or vector:

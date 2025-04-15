@@ -21,6 +21,7 @@ from Ligare.programming.R.type_conversion import (
         ("", ""),
         (" ", " "),
         ("\t", "\t"),
+        (None, None),
     ],
 )
 def test__string__returns_sanitized_string(input_value: Any, expected_value: str):
@@ -31,17 +32,16 @@ def test__string__returns_sanitized_string(input_value: Any, expected_value: str
 @pytest.mark.parametrize(
     "input_value,expected_value",
     [
-        (None, TypeError),
         (False, TypeError),
         (True, TypeError),
         (0, TypeError),
     ],
 )
-def test__string__raises_when_input_is_not_a_str(
-    input_value: Any, expected_value: type[Exception]
+def test__string__raises_when_input_is_not_a_str_or_None(
+    input_value: Any | None, expected_value: type[Exception]
 ):
     with pytest.raises(expected_value):
-        string(input_value)
+        _ = string(input_value)
 
 
 @pytest.mark.parametrize(
@@ -60,6 +60,7 @@ def test__string__raises_when_input_is_not_a_str(
         (",", None),
         (" , ", "' ',' '"),
         ("\t,\t", "'\t','\t'"),
+        (None, None),
     ],
 )
 def test__string__csv__returns_sanitized_csv_string(
@@ -72,17 +73,16 @@ def test__string__csv__returns_sanitized_csv_string(
 @pytest.mark.parametrize(
     "input_value,expected_value",
     [
-        (None, TypeError),
         (False, TypeError),
         (True, TypeError),
         (0, TypeError),
     ],
 )
-def test__string__csv__raises_when_input_is_not_a_str(
-    input_value: Any, expected_value: type[Exception]
+def test__string__csv__raises_when_input_is_not_a_str_or_None(
+    input_value: Any | None, expected_value: type[Exception]
 ):
     with pytest.raises(expected_value):
-        string(input_value, comma_separated=True)
+        _ = string(input_value, comma_separated=True)
 
 
 @pytest.mark.parametrize(
@@ -101,6 +101,7 @@ def test__string__csv__raises_when_input_is_not_a_str(
         (",", None),
         (" , ", "' ',' '"),
         ("\t,\t", "'\t','\t'"),
+        (None, None),
     ],
 )
 def test__string_from_csv__returns_sanitized_csv_string(
@@ -113,17 +114,16 @@ def test__string_from_csv__returns_sanitized_csv_string(
 @pytest.mark.parametrize(
     "input_value,expected_value",
     [
-        (None, TypeError),
         (False, TypeError),
         (True, TypeError),
         (0, TypeError),
     ],
 )
-def test__string_from_csv__raises_when_input_is_not_a_str(
-    input_value: Any, expected_value: type[Exception]
+def test__string_from_csv__raises_when_input_is_not_a_str_or_None(
+    input_value: Any | None, expected_value: type[Exception]
 ):
     with pytest.raises(expected_value):
-        string_from_csv(input_value)
+        _ = string_from_csv(input_value)
 
 
 @pytest.mark.parametrize(
@@ -142,6 +142,7 @@ def test__string_from_csv__raises_when_input_is_not_a_str(
         (",", None),
         (" , ", "c(' ',' ')"),
         ("\t,\t", "c('\t','\t')"),
+        (None, "c()"),
     ],
 )
 def test__string__vector__returns_sanitized_vector_string(
@@ -154,17 +155,16 @@ def test__string__vector__returns_sanitized_vector_string(
 @pytest.mark.parametrize(
     "input_value,expected_value",
     [
-        (None, TypeError),
         (False, TypeError),
         (True, TypeError),
         (0, TypeError),
     ],
 )
-def test__string__vector__raises_when_input_is_not_a_str(
-    input_value: Any, expected_value: type[Exception]
+def test__string__vector__raises_when_input_is_not_a_str_or_None(
+    input_value: Any | None, expected_value: type[Exception]
 ):
     with pytest.raises(expected_value):
-        string(input_value, vector=True)
+        _ = string(input_value, vector=True)
 
 
 @pytest.mark.parametrize(
@@ -183,6 +183,7 @@ def test__string__vector__raises_when_input_is_not_a_str(
         (",", None),
         (" , ", "c(' ',' ')"),
         ("\t,\t", "c('\t','\t')"),
+        (None, "c()"),
     ],
 )
 def test__vector_from_csv__returns_sanitized_vector_string(
@@ -195,17 +196,16 @@ def test__vector_from_csv__returns_sanitized_vector_string(
 @pytest.mark.parametrize(
     "input_value,expected_value",
     [
-        (None, TypeError),
         (False, TypeError),
         (True, TypeError),
         (0, TypeError),
     ],
 )
-def test__vector_from_csv__raises_when_input_is_not_a_str(
-    input_value: Any, expected_value: type[Exception]
+def test__vector_from_csv__raises_when_input_is_not_a_str_or_None(
+    input_value: Any | None, expected_value: type[Exception]
 ):
     with pytest.raises(expected_value):
-        vector_from_csv(input_value)
+        _ = vector_from_csv(input_value)
 
 
 @pytest.mark.parametrize(
