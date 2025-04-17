@@ -94,28 +94,33 @@ def string(
     if value == "" or value is None:
         return value if not vector else "c()"
 
-    if comma_separated or vector:
-        if not (safe_str := safe_comma_separated_string_regex.sub("", value)):
-            # if the safe_str is empty but value is not,
-            # then all characters were stripped and the
-            # supplied value is not "safe." Return None
-            # because this is invalid.
-            return None
-        items = [item for item in safe_str.split(",") if item]
-        new_csv_string = ("'" + "','".join(items) + "'") if items else None
+    try:
+        if comma_separated or vector:
+            if not (safe_str := safe_comma_separated_string_regex.sub("", value)):
+                # if the safe_str is empty but value is not,
+                # then all characters were stripped and the
+                # supplied value is not "safe." Return None
+                # because this is invalid.
+                return None
+            items = [item for item in safe_str.split(",") if item]
+            new_csv_string = ("'" + "','".join(items) + "'") if items else None
 
-        if new_csv_string is None:
-            return None
+            if new_csv_string is None:
+                return None
 
-        if vector:
-            return f"c({new_csv_string})"
+            if vector:
+                return f"c({new_csv_string})"
+            else:
+                return new_csv_string
         else:
-            return new_csv_string
-    else:
-        if not (safe_str := safe_string_regex.sub("", value)):
-            return None
+            if not (safe_str := safe_string_regex.sub("", value)):
+                return None
 
-    return safe_str
+        return safe_str
+    except Exception as e:
+        raise type(e)(
+            f"Failed to convert the value `{value}` to a string. Other parameters: {comma_separated=}, {vector=}"
+        ) from e
 
 
 def boolean(value: str | None) -> str:

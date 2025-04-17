@@ -1,9 +1,8 @@
 import csv
 import os
 import subprocess
-from collections.abc import Collection
 from logging import Logger
-from os import PathLike, pipe
+from os import PathLike, memfd_create, pipe
 from typing import Any, Mapping, cast, final
 
 from Ligare.programming.collections.dict import merge
@@ -247,11 +246,11 @@ class RProcessStepBuilder:
             args: list[str | bytes | PathLike[str] | PathLike[bytes]],
             parameter_read_fd: int | None,
             data: bytes | None,
-        ) -> subprocess.CompletedProcess[bytes]:
+        ) -> tuple[subprocess.CompletedProcess[bytes], bytes]:
             """
             Run the process specified by `args`, which is passed into `subprocess.run`
             as the first argument.
-            This method adds the `READ_FD` environment variable whose value is `str(parameter_read_fd)`.
+            This method adds the `METHOD_ARG_READ_FD` environment variable whose value is `str(parameter_read_fd)`.
             This method blocks thread execution until the process completes.
 
             :param list[str|bytes|PathLike[str]|PathLike[bytes]] args: The argument list to pass to `subprocess.run`.
@@ -261,30 +260,41 @@ class RProcessStepBuilder:
             """
             # We must pass the parent process ENV so we don't need to explicitly
             # manage the envvars for R and Rscript to work correctly.
-            # We also need to pass `READ_FD` so the R script can determine
+            # We also need to pass `METHOD_ARG_READ_FD` so the R script can determine
             # the correct pipe FD (`read_fd`) to read from to determine the function
             # parameters for SRCGrob that were written to `write_fd`.
-            if parameter_read_fd is None:
-                pass_fds: Collection[int] = ()
-                subprocess_env: Mapping[str, Any] | None = None
-            else:
-                # pass the read end of the pipe,
-                # so the process can read whatever we write to write_fd
-                pass_fds = [parameter_read_fd]
-                subprocess_env = cast(
-                    Mapping[str, Any] | None,
-                    merge(os.environ.copy(), {"READ_FD": str(parameter_read_fd)}),
+            image_data_fd = memfd_create("image_data", 0)
+            pass_fds = [image_data_fd]
+
+            try:
+                subprocess_env = merge(
+                    os.environ.copy(), {"IMAGE_DATA_FD": str(image_data_fd)}
                 )
 
-            proc = subprocess.run(
-                args,
-                pass_fds=pass_fds,
-                env=subprocess_env,
-                input=data,
-                text=False,
-                capture_output=True,
-            )
-            return proc
+                if parameter_read_fd is not None:
+                    # pass the read end of the pipe,
+                    # so the process can read whatever we write to write_fd
+                    pass_fds.append(parameter_read_fd)
+                    subprocess_env["METHOD_ARG_READ_FD"] = str(parameter_read_fd)
+
+                proc = subprocess.run(
+                    args,
+                    pass_fds=pass_fds,
+                    env=cast(Mapping[str, Any], subprocess_env),
+                    input=data,
+                    text=False,
+                    capture_output=True,
+                )
+
+                _ = os.lseek(image_data_fd, 0, 0)
+                with os.fdopen(image_data_fd, "rb") as f:
+                    img_data = f.read()
+                return (proc, img_data)
+            finally:
+                try:
+                    os.close(image_data_fd)
+                except:
+                    pass
 
         @staticmethod
         def handle_process_errors(
@@ -300,7 +310,7 @@ class RProcessStepBuilder:
             :param Logger log: The Logger that is written to
             :raises Exception: Raised only if STDERR is not empty and STDOUT is empty.
             """
-            if proc.stderr:
+            if proc.returncode != 0:
                 stderr_decoded = proc.stderr.decode("utf-8")
                 # Rscript still prints to stderr when errors didn't happen
                 # but stdout will be empty if it did actually fail.
@@ -312,7 +322,9 @@ class RProcessStepBuilder:
                 if log is not None:
                     log.debug(stderr_decoded)
 
-        def execute(self) -> subprocess.CompletedProcess[bytes]:
+        def execute(
+            self,
+        ) -> tuple[subprocess.CompletedProcess[bytes], bytes]:
             """
             Execute the configured R script.
 
@@ -333,7 +345,7 @@ class RProcessStepBuilder:
                         "An unexpected error occurred with the executor state. This should have been caught when the builder was built."
                     )
 
-                proc = This.execute_R_process(
+                (proc, img_data) = This.execute_R_process(
                     [self.process._rscript_path, self.script._rscript]  # pyright: ignore[reportPrivateUsage]
                     + self.script._args,  # pyright: ignore[reportPrivateUsage]
                     self.method._read_fd,  # pyright: ignore[reportPrivateUsage]
@@ -345,4 +357,4 @@ class RProcessStepBuilder:
 
             This.handle_process_errors(proc, self._log)
 
-            return proc
+            return (proc, img_data)
