@@ -18,6 +18,34 @@ def string(value: str | None) -> str | None:
     :param str value: The string to sanitize.
     :return string: The sanitized string, or `None` if the
       string only consists of invalid characters.
+
+    ---
+
+    ---------
+    **Usage**
+    ---------
+
+    .. testsetup::
+
+       from Ligare.programming.R.type_conversion import vector_from_csv
+
+    .. doctest::
+
+       >>> string("abc")
+       'abc'
+
+       >>> string("a,b,c")
+       'abc'
+
+       >>> string(None) is None
+       True
+
+       >>> string("\t,\t")
+       '\t\t'
+
+       >>> string(",") is None
+       True
+
     """
 
 
@@ -34,6 +62,34 @@ def string(value: str | None, *, comma_separated: bool) -> str | None:
     :return str | None: _description_
     :return string: The sanitized string, or `None` if the
       string only consists of invalid characters.
+
+    ---
+
+    ---------
+    **Usage**
+    ---------
+
+    .. testsetup::
+
+       from Ligare.programming.R.type_conversion import vector_from_csv
+
+    .. doctest::
+
+       >>> string("abc")
+       'abc'
+
+       >>> string("a,b,c")
+       'abc'
+
+       >>> string(None) is None
+       True
+
+       >>> string("\t,\t")
+       '\t\t'
+
+       >>> string(",") is None
+       True
+
     """
 
 
@@ -49,6 +105,34 @@ def string_from_csv(value: str | None) -> str | None:
     :param str value: The string to sanitize.
     :return string: The sanitized string, or `None` if the
       string only consists of invalid characters.
+
+    ---
+
+    ---------
+    **Usage**
+    ---------
+
+    .. testsetup::
+
+       from Ligare.programming.R.type_conversion import string_from_csv
+
+    .. doctest::
+
+       >>> string_from_csv("abc")
+       "'abc'"
+
+       >>> string_from_csv("a,b,c")
+       "'a','b','c'"
+
+       >>> string_from_csv(None) is None
+       True
+
+       >>> string_from_csv("\\t,\\t")
+       "'\\t','\\t'"
+
+       >>> string_from_csv(",") is None
+       True
+
     """
     return string(value, comma_separated=True)
 
@@ -67,6 +151,33 @@ def string(value: str | None, *, vector: bool) -> str | None:
       If False, this method falls back to `string(value)`.
     :return str | None: The vectorized CSV string, or `None` if no valid
       characters were found
+
+    ---
+
+    ---------
+    **Usage**
+    ---------
+
+    .. testsetup::
+
+       from Ligare.programming.R.type_conversion import string
+
+    .. doctest::
+
+       >>> string("abc")
+       'abc'
+
+       >>> string("a,b,c")
+       'abc'
+
+       >>> string(None) is None
+       True
+
+       >>> string("\t,\t")
+       '\t\t'
+
+       >>> string(",") is None
+       True
     """
 
 
@@ -84,6 +195,63 @@ def vector_from_csv(value: str | None) -> str | None:
 
     :param str value: The string to sanitize.
     :return str | None: The vectorized CSV string, or `None` if no valid characters were found
+
+    ---
+
+    ---------
+    **Usage**
+    ---------
+
+    .. testsetup::
+
+       from Ligare.programming.R.type_conversion import vector_from_csv
+
+    .. doctest::
+
+       >>> vector_from_csv("'") is None
+       True
+
+       >>> vector_from_csv("''") is None
+       True
+
+       >>> vector_from_csv("'a'")
+       "c('a')"
+
+       >>> vector_from_csv("a-b-c")
+       "c('a-b-c')"
+
+       >>> vector_from_csv("a-b-.c")
+       "c('a-b-.c')"
+
+       >>> vector_from_csv("a-b-^%^$%^c")
+       "c('a-b-c')"
+
+       >>> vector_from_csv("")
+       'c()'
+
+       >>> vector_from_csv("abc")
+       "c('abc')"
+
+       >>> vector_from_csv("a,b,c")
+       "c('a','b','c')"
+
+       >>> vector_from_csv(None)
+       'c()'
+
+       >>> vector_from_csv("!!!") is None
+       True
+
+       >>> vector_from_csv("a!b!c!")
+       "c('abc')"
+
+       >>> vector_from_csv("a!,b!,c!")
+       "c('a','b','c')"
+
+       >>> vector_from_csv("a,b,c,")
+       "c('a','b','c')"
+
+       >>> vector_from_csv("a.b.c")
+       "c('a.b.c')"
     """
     return string(value, vector=True)
 
@@ -123,16 +291,66 @@ def string(
         ) from e
 
 
-def boolean(value: str | None) -> str:
+def boolean(value: str | bool | None) -> str:
     """
     Returns the R string `"TRUE"` or `"FALSE"` from the Python
-    string `"True"` or `"False`" (lowercased), respectively.
-    If `value` is `None`, "FALSE" is returned.
+    strings `"True"`, `"T"`, `"False`", or `"F"` (lowercased),
+    or boolean `True` or `False`, respectively.
+    If `value` is `None`, `"FALSE"` is returned.
 
-    :param str value: The input string containing the values `"True"` or `"False"`.
+    :param str value: The input string `"True"`, `"T"`, `"False"`, or `"F"`, or boolean `True` or `False`.
     :return str: The R string `"TRUE"` or `"FALSE"`.
+
+    ---
+
+    ---------
+    **Usage**
+    ---------
+
+    .. testsetup::
+
+       from Ligare.programming.R.type_conversion import boolean
+
+    .. doctest::
+
+       >>> boolean(True)
+       'TRUE'
+
+       >>> boolean("True")
+       'TRUE'
+
+       >>> boolean("T")
+       'TRUE'
+
+       >>> boolean("true")
+       'TRUE'
+
+       >>> boolean(False)
+       'FALSE'
+
+       >>> boolean("False")
+       'FALSE'
+
+       >>> boolean("F")
+       'FALSE'
+
+       >>> boolean("false")
+       'FALSE'
+
+       >>> boolean(1)
+       'FALSE'
+
+       >>> boolean(0)
+       'FALSE'
+
+       >>> boolean(None)
+       'FALSE'
     """
-    return "TRUE" if (value is not None and value.lower() == "true") else "FALSE"
+    return (
+        "TRUE"
+        if (value is not None and str(value).lower() in ["true", "t"])
+        else "FALSE"
+    )
 
 
 def vector_from_parts(
