@@ -44,6 +44,9 @@ read.method.parameters <- function(con=NULL) {
   # process (likely the cev.py endpoint API).
   if (is.null(con)) {
     fd <- as.integer(Sys.getenv('METHOD_ARG_READ_FD'));
+
+    if (is.na(fd)) return(NULL);
+
     con <- file(paste0('/dev/fd/', fd), 'r', raw = TRUE);
   }
   parameter.csv <- readLines(con);
