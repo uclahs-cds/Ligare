@@ -1,0 +1,10 @@
+[project]
+requires-python = ">= 3.10"
+
+name = "R-integration"
+version = "0.0.1"
+
+dependencies = [
+   "Ligare.programming"
+]
+
