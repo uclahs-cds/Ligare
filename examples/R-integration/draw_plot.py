@@ -22,7 +22,7 @@ executor = (
     RProcessStepBuilder()
     .with_Rscript_binary_path("/usr/bin/Rscript")
     # make `draw_plot.R` output a PNG. TIFF is also supported.
-    .with_args([f"--output-type=png"])
+    .with_args(["--output-type=png"])
     .with_R_script_path(script_path)
     # These are the method parameters for the
     # R method `draw_lines_from_dataframe`.

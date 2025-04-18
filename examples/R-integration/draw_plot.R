@@ -11,23 +11,12 @@ library("pythonipc");
 #  xend = c(0.0, 0.6),
 #  yend = c(1.0, 0.0)
 # )
-draw_lines_from_dataframe <- function(
-  df,
-  spacing = 1,
-  line_width = 1,
-  color = "black",
-  background_color = "white"
-) {
+draw_lines_from_dataframe <- function(df, spacing = 1, line_width = 1,
+                                      color = "black",
+                                      background_color = "white") {
   par(bg = background_color);
-  plot(
-    NULL,
-    xlim = c(0, 7),
-    ylim = c(0, 1.1),
-    asp = 1,
-    axes = FALSE,
-    xlab = "",
-    ylab = ""
-  );
+  plot(NULL, xlim = c(0, 7), ylim = c(0, 1.1), asp = 1, axes = FALSE, xlab = "",
+       ylab = "");
 
   unique_letters <- unique(df$letter);
   for (i in seq_along(unique_letters)) {
