@@ -19,7 +19,7 @@ def string(value: str | None) -> str | None:
     :return string: The sanitized string, or `None` if the
       string only consists of invalid characters.
 
-    ---
+    ----
 
     ---------
     **Usage**
@@ -63,7 +63,7 @@ def string(value: str | None, *, comma_separated: bool) -> str | None:
     :return string: The sanitized string, or `None` if the
       string only consists of invalid characters.
 
-    ---
+    ----
 
     ---------
     **Usage**
@@ -106,7 +106,7 @@ def string_from_csv(value: str | None) -> str | None:
     :return string: The sanitized string, or `None` if the
       string only consists of invalid characters.
 
-    ---
+    ----
 
     ---------
     **Usage**
@@ -152,7 +152,7 @@ def string(value: str | None, *, vector: bool) -> str | None:
     :return str | None: The vectorized CSV string, or `None` if no valid
       characters were found
 
-    ---
+    ----
 
     ---------
     **Usage**
@@ -196,7 +196,7 @@ def vector_from_csv(value: str | None) -> str | None:
     :param str value: The string to sanitize.
     :return str | None: The vectorized CSV string, or `None` if no valid characters were found
 
-    ---
+    ----
 
     ---------
     **Usage**
@@ -301,7 +301,7 @@ def boolean(value: str | bool | None) -> str:
     :param str value: The input string `"True"`, `"T"`, `"False"`, or `"F"`, or boolean `True` or `False`.
     :return str: The R string `"TRUE"` or `"FALSE"`.
 
-    ---
+    ----
 
     ---------
     **Usage**
@@ -377,7 +377,7 @@ def vector_from_parts(
     :param Any default: The default value of the new key if all key values in `parts` for the keys `existing_part_keys`
       are `None` or an empty string, defaults to "__NULL__"
 
-    ---
+    ----
 
     ---------
     **Usage**
