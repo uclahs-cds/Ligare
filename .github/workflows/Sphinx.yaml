@@ -28,7 +28,7 @@ jobs:
           DEFAULT_TARGET=cicd \
           VENV=.github-venv \
           REWRITE_DEPENDENCIES=true \
-            make Sphinx-html
+            make Sphinx
 
       - name: Upload static files as artifact
         id: deployment

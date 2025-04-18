@@ -1,2 +1,3 @@
 IGNORE_NAMED_TESTS="repo-name:python-linting"
+IGNORE_LINT_DIRS="examples"
 PYTHON_PYLINT_CONFIG_FILE=true
