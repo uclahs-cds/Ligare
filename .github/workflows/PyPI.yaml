@@ -152,15 +152,12 @@ jobs:
       - name: Set names of publish targets
         id: publish_targets
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "publish_targets=${{ inputs.job }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "publish_targets=Both" >> "$GITHUB_OUTPUT"
-          fi
+          JOB="${{ inputs.job }}"
+          echo "publish_targets=${JOB:-Both}" >> "$GITHUB_OUTPUT"
 
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
-    if: contains(fromJSON('["Both", "PyPI"]'), format('{0}', needs.build.outputs.publish_targets))
+    if: contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_targets)
     needs:
       - build
     runs-on: ubuntu-latest
@@ -184,7 +181,7 @@ jobs:
   github-release:
     name: >-
       Release Python 🐍 distribution 📦 on GitHub
-    if: contains(fromJSON('["Both", "GitHub"]'), format('{0}', needs.build.outputs.publish_targets))
+    if: contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_targets)
     needs:
       - build
     runs-on: ubuntu-latest
