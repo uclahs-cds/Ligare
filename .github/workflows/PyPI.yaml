@@ -151,7 +151,7 @@ jobs:
 
       - name: Set names of publish targets
         id: publish_targets
-        run:  echo "publish_targets=${{ github.event_name == 'workflow_dispatch' && inputs.job || 'Both' }}" >> $GITHUB_OUTPUT
+        run: echo "publish_targets=${{ github.event_name == 'workflow_dispatch' && inputs.job || 'Both' }}" >> $GITHUB_OUTPUT
 
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
