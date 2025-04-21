@@ -100,7 +100,6 @@ jobs:
     if: success() || github.event_name != 'workflow_dispatch'
 
     outputs:
-      publish_targets: ${{ steps.publish_targets.outputs.publish_targets }}
       package_name: ${{ steps.package_details.outputs.package_name }}
       package_directory: ${{ steps.package_details.outputs.package_directory }}
       module_name: ${{ steps.package_details.outputs.module_name }}
@@ -149,11 +148,46 @@ jobs:
           path: "${{ steps.package_details.outputs.package_directory }}/dist/"
           if-no-files-found: error
 
-      - name: Set names of publish targets
-        id: publish_targets
+  test-job-conditions:
+    name: >-
+      Test job conditions
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: go
         run: |
-          JOB="${{ inputs.job }}"
-          echo "publish_targets=${JOB:-Both}" >> "$GITHUB_OUTPUT"
+          echo '${{ github.event_name != 'workflow_dispatch' }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+  
+  test-job-conditions-two:
+    name: >-
+      Test job conditions two
+    needs:
+      - build
+    if: success() || github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: go
+        run: |
+          echo '${{ github.event_name != 'workflow_dispatch' }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+
+  test-job-conditions-three:
+    name: >-
+      Test job conditions three
+    needs:
+      - build
+    if: success() || github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: go
+        run: |
+          echo '${{ github.event_name != 'workflow_dispatch' }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
 
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
@@ -177,18 +211,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: ${{ inputs.pypi_url }}
-
-  test-job-conditions:
-    name: >-
-      Release Python 🐍 distribution 📦 on GitHub
-    needs:
-      - build
-    runs-on: ubuntu-latest
-    steps:
-      - name: go
-        run: |
-          echo '${{ github.event_name != 'workflow_dispatch' }}'
-          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
 
   github-release:
     name: >-
