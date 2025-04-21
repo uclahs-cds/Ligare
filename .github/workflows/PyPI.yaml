@@ -100,6 +100,7 @@ jobs:
     if: success() || github.event_name != 'workflow_dispatch'
 
     outputs:
+      publish_targets: ${{ steps.publish_targets.outputs.publish_targets }}
       package_name: ${{ steps.package_details.outputs.package_name }}
       package_directory: ${{ steps.package_details.outputs.package_directory }}
       module_name: ${{ steps.package_details.outputs.module_name }}
@@ -148,10 +149,14 @@ jobs:
           path: "${{ steps.package_details.outputs.package_directory }}/dist/"
           if-no-files-found: error
 
+      - name: Set names of publish targets
+        id: publish_targets
+        run: echo "publish_targets=${{ github.event_name == 'workflow_dispatch' && inputs.job || 'Both' }}" >> $GITHUB_OUTPUT
+
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
-    if: github.event_name != 'workflow_dispatch' ||
-        (github.event_name == 'workflow_dispatch' && contains(fromJSON('["Both", "PyPI"]'), inputs.job || ''))
+    if: |
+      contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_targets)
     needs:
       - build
     runs-on: ubuntu-latest
@@ -175,8 +180,8 @@ jobs:
   github-release:
     name: >-
       Release Python 🐍 distribution 📦 on GitHub
-    if: github.event_name != 'workflow_dispatch' ||
-        (github.event_name == 'workflow_dispatch' && contains(fromJSON('["Both", "GitHub"]'), inputs.job || ''))
+    if: |
+      contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_targets)
     needs:
       - build
     runs-on: ubuntu-latest
