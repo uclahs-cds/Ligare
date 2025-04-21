@@ -151,7 +151,7 @@ jobs:
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
     if: |
-      contains(fromJSON('["Both", "PyPI"]'), inputs.job)
+      github.event_name != 'workflow_dispatch' || contains(fromJSON('["Both", "PyPI"]'), inputs.job)
     needs:
       - build
     runs-on: ubuntu-latest
@@ -176,7 +176,7 @@ jobs:
     name: >-
       Release Python 🐍 distribution 📦 on GitHub
     if: |
-      contains(fromJSON('["Both", "GitHub"]'), inputs.job)
+      github.event_name != 'workflow_dispatch' || contains(fromJSON('["Both", "GitHub"]'), inputs.job)
     needs:
       - build
     runs-on: ubuntu-latest
