@@ -11,6 +11,15 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.6.0] - 2025004-21
+### Added
+- Introduced an R integration module `Ligare.programming.R` for executing and communicating with R processes.
+- Added types for creating UIs related to R methods.
+
+### Fixed
+- Type error uncovered by Pyright update.
+- `pytest` warnings caused by unintentionally collecting `TestConfig` as a test class, which is really a stub for testing `AbstractConfig`.
+
 ## [0.5.0] - 2025-03-25
 ### Added
 - Introduced generic `ApplicationBuilder` in `Ligare.programming`, usable for CLI and web apps.

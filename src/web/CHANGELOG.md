@@ -11,6 +11,13 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.7.0] - 2025-04-21
+### Added
+- Flask Response utility methods for BadRequest and image downloads.
+
+### Fixed
+- Type error uncovered by Pyright update.
+
 ## [0.6.0] - 2025-03-25
 ### Added
 - Integrated Sphinx documentation system.

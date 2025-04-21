@@ -12,6 +12,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.8.1] - 2025-04-21
+### Fixed
+- Type error uncovered by Pyright update.
+
 ## [0.8.0] - 2025-03-25
 ### Added
 - Added initial module-level docstrings to `Ligare.platform.__init__` for Sphinx documentation generation.
