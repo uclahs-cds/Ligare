@@ -100,6 +100,7 @@ jobs:
     if: success() || github.event_name != 'workflow_dispatch'
 
     outputs:
+      publish_target: ${{ steps.set_default_job_inputs.outputs.publish_target }}
       package_name: ${{ steps.package_details.outputs.package_name }}
       package_directory: ${{ steps.package_details.outputs.package_directory }}
       module_name: ${{ steps.package_details.outputs.module_name }}
@@ -113,6 +114,14 @@ jobs:
         'https://test.pypi.org/p/'
 
     steps:
+      # sets default values for inputs that come from `workflow_dispatch``
+      # that aren't normally set for a `push` event
+      - name: Set default values for inputs to jobs.
+        id: set_default_job_inputs
+        run: |
+          JOB="${{ inputs.job }}"
+          echo "publish_target=${JOB:-Both}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
       - name: Get package details from workflow event
         # sets the step outputs package_directory and package_name
@@ -151,7 +160,9 @@ jobs:
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
     if: |
-      contains(fromJSON('["Both", "PyPI"]'), inputs.job)
+      ${{ !(failure() || cancelled())
+          && contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target)
+      }}
     needs:
       - build
     runs-on: ubuntu-latest
@@ -176,7 +187,9 @@ jobs:
     name: >-
       Release Python 🐍 distribution 📦 on GitHub
     if: |
-      contains(fromJSON('["Both", "GitHub"]'), inputs.job)
+      ${{ !(failure() || cancelled())
+          && contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target)
+      }}
     needs:
       - build
     runs-on: ubuntu-latest
