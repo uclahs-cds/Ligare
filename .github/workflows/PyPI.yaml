@@ -178,6 +178,18 @@ jobs:
         with:
           repository-url: ${{ inputs.pypi_url }}
 
+  test-job-conditions:
+    name: >-
+      Release Python 🐍 distribution 📦 on GitHub
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: go
+        run: |
+          echo '${{ github.event_name != 'workflow_dispatch' }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
+
   github-release:
     name: >-
       Release Python 🐍 distribution 📦 on GitHub
