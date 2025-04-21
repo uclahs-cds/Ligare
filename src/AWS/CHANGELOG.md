@@ -11,6 +11,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.4.1] - 2025-04-21
+### Fixed
+- Type error uncovered by Pyright update.
+
 ## [0.4.0] - 2025-03-25
 ### Added
 - Added initial module-level docstrings to `Ligare.AWS.__init__` to support documentation generation.

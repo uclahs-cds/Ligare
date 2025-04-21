@@ -12,6 +12,39 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## `Ligare.all` [0.9.0] - 2025-04-21
+
+The changes associated with `Ligare.all` `v0.9.0` include new GitHub workflows for publishing releases.
+
+New documentation for R integration is also included, as well as methods for testing Sphinx `doctest`. A cookbook guide has been added to work with the `pythonipc` Python and R libraries.
+
+### Added
+- Introduced an R integration module `Ligare.programming.R` for executing and communicating with R processes.
+- Added types for creating UIs related to R methods.
+- Flask Response utility methods for BadRequest and image downloads.
+
+### Fixed
+- Type error uncovered by Pyright update.
+- `pytest` warnings caused by unintentionally collecting `TestConfig` as a test class, which is really a stub for testing `AbstractConfig`.
+
+### `Ligare.AWS` [0.4.1] - 2025-04-21
+
+* [Ligare.AWS v0.4.1](https://github.com/uclahs-cds/Ligare/blob/Ligare.AWS-v0.4.1/src/AWS/CHANGELOG.md#041---2025-04-21)
+
+### `Ligare.platform` [0.8.1] - 2025-04-21
+
+* [Ligare.platform v0.8.1](https://github.com/uclahs-cds/Ligare/blob/Ligare.platform-v0.8.1/src/platform/CHANGELOG.md#081---2025-04-21)
+
+### `Ligare.programming` [0.6.0] - 2025-04-21
+
+* [Ligare.programming v0.6.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.programming-v0.6.0/src/programming/CHANGELOG.md#060---2025-04-21)
+
+### `Ligare.web` [0.7.0] - 2025-04-21
+
+* [Ligare.web v0.7.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.7.0/src/web/CHANGELOG.md#070---2025-04-21)
+
+---
+
 ## `Ligare.all` [0.8.0] - 2025-03-25
 
 `Ligare.all` `v0.8.0` introduces a unified `ApplicationBuilder` for both web and CLI apps, significantly simplifying how applications are constructed, configured, and documented. This release also brings first-class Sphinx documentation, improved logging, and broader static typing support - making Ligare easier to understand, extend, and debug across all environments.
@@ -58,39 +91,39 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 * Removed deprecated `create_app` and `App[T].create_app` in favor of `ApplicationBuilder`.
 * Removed `json_logging`, which is no longer maintained and incompatible with Connexion ≥ 3.x.
 
-### `Ligare.AWS` [0.4.0] - 2025-03-25  
+### `Ligare.AWS` [0.4.0] - 2025-03-25
 
 * [Ligare.AWS v0.4.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.AWS-v0.4.0/src/AWS/CHANGELOG.md#040---2025-03-25)
 
-### `Ligare.GitHub` [0.3.0] - 2025-03-25  
+### `Ligare.GitHub` [0.3.0] - 2025-03-25
 
 * [Ligare.GitHub v0.3.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.GitHub-v0.3.0/src/GitHub/CHANGELOG.md#030---2025-03-25)
 
-### `Ligare.database` [0.5.0] - 2025-03-25  
+### `Ligare.database` [0.5.0] - 2025-03-25
 
 * [Ligare.database v0.5.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.database-v0.5.0/src/database/CHANGELOG.md#050---2025-03-25)
 
-### `Ligare.development` [0.3.0] - 2025-03-25  
+### `Ligare.development` [0.3.0] - 2025-03-25
 
 * [Ligare.development v0.3.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.development-v0.3.0/src/development/CHANGELOG.md#030---2025-03-25)
 
-### `Ligare.identity` [0.4.0] - 2025-03-25  
+### `Ligare.identity` [0.4.0] - 2025-03-25
 
 * [Ligare.identity v0.4.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.identity-v0.4.0/src/identity/CHANGELOG.md#040---2025-03-25)
 
-### `Ligare.platform` [0.8.0] - 2025-03-25  
+### `Ligare.platform` [0.8.0] - 2025-03-25
 
 * [Ligare.platform v0.8.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.platform-v0.8.0/src/platform/CHANGELOG.md#080---2025-03-25)
 
-### `Ligare.programming` [0.5.0] - 2025-03-25  
+### `Ligare.programming` [0.5.0] - 2025-03-25
 
 * [Ligare.programming v0.5.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.programming-v0.5.0/src/programming/CHANGELOG.md#050---2025-03-25)
 
-### `Ligare.testing` [0.3.0] - 2025-03-25  
+### `Ligare.testing` [0.3.0] - 2025-03-25
 
 * [Ligare.testing v0.3.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.testing-v0.3.0/src/testing/CHANGELOG.md#030---2025-03-25)
 
-### `Ligare.web` [0.6.0] - 2025-03-25  
+### `Ligare.web` [0.6.0] - 2025-03-25
 
 * [Ligare.web v0.6.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.6.0/src/web/CHANGELOG.md#060---2025-03-25)
 
