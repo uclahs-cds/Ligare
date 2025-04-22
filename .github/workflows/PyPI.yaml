@@ -100,6 +100,7 @@ jobs:
     if: success() || github.event_name != 'workflow_dispatch'
 
     outputs:
+      publish_target: ${{ steps.set_default_job_inputs.outputs.publish_target }}
       package_name: ${{ steps.package_details.outputs.package_name }}
       package_directory: ${{ steps.package_details.outputs.package_directory }}
       module_name: ${{ steps.package_details.outputs.module_name }}
@@ -113,6 +114,12 @@ jobs:
         'https://test.pypi.org/p/'
 
     steps:
+      # sets default values for inputs that come from `workflow_dispatch``
+      # that aren't normally set for a `push` event
+      - name: Set default values for inputs to jobs.
+        id: set_default_job_inputs
+        run: echo "publish_target=${{ github.event_name == 'workflow_dispatch' && inputs.job || 'Both' }}" >> $GITHUB_OUTPUT
+
       - uses: actions/checkout@v4
       - name: Get package details from workflow event
         # sets the step outputs package_directory and package_name
@@ -160,7 +167,7 @@ jobs:
           echo '${{ github.event_name != 'workflow_dispatch' }}'
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
-  
+
   test-job-conditions-two:
     name: >-
       Test job conditions two
@@ -188,6 +195,102 @@ jobs:
           echo '${{ github.event_name != 'workflow_dispatch' }}'
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+
+  test-job-conditions-four:
+    name: >-
+      Test job conditions four
+    needs:
+      - build
+    if: success() || github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: go
+        run: |
+          echo '${{ github.event_name != 'workflow_dispatch' }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}'
+
+  test-job-conditions-five:
+    name: >-
+      Test job conditions five
+    needs:
+      - build
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: go
+        run: |
+          echo '${{ github.event_name != 'workflow_dispatch' }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}'
+
+  test-job-conditions-six:
+    name: >-
+      Test job conditions six
+    needs:
+      - build
+    if: ${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: go
+        run: |
+          echo '${{ github.event_name != 'workflow_dispatch' }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}'
+
+  test-job-conditions-seven:
+    name: >-
+      Test job conditions seven
+    needs:
+      - build
+    if: ${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) || contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: go
+        run: |
+          echo '${{ github.event_name != 'workflow_dispatch' }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}'
+
+  test-job-conditions-eight:
+    name: >-
+      Test job conditions eight
+    needs:
+      - build
+    if: contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) || contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target)
+    runs-on: ubuntu-latest
+    steps:
+      - name: go
+        run: |
+          echo '${{ github.event_name != 'workflow_dispatch' }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}'
+
+  test-job-conditions-nine:
+    name: >-
+      Test job conditions nine
+    needs:
+      - build
+    if: success() && ( contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) || contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) )
+    runs-on: ubuntu-latest
+    steps:
+      - name: go
+        run: |
+          echo '${{ github.event_name != 'workflow_dispatch' }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}'
 
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
