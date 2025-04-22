@@ -242,7 +242,7 @@ jobs:
       Test job conditions six
     needs:
       - build
-    if: ${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}
+    if: contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target)
     runs-on: ubuntu-latest
     steps:
       - name: go
@@ -259,7 +259,7 @@ jobs:
       Test job conditions seven
     needs:
       - build
-    if: ${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) || contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}
+    if: contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) || contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target)
     runs-on: ubuntu-latest
     steps:
       - name: go
