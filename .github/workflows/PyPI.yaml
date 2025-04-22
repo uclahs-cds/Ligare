@@ -178,9 +178,12 @@ jobs:
     steps:
       - name: go
         run: |
+          echo '${{ needs.build.result }}'
           echo '${{ github.event_name != 'workflow_dispatch' }}'
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}'
 
   test-job-conditions-three:
     name: >-
@@ -192,9 +195,12 @@ jobs:
     steps:
       - name: go
         run: |
+          echo '${{ needs.build.result }}'
           echo '${{ github.event_name != 'workflow_dispatch' }}'
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}'
 
   test-job-conditions-four:
     name: >-
@@ -206,11 +212,13 @@ jobs:
     steps:
       - name: go
         run: |
+          echo '${{ needs.build.result }}'
           echo '${{ github.event_name != 'workflow_dispatch' }}'
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}'
+          echo '${{ ( contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) || contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) ) }}'
 
   test-job-conditions-five:
     name: >-
@@ -222,6 +230,7 @@ jobs:
     steps:
       - name: go
         run: |
+          echo '${{ needs.build.result }}'
           echo '${{ github.event_name != 'workflow_dispatch' }}'
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
@@ -238,6 +247,7 @@ jobs:
     steps:
       - name: go
         run: |
+          echo '${{ needs.build.result }}'
           echo '${{ github.event_name != 'workflow_dispatch' }}'
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
@@ -254,6 +264,7 @@ jobs:
     steps:
       - name: go
         run: |
+          echo '${{ needs.build.result }}'
           echo '${{ github.event_name != 'workflow_dispatch' }}'
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
@@ -270,6 +281,7 @@ jobs:
     steps:
       - name: go
         run: |
+          echo '${{ needs.build.result }}'
           echo '${{ github.event_name != 'workflow_dispatch' }}'
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
@@ -286,6 +298,7 @@ jobs:
     steps:
       - name: go
         run: |
+          echo '${{ needs.build.result }}'
           echo '${{ github.event_name != 'workflow_dispatch' }}'
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
