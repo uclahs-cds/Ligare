@@ -159,10 +159,7 @@ jobs:
 
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
-    if: |
-      ${{ !(failure() || cancelled())
-          && contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target)
-      }}
+    if: ${{ (!failure() && !cancelled()) && contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}
     needs:
       - build
     runs-on: ubuntu-latest
@@ -186,10 +183,7 @@ jobs:
   github-release:
     name: >-
       Release Python 🐍 distribution 📦 on GitHub
-    if: |
-      ${{ !(failure() || cancelled())
-          && contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target)
-      }}
+    if: ${{ (!failure() && !cancelled()) && contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}
     needs:
       - build
     runs-on: ubuntu-latest
