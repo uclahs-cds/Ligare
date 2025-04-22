@@ -221,6 +221,18 @@ jobs:
           echo '${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}'
           echo '${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}'
           echo '${{ ( contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) || contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) ) }}'
+          echo "----------------------"
+          echo "GOT: '${{ needs.build.outputs.publish_target }}'"
+          if [[ "${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}" == "true" ]]; then
+            echo "GitHub PASS"
+          else
+            echo "GitHub FAIL"
+          fi
+          if [[ "${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}" == "true" ]]; then
+            echo "PyPI PASS"
+          else
+            echo "PyPI FAIL"
+          fi
 
   test-job-conditions-five:
     name: >-
