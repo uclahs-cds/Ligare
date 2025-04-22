@@ -159,7 +159,7 @@ jobs:
 
   test-job-conditions-one:
     name: >-
-      Test job conditions
+      Test job conditions one
     needs:
       - build
     runs-on: ubuntu-latest
@@ -172,7 +172,7 @@ jobs:
 
   test-job-conditions-one-a:
     name: >-
-      Test job conditions
+      Test job conditions one a
     needs:
       - build
     if: success()
@@ -224,6 +224,36 @@ jobs:
     needs:
       - build
     if: success() || github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: go
+        run: |
+          echo '${{ needs.build.result }}'
+          echo '${{ github.event_name != 'workflow_dispatch' }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), inputs.job) }}'
+          echo '${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}'
+          echo '${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}'
+          echo '${{ ( contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) || contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) ) }}'
+          echo "----------------------"
+          echo "GOT: '${{ needs.build.outputs.publish_target }}'"
+          if [[ "${{ contains(fromJSON('["Both", "GitHub"]'), needs.build.outputs.publish_target) }}" == "true" ]]; then
+            echo "GitHub PASS"
+          else
+            echo "GitHub FAIL"
+          fi
+          if [[ "${{ contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) }}" == "true" ]]; then
+            echo "PyPI PASS"
+          else
+            echo "PyPI FAIL"
+          fi
+  
+  test-job-conditions-four-a:
+    name: >-
+      Test job conditions four a
+    needs:
+      - build
+    if: always() && (needs.build.result != 'skipped' || github.event_name != 'workflow_dispatch') && ( contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) || contains(fromJSON('["Both", "PyPI"]'), needs.build.outputs.publish_target) )
     runs-on: ubuntu-latest
     steps:
       - name: go
