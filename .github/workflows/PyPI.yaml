@@ -118,7 +118,9 @@ jobs:
       # that aren't normally set for a `push` event
       - name: Set default values for inputs to jobs.
         id: set_default_job_inputs
-        run: echo "publish_target=${{ github.event_name == 'workflow_dispatch' && inputs.job || 'Both' }}" >> $GITHUB_OUTPUT
+        run: |
+          JOB="${{ inputs.job }}"
+          echo "publish_target=${JOB:-Both}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
       - name: Get package details from workflow event
