@@ -219,7 +219,7 @@ jobs:
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          MARK_RELEASE_LATEST: ${{ inputs.mark_github_release_as_latest }}
+          MARK_RELEASE_LATEST: ${{ github.event_name == 'workflow_dispatch' && inputs.mark_github_release_as_latest || 'false' }}
         run: >-
           gh release create
           "$MODULE_NAME-v$MODULE_VERSION"
