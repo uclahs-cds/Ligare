@@ -11,6 +11,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.7.1] - 2025-04-28
+### Fixed
+- Issue caused by OpenAPI specification resolution. #222
+
 ## [0.7.0] - 2025-04-21
 ### Added
 - Flask Response utility methods for BadRequest and image downloads.
