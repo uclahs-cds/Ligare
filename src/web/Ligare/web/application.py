@@ -412,10 +412,23 @@ class ApplicationBuilder(GenericApplicationBuilder[T_app]):
         )
 
 
+def _override_connexion_spec_clone():
+    import copy
+
+    from connexion.spec import Specification
+
+    def clone(self: Specification):
+        return type(self)(copy.deepcopy(cast(dict[Any, Any], self._raw_spec)))  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+
+    Specification.clone = clone
+
+
 def configure_openapi(config: Config, name: Optional[str] = None):
     """
     Instantiate Connexion and set Flask logging options
     """
+
+    _override_connexion_spec_clone()
 
     if (
         config.flask is None
