@@ -59,7 +59,7 @@ read.method.parameters <- function(con=NULL) {
 }
 
 #' @export
-read.dataframe <- function(con=NULL) {
+read.dataframe <- function(con=NULL, header = TRUE, na.strings = 'NA', ...) {
   # We read stdin like this so we can read the data more than once.
   # using just the `stdin` stream means we couldn't:
   # 1. read the first.line for `determine.file.type()`
@@ -76,8 +76,9 @@ read.dataframe <- function(con=NULL) {
     read.csv(
       text = raw.text,
       sep = '\t',
-      header = TRUE,
-      na.strings = 'NA'
+      header = header,
+      na.strings = na.strings,
+      ...
     ),
     error = function(e) NULL
   );
@@ -89,8 +90,9 @@ read.dataframe <- function(con=NULL) {
       read.csv(
         text = raw.text,
         sep = ',',
-        header = TRUE,
-        na.strings = 'NA'
+        header = header,
+        na.strings = na.strings,
+        ...
       ),
       error = function(e) NULL
     );
