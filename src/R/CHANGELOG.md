@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.2] - 2025-05-09
+
+### Added
+
+- `read.dataframe` now accepts additional arguments to be passed into `read.csv`.
+
+
 ## [0.1.1] - 2025-04-22
 
 ### Added
