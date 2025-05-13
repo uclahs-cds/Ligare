@@ -11,7 +11,11 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
-## [0.6.0] - 2025004-21
+## [0.7.0] - 2025-05-12
+### Changed
+- Changed how R script errors are handled
+
+## [0.6.0] - 2025-04-21
 ### Added
 - Introduced an R integration module `Ligare.programming.R` for executing and communicating with R processes.
 - Added types for creating UIs related to R methods.
