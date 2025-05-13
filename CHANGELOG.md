@@ -11,6 +11,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Unreleased
 
 ---
+## `Ligare.all` [0.10.0] - 2025-05-13
+
+### Fixed
+- Issue caused by OpenAPI specification resolution in Ligare.web. #222
+
+### `Ligare.programming` [0.7.0] - 2025-05-13
+
+* [Ligare.programming v0.7.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.programming-v0.7.0/src/programming/CHANGELOG.md#070---2025-05-13)
+
+---
+
 ## `Ligare.all` [0.9.1] - 2025-04-28
 
 ### Fixed
