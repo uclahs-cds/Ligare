@@ -1,3 +1,4 @@
+from Ligare.programming.R.exception import RscriptProcessError, RscriptScriptError
 from Ligare.programming.R.process import RProcessStepBuilder
 from Ligare.programming.R.type_conversion import (
     boolean,
@@ -14,4 +15,6 @@ __all__ = (
     "string_from_csv",
     "vector_from_csv",
     "vector_from_parts",
+    "RscriptProcessError",
+    "RscriptScriptError",
 )

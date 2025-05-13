@@ -6,6 +6,7 @@ from os import PathLike, memfd_create, pipe
 from typing import Any, Mapping, cast, final
 
 from Ligare.programming.collections.dict import merge
+from Ligare.programming.R.exception import RscriptProcessError, RscriptScriptError
 from typing_extensions import Self
 
 _path_like = str | bytes | PathLike[str] | PathLike[bytes]
@@ -310,17 +311,26 @@ class RProcessStepBuilder:
             :param Logger log: The Logger that is written to
             :raises Exception: Raised only if STDERR is not empty and STDOUT is empty.
             """
-            if proc.returncode != 0:
-                stderr_decoded = proc.stderr.decode("utf-8")
-                # Rscript still prints to stderr when errors didn't happen
-                # but stdout will be empty if it did actually fail.
-                if not proc.stdout:
-                    if log is not None:
-                        log.error(stderr_decoded)
-                    raise Exception(stderr_decoded)
+            if proc.returncode == 0:
+                return
 
+            stdout_decoded = proc.stdout.decode("utf-8")
+            stderr_decoded = proc.stderr.decode("utf-8")
+
+            if not stderr_decoded and stdout_decoded:
+                # Log the error because it is likely the application executing
+                # Rscript correctly, or something else is wrong with Rscript,
+                # but not the executing script itself.
                 if log is not None:
-                    log.debug(stderr_decoded)
+                    log.error(
+                        "Failure running Rscript.",
+                        exc_info=Exception(
+                            f"STDOUT: {stdout_decoded}\nSTDERR: {stderr_decoded}"
+                        ),
+                    )
+                raise RscriptProcessError(proc)
+
+            raise RscriptScriptError(proc)
 
         def execute(
             self,
