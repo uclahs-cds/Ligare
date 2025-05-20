@@ -11,6 +11,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Unreleased
 
 ---
+## `Ligare.all` [0.10.1] - 2025-05-20
+
+### Added
+- `create_BadRequest_response` now accepts a minimal "details" object in Ligare.web.
+
+### `Ligare.web` [0.7.2] - 2025-05-20
+
+* [Ligare.web v0.7.2](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.7.2/src/web/CHANGELOG.md#072---2025-05=20)
+
+---
+
 ## `Ligare.all` [0.10.0] - 2025-05-13
 
 ### Fixed
