@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from enum import Enum
 
 from flask import Response
@@ -7,6 +8,11 @@ from flask import Response
 class OutputType(Enum):
     PNG = "png"
     TIFF = "tiff"
+
+
+@dataclass
+class ErrorDetail:
+    source: str
 
 
 def create_attachment_response(
@@ -31,7 +37,9 @@ def create_attachment_response(
     return resp
 
 
-def create_BadRequest_response(error_msg: str) -> Response:
+def create_BadRequest_response(
+    error_msg: str, details: list[ErrorDetail] | None = None
+) -> Response:
     """
     Create a 400 `Response.
 
@@ -41,7 +49,8 @@ def create_BadRequest_response(error_msg: str) -> Response:
       {
         "error_msg": error_msg,
         "status": "Bad Request",
-        "status_code": 400
+        "status_code": 400,
+        "details": [...]
       }
     """
     resp = Response(
@@ -49,9 +58,10 @@ def create_BadRequest_response(error_msg: str) -> Response:
             "error_msg": error_msg,
             "status": "Bad Request",
             "status_code": 400,
+            "details": [vars(detail) for detail in details] if details else [],
         }),
         400,
+        content_type="application/json",
     )
-    # 400 might not be accurate
-    resp.headers["Content-Type"] = "application/json"
+
     return resp
