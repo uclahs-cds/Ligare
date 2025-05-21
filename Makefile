@@ -227,6 +227,8 @@ clean-build :
 		-o -name __pycache__ \
 		-o -name \*.egg-info \
 		-o -name .pytest-cache \
+		-o -name .pytest_cache \
+		-o -name .ruff_cache \
 	\) -prune -exec rm -rf {} +
 
 clean-test :
