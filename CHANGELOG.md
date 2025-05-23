@@ -11,6 +11,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Unreleased
 
 ---
+## `Ligare.all` [0.10.2] - 2025-05-23
+
+### Fixed
+- Fixed a problem with R serialization when serializing values to character vectors.
+
+### `Ligare.programming` [0.7.1] - 2025-05-23
+
+* [Ligare.programming v0.7.1](https://github.com/uclahs-cds/Ligare/blob/Ligare.programming-v0.7.1/src/web/CHANGELOG.md#071---2025-05=23)
+
+---
+
 ## `Ligare.all` [0.10.1] - 2025-05-20
 
 ### Added
