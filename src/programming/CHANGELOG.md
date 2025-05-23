@@ -11,6 +11,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.7.1] - 2025-05-23
+### Fixed
+- Fixed a problem with R serialization when serializing values to character vectors.
+
 ## [0.7.0] - 2025-05-12
 ### Changed
 - Changed how R script errors are handled
