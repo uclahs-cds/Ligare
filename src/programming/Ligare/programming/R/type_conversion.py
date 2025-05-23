@@ -8,6 +8,10 @@ safe_string_regex = re.compile(SAFE_STRING_PATTERN)
 SAFE_COMMA_SEPARATED_STRING_PATTERN = r"[^a-zA-Z0-9_,.\s-]"
 safe_comma_separated_string_regex = re.compile(SAFE_COMMA_SEPARATED_STRING_PATTERN)
 
+NULL = "__NULL__"
+FALSE = "FALSE"
+TRUE = "TRUE"
+
 
 @overload
 def string(value: str | None) -> str | None:
@@ -347,17 +351,28 @@ def boolean(value: str | bool | None) -> str:
        'FALSE'
     """
     return (
-        "TRUE"
-        if (value is not None and str(value).lower() in ["true", "t"])
-        else "FALSE"
+        TRUE if (value is not None and str(value).lower() in ["true", "t"]) else FALSE
     )
+
+
+def _serialize(value: Any):
+    if value is None:
+        value = f"'{NULL}'"
+
+    elif isinstance(value, str):
+        value = f"'{string(value)}'"
+
+    elif isinstance(value, bool):
+        value = f"'{boolean(value)}'"
+
+    return str(value)
 
 
 def vector_from_parts(
     parts: dict[str, Any],
     new_part_key: str,
     existing_part_keys: list[str],
-    default: Any = "__NULL__",
+    default: Any = NULL,
 ) -> None:
     """
     Add a new key to the `parts` dictionary named `new_part_key`.
@@ -402,7 +417,24 @@ def vector_from_parts(
        ...     ["scale.bar.coords.x", "scale.bar.coords.y"]
        ... )
        >>> query_params
-       {'scale.bar.coords': "c('0.5','1.0')"}
+       {'scale.bar.coords': 'c(0.5,1.0)'}
+
+    **Convert two keys with numerical and string values into a single two-item vector.**
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    .. doctest::
+
+       >>> query_params = {
+       ...     "scale.bar.coords.x": 0.5,
+       ...     "scale.bar.coords.y": '1.0'
+       ... }
+       >>> vector_from_parts(
+       ...     query_params,
+       ...     "scale.bar.coords",
+       ...     ["scale.bar.coords.x", "scale.bar.coords.y"]
+       ... )
+       >>> query_params
+       {'scale.bar.coords': "c(0.5,'1.0')"}
 
     **Convert two keys into a single two-item vector where one value is `None`**
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -419,7 +451,7 @@ def vector_from_parts(
        ...     ["scale.bar.coords.x", "scale.bar.coords.y"]
        ... )
        >>> query_params
-       {'scale.bar.coords': "c('0.5','__NULL__')"}
+       {'scale.bar.coords': "c(0.5,'__NULL__')"}
 
     **Convert two keys into an empty value where all values are `None`**
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -437,17 +469,49 @@ def vector_from_parts(
        ... )
        >>> query_params
        {'scale.bar.coords': '__NULL__'}
+
+    **Convert many keys of varying types into a single vector.**
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    .. doctest::
+
+       >>> query_params = {
+       ...     "scale.bar.coords.x": 0.5,
+       ...     "scale.bar.coords.y": '1.0',
+       ...     "scale.bar.coords.z": None,
+       ...     "scale.bar.coords.a": 123,
+       ...     "scale.bar.coords.b": True,
+       ...     "scale.bar.coords.c": False
+       ... }
+       >>> vector_from_parts(
+       ...     query_params,
+       ...     "scale.bar.coords",
+       ...     [
+       ...         "scale.bar.coords.x",
+       ...         "scale.bar.coords.y",
+       ...         "scale.bar.coords.z",
+       ...         "scale.bar.coords.a",
+       ...         "scale.bar.coords.b",
+       ...         "scale.bar.coords.c",
+       ...     ]
+       ... )
+       >>> query_params
+       {'scale.bar.coords': "c(0.5,'1.0','__NULL__',123,'TRUE','FALSE')"}
     """
-    part_values: list[str | None] = []
+    if not isinstance(parts, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise TypeError(
+            f"`parts` must be a dictionary. The value given is a `{type(parts)}`."
+        )
+
+    part_values: list[Any] = []
     for part in existing_part_keys:
-        part_values.append(str(parts[part]) if parts[part] is not None else None)
+        part_values.append(parts.get(part))
         del parts[part]
 
     if all([value is None or value == "" for value in part_values]):
         parts[new_part_key] = default
     else:
-        serialized_part_values = "','".join([
-            "__NULL__" if part_value is None else part_value
-            for part_value in part_values
+        serialized_part_values = ",".join([
+            _serialize(part_value) for part_value in part_values
         ])
-        parts[new_part_key] = f"c('{serialized_part_values}')"
+        parts[new_part_key] = f"c({serialized_part_values})"
