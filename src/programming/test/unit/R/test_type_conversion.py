@@ -3,9 +3,10 @@ from typing import Any
 import pytest
 from Ligare.programming.R.type_conversion import (
     boolean,
+    list_from_parts,
     string,
     string_from_csv,
-    vector_from_csv,
+    string_vector_from_csv,
     vector_from_parts,
 )
 
@@ -186,11 +187,11 @@ def test__string__vector__raises_when_input_is_not_a_str_or_None(
         (None, "c()"),
     ],
 )
-def test__vector_from_csv__returns_sanitized_vector_string(
+def test__string_vector_from_csv__returns_sanitized_vector_string(
     input_value: Any, expected_value: str
 ):
-    result = vector_from_csv(input_value)
-    assert result == expected_value
+    result = string_vector_from_csv(input_value)
+    assert result.value == expected_value
 
 
 @pytest.mark.parametrize(
@@ -201,11 +202,11 @@ def test__vector_from_csv__returns_sanitized_vector_string(
         (0, TypeError),
     ],
 )
-def test__vector_from_csv__raises_when_input_is_not_a_str_or_None(
+def test__string_vector_from_csv__raises_when_input_is_not_a_str_or_None(
     input_value: Any | None, expected_value: type[Exception]
 ):
     with pytest.raises(expected_value):
-        _ = vector_from_csv(input_value)
+        _ = string_vector_from_csv(input_value)
 
 
 @pytest.mark.parametrize(
@@ -245,7 +246,7 @@ def test__boolean__returns_sanitized_string(input_value: Any, expected_value: st
         ),
     ],
 )
-def test__vector_from_parts__returns(
+def test__vector_from_parts__returns_expected_serialized_vector(
     parts: dict[Any, Any],
     new_part_key: Any,
     existing_part_keys: list[Any],
@@ -275,3 +276,30 @@ def test__vector_from_parts__raises_when_parts_is_not_a_dict(
 ):
     with pytest.raises(expected_value):
         vector_from_parts(parts, new_part_key, existing_part_keys)
+
+
+@pytest.mark.parametrize(
+    "parts,new_part_key,existing_part_keys,expected_value",
+    [
+        ({"a": 1, "b": 2}, "c", ["a", "b"], {"c": "list(1,2)"}),
+        ({"a": 1, "b": 2, "c": 3}, "c", ["a", "b"], {"c": "list(1,2)"}),
+        ({"a": 1, "b": 2}, "a", ["a", "b"], {"a": "list(1,2)"}),
+        ({"a": 1, "b": 2, "c": 3}, "a", ["a", "b"], {"a": "list(1,2)", "c": 3}),
+        ({1: 1, 2: 2}, 3, [1, 2], {3: "list(1,2)"}),
+        ({"a": None, "b": None}, "c", ["a", "b"], {"c": "__NULL__"}),
+        (
+            {"x": 0.5, "y": "1.0", "z": None, "a": 123, "b": True, "c": False},
+            "A",
+            ["x", "y", "z", "a", "b", "c"],
+            {"A": "list(0.5,'1.0','__NULL__',123,'TRUE','FALSE')"},
+        ),
+    ],
+)
+def test__list_from_parts__returns_expected_serialized_list(
+    parts: dict[Any, Any],
+    new_part_key: Any,
+    existing_part_keys: list[Any],
+    expected_value: dict[Any, Any],
+):
+    list_from_parts(parts, new_part_key, existing_part_keys)
+    assert parts == expected_value

@@ -1,5 +1,7 @@
 import re
-from typing import Any
+from enum import Enum
+from functools import partial
+from typing import Any, Callable, Generic, Optional, Protocol, TypeVar
 
 from typing_extensions import overload
 
@@ -7,6 +9,7 @@ SAFE_STRING_PATTERN = r"[^a-zA-Z0-9_.\s-]"
 safe_string_regex = re.compile(SAFE_STRING_PATTERN)
 SAFE_COMMA_SEPARATED_STRING_PATTERN = r"[^a-zA-Z0-9_,.\s-]"
 safe_comma_separated_string_regex = re.compile(SAFE_COMMA_SEPARATED_STRING_PATTERN)
+
 
 NULL = "__NULL__"
 FALSE = "FALSE"
@@ -185,81 +188,6 @@ def string(value: str | None, *, vector: bool) -> str | None:
     """
 
 
-def vector_from_csv(value: str | None) -> str | None:
-    """
-    This method is a pass-through for `string(value, vector=True)`.
-
-    Remove all characters from a string that are not
-    whitelisted in the `SAFE_COMMA_SEPARATED_STRING_PATTERN` regex.
-
-    The string is comma-separated
-      and this method accepts `,` as valid. This method
-      returns a string value formatted as an R vector `c(...)`
-      containing the values from the CSV `value` string.
-
-    :param str value: The string to sanitize.
-    :return str | None: The vectorized CSV string, or `None` if no valid characters were found
-
-    ----
-
-    ---------
-    **Usage**
-    ---------
-
-    .. testsetup::
-
-       from Ligare.programming.R.type_conversion import vector_from_csv
-
-    .. doctest::
-
-       >>> vector_from_csv("'") is None
-       True
-
-       >>> vector_from_csv("''") is None
-       True
-
-       >>> vector_from_csv("'a'")
-       "c('a')"
-
-       >>> vector_from_csv("a-b-c")
-       "c('a-b-c')"
-
-       >>> vector_from_csv("a-b-.c")
-       "c('a-b-.c')"
-
-       >>> vector_from_csv("a-b-^%^$%^c")
-       "c('a-b-c')"
-
-       >>> vector_from_csv("")
-       'c()'
-
-       >>> vector_from_csv("abc")
-       "c('abc')"
-
-       >>> vector_from_csv("a,b,c")
-       "c('a','b','c')"
-
-       >>> vector_from_csv(None)
-       'c()'
-
-       >>> vector_from_csv("!!!") is None
-       True
-
-       >>> vector_from_csv("a!b!c!")
-       "c('abc')"
-
-       >>> vector_from_csv("a!,b!,c!")
-       "c('a','b','c')"
-
-       >>> vector_from_csv("a,b,c,")
-       "c('a','b','c')"
-
-       >>> vector_from_csv("a.b.c")
-       "c('a.b.c')"
-    """
-    return string(value, vector=True)
-
-
 def string(
     value: str | None, *, comma_separated: bool = False, vector: bool = False
 ) -> str | None:
@@ -293,6 +221,221 @@ def string(
         raise type(e)(
             f"Failed to convert the value `{value}` to a string. Other parameters: {comma_separated=}, {vector=}"
         ) from e
+
+
+def number(
+    value: str | None, *, comma_separated: bool = False, vector: bool = False
+) -> str | None:
+    if value == "" or value is None:
+        return value if not vector else "c()"
+
+    try:
+        if comma_separated or vector:
+            if not (safe_str := safe_comma_separated_string_regex.sub("", value)):
+                # if the safe_str is empty but value is not,
+                # then all characters were stripped and the
+                # supplied value is not "safe." Return None
+                # because this is invalid.
+                return None
+            items = [
+                item
+                for item in filter(lambda element: element, safe_str.split(","))
+                if float(item)
+            ]
+            new_csv_string = ",".join(items) if items else None
+
+            if new_csv_string is None:
+                return None
+
+            if vector:
+                return f"c({new_csv_string})"
+            else:
+                return new_csv_string
+        else:
+            if not (safe_str := safe_string_regex.sub("", value)):
+                return None
+
+        return safe_str
+    except Exception as e:
+        raise type(e)(
+            f"Failed to convert the value `{value}` to a number or number vector. Other parameters: {comma_separated=}, {vector=}"
+        ) from e
+
+
+class VectorString:
+    def __init__(self, value: str | None) -> None:
+        self.value = value
+
+    def __str__(self) -> str:
+        if self.value is None:
+            raise TypeError("Value is `None`")
+        return self.value
+
+    def __repr__(self) -> str:
+        return f"VectorString({self.value})"
+
+
+class Converter(Protocol):
+    @overload
+    def __call__(self, value: str | None) -> str | None: ...
+    @overload
+    def __call__(self, value: str | None, *, comma_separated: bool) -> str | None: ...
+    @overload
+    def __call__(self, value: str | None, *, vector: bool) -> str | None: ...
+
+    def __call__(
+        self, value: str | None, *, comma_separated: bool = False, vector: bool = False
+    ) -> str | None: ...
+
+
+def vector_from_csv(value: str | None, converter: Converter):
+    return VectorString(converter(value))
+
+
+def string_vector_from_csv(value: str | None) -> VectorString:
+    """
+    This method is a pass-through for `string(value, vector=True)`.
+
+    Remove all characters from a string that are not
+    whitelisted in the `SAFE_COMMA_SEPARATED_STRING_PATTERN` regex.
+
+    The string is comma-separated
+      and this method accepts `,` as valid. This method
+      returns a string value formatted as an R vector `c(...)`
+      containing the string values from the CSV `value` string.
+
+    :param str value: The string to sanitize.
+    :return str | None: The vectorized CSV string, or `None` if no valid characters were found
+
+    ----
+
+    ---------
+    **Usage**
+    ---------
+
+    .. testsetup::
+
+       from Ligare.programming.R.type_conversion import string_vector_from_csv
+
+    .. doctest::
+
+       >>> string_vector_from_csv("'").value is None
+       True
+
+       >>> string_vector_from_csv("''").value is None
+       True
+
+       >>> string_vector_from_csv("'a'").value
+       "c('a')"
+
+       >>> string_vector_from_csv("a-b-c").value
+       "c('a-b-c')"
+
+       >>> string_vector_from_csv("a-b-.c").value
+       "c('a-b-.c')"
+
+       >>> string_vector_from_csv("a-b-^%^$%^c").value
+       "c('a-b-c')"
+
+       >>> string_vector_from_csv("").value
+       'c()'
+
+       >>> string_vector_from_csv("abc").value
+       "c('abc')"
+
+       >>> string_vector_from_csv("a,b,c").value
+       "c('a','b','c')"
+
+       >>> string_vector_from_csv(None).value
+       'c()'
+
+       >>> string_vector_from_csv("!!!").value is None
+       True
+
+       >>> string_vector_from_csv("a!b!c!").value
+       "c('abc')"
+
+       >>> string_vector_from_csv("a!,b!,c!").value
+       "c('a','b','c')"
+
+       >>> string_vector_from_csv("a,b,c,").value
+       "c('a','b','c')"
+
+       >>> string_vector_from_csv("a.b.c").value
+       "c('a.b.c')"
+    """
+    p = partial(string, vector=True)
+    return vector_from_csv(value, p)  # partial(string, vector=True))
+
+
+def number_vector_from_csv(value: str | None) -> VectorString:
+    """
+    This method is a pass-through for `number(value, vector=True)`.
+
+    Remove all characters from a string that are not
+    whitelisted in the `SAFE_COMMA_SEPARATED_STRING_PATTERN` regex.
+
+    The string is comma-separated
+      and this method accepts `,` as valid. This method
+      returns a string value formatted as an R vector `c(...)`
+      containing the numerical values from the CSV `value` string.
+
+    :param str value: The string to sanitize.
+    :return str | None: The vectorized CSV string, or `None` if no valid characters were found
+
+    ----
+
+    ---------
+    **Usage**
+    ---------
+
+    .. testsetup::
+
+       from Ligare.programming.R.type_conversion import number_vector_from_csv
+
+    .. doctest::
+
+       >>> number_vector_from_csv("'").value is None
+       True
+
+       >>> number_vector_from_csv("''").value is None
+       True
+
+       >>> number_vector_from_csv("'a'")
+       Traceback (most recent call last):
+        ...
+       ValueError: Failed to convert the value `'a'` to a number or number vector. Other parameters: comma_separated=False, vector=True
+
+       >>> number_vector_from_csv("a")
+       Traceback (most recent call last):
+        ...
+       ValueError: Failed to convert the value `a` to a number or number vector. Other parameters: comma_separated=False, vector=True
+
+       >>> number_vector_from_csv("").value
+       'c()'
+
+       >>> number_vector_from_csv("123").value
+       'c(123)'
+
+       >>> number_vector_from_csv("1,2,3").value
+       'c(1,2,3)'
+
+       >>> number_vector_from_csv(None).value
+       'c()'
+
+       >>> number_vector_from_csv("!!!").value is None
+       True
+
+       >>> number_vector_from_csv("1!2!3!").value
+       'c(123)'
+
+       >>> number_vector_from_csv("1!,2!,3!").value
+       'c(1,2,3)'
+
+       >>> number_vector_from_csv("1,2,3,").value
+       'c(1,2,3)'
+    """
+    return vector_from_csv(value, partial(number, vector=True))
 
 
 def boolean(value: str | bool | None) -> str:
@@ -355,9 +498,12 @@ def boolean(value: str | bool | None) -> str:
     )
 
 
-def _serialize(value: Any):
+def serialize(value: Any):
     if value is None:
         value = f"'{NULL}'"
+
+    if isinstance(value, VectorString):
+        value = value.value
 
     elif isinstance(value, str):
         value = f"'{string(value)}'"
@@ -368,7 +514,13 @@ def _serialize(value: Any):
     return str(value)
 
 
-def vector_from_parts(
+class CompositeType(Enum):
+    VECTOR = "c"
+    LIST = "list"
+
+
+def composite_type_from_parts(
+    composite_type: CompositeType,
     parts: dict[str, Any],
     new_part_key: str,
     existing_part_keys: list[str],
@@ -508,10 +660,32 @@ def vector_from_parts(
         part_values.append(parts.get(part))
         del parts[part]
 
-    if all([value is None or value == "" for value in part_values]):
+    if all([value is None or value == "" or value == NULL for value in part_values]):
         parts[new_part_key] = default
     else:
         serialized_part_values = ",".join([
-            _serialize(part_value) for part_value in part_values
+            serialize(part_value) for part_value in part_values
         ])
-        parts[new_part_key] = f"c({serialized_part_values})"
+        parts[new_part_key] = f"{composite_type.value}({serialized_part_values})"
+
+
+def vector_from_parts(
+    parts: dict[str, Any],
+    new_part_key: str,
+    existing_part_keys: list[str],
+    default: Any = NULL,
+) -> None:
+    return composite_type_from_parts(
+        CompositeType.VECTOR, parts, new_part_key, existing_part_keys, default
+    )
+
+
+def list_from_parts(
+    parts: dict[str, Any],
+    new_part_key: str,
+    existing_part_keys: list[str],
+    default: Any = NULL,
+) -> None:
+    return composite_type_from_parts(
+        CompositeType.LIST, parts, new_part_key, existing_part_keys, default
+    )

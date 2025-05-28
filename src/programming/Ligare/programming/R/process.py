@@ -185,6 +185,8 @@ class RProcessStepBuilder:
             with open(write_fd, "w") as f:
                 csv_writer = csv.DictWriter(f, parameters.keys())
                 csv_writer.writeheader()
+                #d = dict((k,"__NULL__" if v is None else v) for (k,v) in parameters.items())
+                #csv_writer.writerow(d)
                 csv_writer.writerow(parameters)
                 f.flush()
 
