@@ -11,6 +11,39 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Unreleased
 
 ---
+## `Ligare.all` [0.10.2] - 2025-05-23
+
+### Fixed
+- Fixed a problem with R serialization when serializing values to character vectors.
+
+### `Ligare.programming` [0.7.1] - 2025-05-23
+
+* [Ligare.programming v0.7.1](https://github.com/uclahs-cds/Ligare/blob/Ligare.programming-v0.7.1/src/web/CHANGELOG.md#071---2025-05=23)
+
+---
+
+## `Ligare.all` [0.10.1] - 2025-05-20
+
+### Added
+- `create_BadRequest_response` now accepts a minimal "details" object in Ligare.web.
+
+### `Ligare.web` [0.7.2] - 2025-05-20
+
+* [Ligare.web v0.7.2](https://github.com/uclahs-cds/Ligare/blob/Ligare.web-v0.7.2/src/web/CHANGELOG.md#072---2025-05=20)
+
+---
+
+## `Ligare.all` [0.10.0] - 2025-05-13
+
+### Fixed
+- Issue caused by OpenAPI specification resolution in Ligare.web. #222
+
+### `Ligare.programming` [0.7.0] - 2025-05-13
+
+* [Ligare.programming v0.7.0](https://github.com/uclahs-cds/Ligare/blob/Ligare.programming-v0.7.0/src/programming/CHANGELOG.md#070---2025-05-13)
+
+---
+
 ## `Ligare.all` [0.9.1] - 2025-04-28
 
 ### Fixed

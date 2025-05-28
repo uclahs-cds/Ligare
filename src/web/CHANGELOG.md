@@ -11,6 +11,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.7.2] - 2025-05-20
+### Added
+- `create_BadRequest_response` now accepts a minimal "details" object
+
 ## [0.7.1] - 2025-04-28
 ### Fixed
 - Issue caused by OpenAPI specification resolution. #222

@@ -231,12 +231,18 @@ def test__boolean__returns_sanitized_string(input_value: Any, expected_value: st
 @pytest.mark.parametrize(
     "parts,new_part_key,existing_part_keys,expected_value",
     [
-        ({"a": 1, "b": 2}, "c", ["a", "b"], {"c": "c('1','2')"}),
-        ({"a": 1, "b": 2, "c": 3}, "c", ["a", "b"], {"c": "c('1','2')"}),
-        ({"a": 1, "b": 2}, "a", ["a", "b"], {"a": "c('1','2')"}),
-        ({"a": 1, "b": 2, "c": 3}, "a", ["a", "b"], {"a": "c('1','2')", "c": 3}),
-        ({1: 1, 2: 2}, 3, [1, 2], {3: "c('1','2')"}),
+        ({"a": 1, "b": 2}, "c", ["a", "b"], {"c": "c(1,2)"}),
+        ({"a": 1, "b": 2, "c": 3}, "c", ["a", "b"], {"c": "c(1,2)"}),
+        ({"a": 1, "b": 2}, "a", ["a", "b"], {"a": "c(1,2)"}),
+        ({"a": 1, "b": 2, "c": 3}, "a", ["a", "b"], {"a": "c(1,2)", "c": 3}),
+        ({1: 1, 2: 2}, 3, [1, 2], {3: "c(1,2)"}),
         ({"a": None, "b": None}, "c", ["a", "b"], {"c": "__NULL__"}),
+        (
+            {"x": 0.5, "y": "1.0", "z": None, "a": 123, "b": True, "c": False},
+            "A",
+            ["x", "y", "z", "a", "b", "c"],
+            {"A": "c(0.5,'1.0','__NULL__',123,'TRUE','FALSE')"},
+        ),
     ],
 )
 def test__vector_from_parts__returns(
