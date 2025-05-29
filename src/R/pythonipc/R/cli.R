@@ -41,10 +41,30 @@ parse.cli.args <- function() {
     );
 
 
+  default.units <- 'in';
+  default.dpi <- 96;
+  original.output.type.func <- get(output.type, mode = 'function');
+  default.args <- as.list(formals(original.output.type.func));
+
+  output.type.func <- function() {}
+  formals(output.type.func) <- as.pairlist(modifyList(
+    as.list(formals(original.output.type.func)),
+    list(
+      width = default.args$width / default.dpi,
+      height = default.args$height / default.dpi,
+      units = default.units,
+      res = default.dpi
+      )
+    ));
+
+  body(output.type.func) <- bquote({
+    do.call(.(original.output.type.func), as.list(match.call())[-1]);
+    });
+
 
   return(c(
     output.type = output.type,
-    output.type.func = get(output.type),
+    output.type.func = output.type.func,
     output.device = output.device
     ));
   }
