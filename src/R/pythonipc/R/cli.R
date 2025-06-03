@@ -1,7 +1,7 @@
 partial <- function(func, ...) {
   fixed <- list(...);
   new.func <- function() {}
-  formals(new.func) <- formals(func);
+  formals(new.func) <- modifyList(formals(func), fixed);
   body(new.func) <- bquote({
     args <- as.list(match.call())[-1]
     do.call(.(func), modifyList(.(fixed), args))
@@ -53,10 +53,13 @@ parse.cli.args <- function() {
     );
 
   original.output.type.func <- get(output.type, mode = 'function');
+  original.formals <- formals(original.output.type.func);
   output.type.func <- partial(
     original.output.type.func,
     units = 'in',
-    res = 96
+    res = 96,
+    width = original.formals$width / 96,
+    height = original.formals$height / 96
     );
 
   return(c(
