@@ -1,6 +1,7 @@
 partial <- function(func, ...) {
   fixed <- list(...);
-  new.func <- function() {}
+  new.func <- function() {
+  }
   formals(new.func) <- modifyList(formals(func), fixed);
   body(new.func) <- bquote({
     args <- as.list(match.call())[-1]
