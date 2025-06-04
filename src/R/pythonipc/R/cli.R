@@ -1,3 +1,15 @@
+partial <- function(func, ...) {
+  fixed <- list(...);
+  new.func <- function() {}
+  formals(new.func) <- modifyList(formals(func), fixed);
+  body(new.func) <- bquote({
+    args <- as.list(match.call())[-1]
+    do.call(.(func), modifyList(.(fixed), args))
+    });
+  return(new.func);
+  }
+
+
 #' @export
 parse.cli.args <- function() {
   args <- commandArgs(trailingOnly = TRUE);
@@ -40,11 +52,19 @@ parse.cli.args <- function() {
     get.output.device.from.args()
     );
 
-
+  original.output.type.func <- get(output.type, mode = 'function');
+  original.formals <- formals(original.output.type.func);
+  output.type.func <- partial(
+    original.output.type.func,
+    units = 'in',
+    res = 96,
+    width = original.formals$width / 96,
+    height = original.formals$height / 96
+    );
 
   return(c(
     output.type = output.type,
-    output.type.func = get(output.type),
+    output.type.func = output.type.func,
     output.device = output.device
     ));
   }
