@@ -1,3 +1,11 @@
+#' Partially apply parameter values to a method
+#' and get a new method.
+#'
+#' @param func The function to apply parameters to.
+#' @param ... Any named parameters and their values to apply to the function.
+#'
+#' @return A function whose parameters include the parameters from `func`
+#'         whose named parameters match those in `...`.
 partial <- function(func, ...) {
   fixed <- list(...);
   new.func <- function() {
@@ -11,6 +19,27 @@ partial <- function(func, ...) {
   }
 
 
+#' Parse specific command-line parameters.
+#'
+#' `--output-type=<value>` The value of this parameter should be an
+#'                         output device.
+#'                         Defaults to `png`
+#'
+#' `--output-fd=<value>` The integer value of the file descriptor that
+#'                       the output device will write to.
+#'                       If not specified, `parse.cli.args` tries to get
+#'                       the FD from the `IMAGE_DATA_FD` envvar.
+#'                       If the envvar is not specified, this defaults
+#'                       to STDOUT.
+#'
+#' @return A vector containing:
+#' \describe{
+#'   \item{output.type}{The type name of the output device, e.g., "png".}
+#'   \item{output.type.func}{The function matching the
+#' name of the output device. The device forces the use of
+#' inches for resolution units, with a DPI of 96.}
+#'   \item{output.device}{The output device name.}
+#' }
 #' @export
 parse.cli.args <- function() {
   args <- commandArgs(trailingOnly = TRUE);
