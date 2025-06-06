@@ -1,6 +1,17 @@
-# Attempt to parse R values from Python values.
-# Warning: this method calls `eval`. Do no use with
-# untrusted data.
+#' Attempt to parse an R value from a Python value.
+#' Warning: this method calls `eval`. Do no use with
+#' untrusted data.
+#'
+#' @param x Any string matching R syntax representing a value.
+#'          Some examples are:
+#'          * "c('a','b')"
+#'          * "1"
+#'          * "list(1,2,3)"
+#'
+#' @return The parsed value as the proper R type.
+#'         For example, the R string `"c('a','b')"` becomes
+#'         the R vector `c('a','b')`
+#'
 #' @export
 parse.value <- function(x) {
   if (!is.character(x)) return(x);
@@ -19,6 +30,22 @@ parse.value <- function(x) {
   return(parsed);
 }
 
+#' Parse a CSV containing a named list that can be applied
+#' to a function whose parameters match the values in the named list.
+#' Parameters are deserialized by calling `parse.value` on each value.
+#'
+#' @examples
+#' csv <- "a,b,c\n1,2,3"
+#' read.csv.as.method.parameters(csv)
+#' # $a
+#' # [1] 1
+#' # $b
+#' # [1] 2
+#' # $c
+#' # [1] 3
+#' @return A named list whose names are the first row of the CSV
+#'         and whose values are the second row of the CSV, matching
+#'         the same column as the names.
 #' @export
 read.csv.as.method.parameters <- function(parameter.csv) {
   parameters <- read.csv(text = parameter.csv, header = TRUE);
@@ -37,6 +64,16 @@ read.csv.as.method.parameters <- function(parameter.csv) {
   return(lapply(parameter.args, parse.value));
 }
 
+#' Parse a CSV containing a named list that can be applied
+#' to a function whose parameters match the values in the named list.
+#' This method executes and returns `read.csv.as.method.parameters`
+#' after reading the CSV parameters from `con` or the device name
+#' from the envvar `METHOD_ARG_READ_FD`.
+#'
+#' @param con The connection to read CSV parameters from.
+#'
+#' @return The same as `read.csv.as.method.parameters`.
+#'
 #' @export
 read.method.parameters <- function(con=NULL) {
   # Read function parameters from the METHOD_ARG_READ_FD pipe.
@@ -58,6 +95,10 @@ read.method.parameters <- function(con=NULL) {
   return(method.parameters);
 }
 
+#' Parse a CSV or TSV into a dataframe.
+#'
+#' @return A dataframe.
+#'
 #' @export
 read.dataframe <- function(con=NULL, header = TRUE, na.strings = 'NA', ...) {
   # We read stdin like this so we can read the data more than once.
