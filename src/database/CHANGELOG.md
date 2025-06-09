@@ -11,6 +11,10 @@ Review the `Ligare` [CHANGELOG.md](https://github.com/uclahs-cds/Ligare/blob/mai
 ---
 ## Unreleased
 
+## [0.5.1] - 2025-06-09
+### Fixed
+- Fixed issue with breaking change from Alembic causing migration failures when creating Alembic config.
+
 ## [0.5.0] - 2025-03-25
 ### Added
 - Added module-level documentation for all key components in `Ligare.database`, including engines, migrations, and schema.
