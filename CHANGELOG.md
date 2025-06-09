@@ -11,6 +11,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Unreleased
 
 ---
+## `Ligare.all` [0.10.3] - 2025-06-09
+
+### Fixed
+- Fixed issue with breaking change from Alembic causing migration failures when creating Alembic config.
+
+### `Ligare.database` [0.5.1] - 2025-06-09
+
+* [Ligare.database v0.5.1](https://github.com/uclahs-cds/Ligare/blob/Ligare.database-v0.5.1/src/database/CHANGELOG.md#051---2025-06-09)
+
+---
+
 ## `Ligare.all` [0.10.2] - 2025-05-23
 
 ### Fixed
@@ -18,7 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### `Ligare.programming` [0.7.1] - 2025-05-23
 
-* [Ligare.programming v0.7.1](https://github.com/uclahs-cds/Ligare/blob/Ligare.programming-v0.7.1/src/web/CHANGELOG.md#071---2025-05=23)
+* [Ligare.programming v0.7.1](https://github.com/uclahs-cds/Ligare/blob/Ligare.programming-v0.7.1/src/programming/CHANGELOG.md#071---2025-05-23)
 
 ---
 
