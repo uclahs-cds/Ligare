@@ -68,7 +68,7 @@ class LigareAlembic:
         alembic_cli = CommandLine()
         parsed_args = alembic_cli.parser.parse_args(argv)
         self._log.debug(f"Parsed arguments: {parsed_args}")
-        config = Config(parsed_args.config)
+        config = Config(*parsed_args.config)
         self._log.debug(f"Instantiated config: {repr(config)}")
         return config
 
