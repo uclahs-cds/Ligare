@@ -1,7 +1,8 @@
 import re
+from abc import ABC
 from enum import Enum
 from functools import partial
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeVar
 
 from typing_extensions import overload
 
@@ -14,6 +15,75 @@ safe_comma_separated_string_regex = re.compile(SAFE_COMMA_SEPARATED_STRING_PATTE
 NULL = "__NULL__"
 FALSE = "FALSE"
 TRUE = "TRUE"
+
+
+class SerializedType:
+    def __init__(self, value: Any) -> None:
+        self.value = value
+
+    def serialize(self) -> str | None:
+        if self.value is None:
+            return NULL
+        return str(self.value)
+
+
+class Number(SerializedType):
+    def __init__(self, value: Any) -> None:
+        if (
+            value is None
+            or isinstance(value, int)
+            or isinstance(value, float)
+            or isinstance(value, complex)
+        ):
+            super().__init__(value)
+        else:
+            try:
+                super().__init__(int(value))  # pyright: ignore[reportArgumentType]
+            except:
+                super().__init__(float(value))  # pyright: ignore[reportArgumentType]
+
+
+class String(SerializedType):
+    def serialize(self) -> str | None:
+        if self.value is None:
+            return NULL
+        return f"'{self.value}'"
+
+
+class CompositeType(Enum):
+    VECTOR = "c"
+    LIST = "list"
+    SEQ = "seq"
+
+
+class Composite(SerializedType, ABC):
+    composite_type: CompositeType
+    value: list[SerializedType] | None
+
+    def __init__(self, value: list[SerializedType | None] | None) -> None:
+        super().__init__(value)
+
+    def serialize(self) -> str | None:
+        if self.value is None:
+            return None
+
+        serialized_values = ",".join([
+            ((value.serialize() or NULL) if value else NULL) for value in self.value
+        ])
+
+        return f"{self.composite_type.value}({serialized_values})"
+
+
+class Vector(Composite):
+    composite_type = CompositeType.VECTOR
+
+
+class List(Composite):
+    composite_type = CompositeType.LIST
+
+
+class Seq(Composite):
+    composite_type = CompositeType.SEQ
 
 
 @overload
@@ -145,10 +215,14 @@ def string(value: str | None, *, vector: bool) -> str | None:
 
 
 def string(
-    value: str | None, *, comma_separated: bool = False, vector: bool = False
+    value: str | None,
+    *,
+    comma_separated: bool = False,
+    vector: bool = False,
+    composite_type: CompositeType = CompositeType.VECTOR,
 ) -> str | None:
     if value == "" or value is None:
-        return value if not vector else "c()"
+        return value if not vector else f"{composite_type.value}()"
 
     try:
         if comma_separated or vector:
@@ -165,7 +239,7 @@ def string(
                 return None
 
             if vector:
-                return f"c({new_csv_string})"
+                return f"{composite_type.value}({new_csv_string})"
             else:
                 return new_csv_string
         else:
@@ -196,6 +270,7 @@ def number(
     *,
     comma_separated: bool = False,
     vector: bool = False,
+    composite_type: CompositeType = CompositeType.VECTOR,
 ) -> str | None:
     if isinstance(value, bool):
         raise ValueError("Disallowed type `bool` for 'number' serialization.")
@@ -228,7 +303,7 @@ def number(
             items = [
                 item
                 for item in filter(lambda element: element, safe_str.split(","))
-                if float(item)
+                if float(item) or float(item) == 0
             ]
             new_csv_string = ",".join(items) if items else None
 
@@ -236,7 +311,7 @@ def number(
                 return None
 
             if vector:
-                return f"c({new_csv_string})"
+                return f"{composite_type.value}({new_csv_string})"
             else:
                 return new_csv_string
         else:
@@ -602,17 +677,13 @@ def serialize(value: Any):
     return str(value)
 
 
-class CompositeType(Enum):
-    VECTOR = "c"
-    LIST = "list"
-
-
 def composite_type_from_parts(
     composite_type: CompositeType,
     parts: dict[str, Any],
     new_part_key: str,
     existing_part_keys: list[str],
     default: Any = NULL,
+    _serialize: bool = True,
 ) -> None:
     """
     Add a new key to the `parts` dictionary named `new_part_key`.
@@ -752,7 +823,8 @@ def composite_type_from_parts(
         parts[new_part_key] = default
     else:
         serialized_part_values = ",".join([
-            serialize(part_value) for part_value in part_values
+            (serialize(part_value) if _serialize else part_value)
+            for part_value in part_values
         ])
         parts[new_part_key] = f"{composite_type.value}({serialized_part_values})"
 
@@ -803,4 +875,18 @@ def string_list_from_parts(
         parts[key] = StringVector(parts[key])
     return composite_type_from_parts(
         CompositeType.LIST, parts, new_part_key, existing_part_keys, default
+    )
+
+
+def number_seq_from_parts(
+    parts: dict[str, Any],
+    new_part_key: str,
+    existing_part_keys: list[str],
+    default: Any = NULL,
+) -> None:
+    for key in existing_part_keys:
+        if not isinstance(parts[key], bool):
+            parts[key] = NumberVector(parts[key])
+    return composite_type_from_parts(
+        CompositeType.SEQ, parts, new_part_key, existing_part_keys, default
     )
