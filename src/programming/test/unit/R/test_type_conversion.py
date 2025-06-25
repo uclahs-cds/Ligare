@@ -3,7 +3,9 @@ from typing import Any
 
 import pytest
 from Ligare.programming.R.type_conversion import (
+    FALSE,
     NULL,
+    TRUE,
     Composite,
     List,
     Number,
@@ -25,20 +27,20 @@ from Ligare.programming.R.type_conversion import (
 @pytest.mark.parametrize(
     "input_value,expected_value",
     [
-        ("abc", "abc"),
-        ("c('a','b','c')", "cabc"),
-        ("123", "123"),
-        ("a'b'c", "abc"),
-        ("'1,2,3'", "123"),
-        ("", ""),
-        (" ", " "),
-        ("\t", "\t"),
-        (None, None),
+        ("abc", "'abc'"),
+        ("c('a','b','c')", "'cabc'"),
+        ("123", "'123'"),
+        ("a'b'c", "'abc'"),
+        ("'1,2,3'", "'123'"),
+        ("", "''"),
+        (" ", "' '"),
+        ("\t", "'\t'"),
+        (None, NULL),
     ],
 )
 def test__string__returns_sanitized_string(input_value: Any, expected_value: str):
     result = string(input_value)
-    assert result == expected_value
+    assert result.serialize() == expected_value
 
 
 @pytest.mark.parametrize(
@@ -64,21 +66,21 @@ def test__string__raises_when_input_is_not_a_str_or_None(
         ("1,2,3", "'1','2','3'"),
         ("a,'b,'c", "'a','b','c'"),
         ("'1,2,3'", "'1','2','3'"),
-        ("a,", "'a'"),
-        ("a,b,", "'a','b'"),
-        ("", ""),
+        ("a,", "'a',''"),
+        ("a,b,", f"'a','b',''"),
+        ("", "''"),
         (" ", "' '"),
         ("\t", "'\t'"),
-        (",", None),
+        (",", "'',''"),
         (" , ", "' ',' '"),
         ("\t,\t", "'\t','\t'"),
-        (None, None),
+        (None, NULL),
     ],
 )
 def test__string__csv__returns_sanitized_csv_string(
     input_value: Any, expected_value: str
 ):
-    result = string(input_value, comma_separated=True)
+    result = string(input_value, comma_separated=True).serialize()
     assert result == expected_value
 
 
@@ -105,21 +107,21 @@ def test__string__csv__raises_when_input_is_not_a_str_or_None(
         ("1,2,3", "'1','2','3'"),
         ("a,'b,'c", "'a','b','c'"),
         ("'1,2,3'", "'1','2','3'"),
-        ("a,", "'a'"),
-        ("a,b,", "'a','b'"),
-        ("", ""),
+        ("a,", "'a',''"),
+        ("a,b,", "'a','b',''"),
+        ("", "''"),
         (" ", "' '"),
         ("\t", "'\t'"),
-        (",", None),
+        (",", "'',''"),
         (" , ", "' ',' '"),
         ("\t,\t", "'\t','\t'"),
-        (None, None),
+        (None, NULL),
     ],
 )
 def test__string_from_csv__returns_sanitized_csv_string(
     input_value: Any, expected_value: str
 ):
-    result = string_from_csv(input_value)
+    result = string_from_csv(input_value).serialize()
     assert result == expected_value
 
 
@@ -146,12 +148,12 @@ def test__string_from_csv__raises_when_input_is_not_a_str_or_None(
         ("1,2,3", "c('1','2','3')"),
         ("a,'b,'c", "c('a','b','c')"),
         ("'1,2,3'", "c('1','2','3')"),
-        ("a,", "c('a')"),
-        ("a,b,", "c('a','b')"),
+        ("a,", "c('a','')"),
+        ("a,b,", "c('a','b','')"),
         ("", "c()"),
         (" ", "c(' ')"),
         ("\t", "c('\t')"),
-        (",", None),
+        (",", f"c('','')"),
         (" , ", "c(' ',' ')"),
         ("\t,\t", "c('\t','\t')"),
         (None, "c()"),
@@ -160,7 +162,7 @@ def test__string_from_csv__raises_when_input_is_not_a_str_or_None(
 def test__string__vector__returns_sanitized_vector_string(
     input_value: Any, expected_value: str
 ):
-    result = string(input_value, vector=True)
+    result = string(input_value, vector=True).serialize()
     assert result == expected_value
 
 
@@ -187,13 +189,13 @@ def test__string__vector__raises_when_input_is_not_a_str_or_None(
         ("1,2,3", "c('1','2','3')"),
         ("a,'b,'c", "c('a','b','c')"),
         ("'1,2,3'", "c('1','2','3')"),
-        ("a,", "c('a')"),
-        (",a", "c('a')"),
-        ("a,b,", "c('a','b')"),
+        ("a,", "c('a','')"),
+        (",a", "c('','a')"),
+        ("a,b,", "c('a','b','')"),
         ("", "c()"),
         (" ", "c(' ')"),
         ("\t", "c('\t')"),
-        (",", None),
+        (",", "c('','')"),
         (" , ", "c(' ',' ')"),
         ("\t,\t", "c('\t','\t')"),
         (None, "c()"),
@@ -202,8 +204,8 @@ def test__string__vector__raises_when_input_is_not_a_str_or_None(
 def test__string_vector_from_csv__returns_sanitized_vector_string(
     input_value: Any, expected_value: str
 ):
-    result = string_vector_from_csv(input_value)
-    assert result.value == expected_value
+    result = string_vector_from_csv(input_value).serialize()
+    assert result == expected_value
 
 
 @pytest.mark.parametrize(
@@ -230,16 +232,16 @@ def test__string_vector_from_csv__raises_when_input_is_not_a_str_or_None(
         ("1,", "c(1)"),
         (",1", "c(1)"),
         ("1,2,", "c(1,2)"),
-        ("", "__NULL__"),
-        (",", None),
-        (None, "__NULL__"),
+        ("", NULL),
+        (",", "c()"),
+        (None, NULL),
     ],
 )
 def test__number_vector_from_csv__returns_sanitized_vector_string(
     input_value: Any, expected_value: str
 ):
-    result = number_vector_from_csv(input_value)
-    assert result.value == expected_value
+    result = number_vector_from_csv(input_value).serialize()
+    assert result == expected_value
 
 
 @pytest.mark.parametrize(
@@ -280,7 +282,7 @@ def test__number_vector_from_csv__raises_when_input_is_not_a_number_or_None(
     ],
 )
 def test__boolean__returns_sanitized_string(input_value: Any, expected_value: str):
-    result = boolean(input_value)
+    result = boolean(input_value).serialize()
     assert result == expected_value
 
 
@@ -329,13 +331,13 @@ class FromPartsTestData:
             parts={"a": None, "b": None},
             new_part_key="c",
             existing_part_keys=["a", "b"],
-            expected_value={"c": "__NULL__"},
+            expected_value={"c": NULL},
         ),
         FromPartsTestData(
             parts={"x": 0.5, "y": "1.0", "z": None, "a": 123, "b": True, "c": False},
             new_part_key="A",
             existing_part_keys=["x", "y", "z", "a", "b", "c"],
-            expected_value={"A": "c(0.5,'1.0','__NULL__',123,'TRUE','FALSE')"},
+            expected_value={"A": f"c(0.5,c('1.0'),{NULL},123,{TRUE},{FALSE})"},
         ),
     ],
 )
@@ -411,7 +413,7 @@ def test__vector_from_parts__raises_when_parts_is_not_a_dict(data: FromPartsTest
             parts={"a": "1,2", "b": "3,4"},
             new_part_key="c",
             existing_part_keys=["a", "b"],
-            expected_value={"c": "list('12','34')"},
+            expected_value={"c": "list(c('1','2'),c('3','4'))"},
         ),
         FromPartsTestData(
             parts={"a": 1, "b": 2, "c": 3},
@@ -441,13 +443,13 @@ def test__vector_from_parts__raises_when_parts_is_not_a_dict(data: FromPartsTest
             parts={"a": None, "b": None},
             new_part_key="c",
             existing_part_keys=["a", "b"],
-            expected_value={"c": "__NULL__"},
+            expected_value={"c": NULL},
         ),
         FromPartsTestData(
             parts={"x": 0.5, "y": "1.0", "z": None, "a": 123, "b": True, "c": False},
             new_part_key="A",
             existing_part_keys=["x", "y", "z", "a", "b", "c"],
-            expected_value={"A": "list(0.5,'1.0','__NULL__',123,'TRUE','FALSE')"},
+            expected_value={"A": f"list(0.5,c('1.0'),{NULL},123,{TRUE},{FALSE})"},
         ),
     ],
 )
@@ -499,13 +501,13 @@ def test__list_from_parts__returns_expected_serialized_list(data: FromPartsTestD
             parts={"a": None, "b": None},
             new_part_key="c",
             existing_part_keys=["a", "b"],
-            expected_value={"c": "list(__NULL__,__NULL__)"},
+            expected_value={"c": NULL},
         ),
         FromPartsTestData(
             parts={"x": 0.5, "y": "1.0", "z": None, "a": 123, "b": True, "c": False},
             new_part_key="A",
             existing_part_keys=["x", "y", "z", "a", "b", "c"],
-            expected_value={"A": "list(0.5,1.0,__NULL__,123,'TRUE','FALSE')"},
+            expected_value={"A": f"list(0.5,c(1.0),{NULL},123,{TRUE},{FALSE})"},
         ),
     ],
 )

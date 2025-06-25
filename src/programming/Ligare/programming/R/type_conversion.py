@@ -2,7 +2,7 @@ import re
 from abc import ABC
 from enum import Enum
 from functools import partial
-from typing import Any, Protocol, TypeVar
+from typing import Any, Protocol
 
 from typing_extensions import overload
 
@@ -31,16 +31,27 @@ class Number(SerializedType):
     def __init__(self, value: Any) -> None:
         if (
             value is None
-            or isinstance(value, int)
+            or (isinstance(value, int) and not isinstance(value, bool))
             or isinstance(value, float)
             or isinstance(value, complex)
         ):
             super().__init__(value)
+        elif not value:
+            super().__init__(None)
         else:
             try:
                 super().__init__(int(value))  # pyright: ignore[reportArgumentType]
             except:
                 super().__init__(float(value))  # pyright: ignore[reportArgumentType]
+
+
+class Boolean(SerializedType):
+    def serialize(self) -> str | None:
+        return (
+            TRUE
+            if (self.value is not None and str(self.value).lower() in ["true", "t"])
+            else FALSE
+        )
 
 
 class String(SerializedType):
@@ -56,8 +67,8 @@ class CompositeType(Enum):
     SEQ = "seq"
 
 
-class Composite(SerializedType, ABC):
-    composite_type: CompositeType
+class Composite(SerializedType):  # , ABC):
+    composite_type: CompositeType | None = None
     value: list[SerializedType] | None
 
     def __init__(self, value: list[SerializedType | None] | None) -> None:
@@ -71,7 +82,10 @@ class Composite(SerializedType, ABC):
             ((value.serialize() or NULL) if value else NULL) for value in self.value
         ])
 
-        return f"{self.composite_type.value}({serialized_values})"
+        if self.composite_type:
+            return f"{self.composite_type.value}({serialized_values})"
+        else:
+            return str(serialized_values)
 
 
 class Vector(Composite):
@@ -87,7 +101,7 @@ class Seq(Composite):
 
 
 @overload
-def string(value: str | None) -> str | None:
+def string(value: str | None) -> String:
     """
     Remove all characters from a string that are not
     whitelisted in the `SAFE_STRING_PATTERN` regex.
@@ -127,7 +141,7 @@ def string(value: str | None) -> str | None:
 
 
 @overload
-def string(value: str | None, *, comma_separated: bool) -> str | None:
+def string(value: str | None, *, comma_separated: bool) -> String:  # str | None:
     """
     Remove all characters from a string that are not
     whitelisted in the `SAFE_COMMA_SEPARATED_STRING_PATTERN` regex.
@@ -171,7 +185,7 @@ def string(value: str | None, *, comma_separated: bool) -> str | None:
 
 
 @overload
-def string(value: str | None, *, vector: bool) -> str | None:
+def string(value: str | None, *, vector: bool) -> Vector | String:  # str | None:
     """
     Remove all characters from a string that are not
     whitelisted in the `SAFE_COMMA_SEPARATED_STRING_PATTERN` regex.
@@ -215,14 +229,12 @@ def string(value: str | None, *, vector: bool) -> str | None:
 
 
 def string(
-    value: str | None,
-    *,
-    comma_separated: bool = False,
-    vector: bool = False,
-    composite_type: CompositeType = CompositeType.VECTOR,
-) -> str | None:
+    value: str | None, *, comma_separated: bool = False, vector: bool = False
+) -> Vector | String | Composite:  # str | None:
     if value == "" or value is None:
-        return value if not vector else f"{composite_type.value}()"
+        if vector:
+            return Vector([])
+        return String(value)
 
     try:
         if comma_separated or vector:
@@ -231,22 +243,26 @@ def string(
                 # then all characters were stripped and the
                 # supplied value is not "safe." Return None
                 # because this is invalid.
-                return None
-            items = [item for item in safe_str.split(",") if item]
-            new_csv_string = ("'" + "','".join(items) + "'") if items else None
+                return String(None)
+            # new_csv_string = ("'" + "','".join(items) + "'") if items else None
 
-            if new_csv_string is None:
-                return None
+            # if new_csv_string is None:
+            #    return String(None)
 
+            items = (item for item in safe_str.split(","))  # if item)  # is not None)
             if vector:
-                return f"{composite_type.value}({new_csv_string})"
+                return Vector([String(item) for item in items])
+                # return f"{composite_type.value}({new_csv_string})"
             else:
-                return new_csv_string
+                return Composite([String(item) for item in items])
+                # return SerializedType(
+                #    ",".join([String(item).serialize() for item in items])
+                # )
         else:
             if not (safe_str := safe_string_regex.sub("", value)):
-                return None
+                return String(None)
 
-        return safe_str
+        return String(safe_str)
     except Exception as e:
         raise type(e)(
             f"Failed to convert the value `{value}` to a string. Other parameters: {comma_separated=}, {vector=}"
@@ -254,15 +270,15 @@ def string(
 
 
 @overload
-def number(value: str | int | float | complex | None) -> str | None: ...
+def number(value: str | int | float | complex | None) -> Vector | Number: ...
 @overload
 def number(
     value: str | int | float | complex | None, *, comma_separated: bool
-) -> str | None: ...
+) -> String: ...
 @overload
 def number(
     value: str | int | float | complex | None, *, vector: bool
-) -> str | None: ...
+) -> Vector | Number: ...
 
 
 def number(
@@ -271,26 +287,18 @@ def number(
     comma_separated: bool = False,
     vector: bool = False,
     composite_type: CompositeType = CompositeType.VECTOR,
-) -> str | None:
+    # String is for comma_separated
+) -> Vector | Number | String:
     if isinstance(value, bool):
         raise ValueError("Disallowed type `bool` for 'number' serialization.")
 
     if isinstance(value, int) or isinstance(value, float) or isinstance(value, complex):
-        return str(value)
-
-    try:
-        return str(int(value))  # pyright: ignore[reportArgumentType]
-    except:
-        try:
-            return str(float(value))  # pyright: ignore[reportArgumentType]
-        except:
-            try:
-                return str(complex(value))  # pyright: ignore[reportArgumentType,reportCallIssue]
-            except:
-                pass
+        return Number(value)
 
     if value == "" or value is None or value == NULL:
-        return value if not vector else NULL
+        return Number(value)
+        # return Number(value if not vector else NULL)
+        # return value if not vector else NULL
 
     try:
         if comma_separated or vector:
@@ -299,33 +307,35 @@ def number(
                 # then all characters were stripped and the
                 # supplied value is not "safe." Return None
                 # because this is invalid.
-                return None
-            items = [
+                # return None
+                return Number(None)
+            items = (
                 item
                 for item in filter(lambda element: element, safe_str.split(","))
                 if float(item) or float(item) == 0
-            ]
-            new_csv_string = ",".join(items) if items else None
+            )
+            # new_csv_string = ",".join(items) if items else None
 
-            if new_csv_string is None:
-                return None
+            # if new_csv_string is None:
+            #    return Number(None)
 
             if vector:
-                return f"{composite_type.value}({new_csv_string})"
+                return Vector([Number(item) for item in items])
+                # return f"{composite_type.value}({new_csv_string})"
             else:
-                return new_csv_string
+                return String(",".join(items) if items else None)  # new_csv_string
         else:
             if not (safe_str := safe_string_regex.sub("", str(value))):
-                return None
+                return Number(None)
 
-        return safe_str
+        return Number(safe_str)
     except Exception as e:
         raise type(e)(
             f"Failed to convert the value `{value}` to a number or number vector. Other parameters: {comma_separated=}, {vector=}"
         ) from e
 
 
-def string_from_csv(value: str | None) -> str | None:
+def string_from_csv(value: str | None) -> String:  # str | None:
     """
     This method is a pass-through for `string(value, comma_separated=True)`.
 
@@ -369,7 +379,7 @@ def string_from_csv(value: str | None) -> str | None:
     return string(value, comma_separated=True)
 
 
-def number_from_csv(value: str | None) -> str | None:
+def number_from_csv(value: str | None) -> String:  # str | None:
     """
     This method is a pass-through for `number(value, comma_separated=True)`.
 
@@ -410,32 +420,6 @@ def number_from_csv(value: str | None) -> str | None:
     return number(value, comma_separated=True)
 
 
-class NumberVector:
-    def __init__(self, value: str | int | float | complex | None) -> None:
-        self.value = value
-
-    def __str__(self) -> str:
-        if self.value is None:
-            raise TypeError("Value is `None`")
-        return str(self.value)
-
-    def __repr__(self) -> str:
-        return f"NumberVector({self.value})"
-
-
-class StringVector:
-    def __init__(self, value: str | None) -> None:
-        self.value = value
-
-    def __str__(self) -> str:
-        if self.value is None:
-            raise TypeError("Value is `None`")
-        return self.value
-
-    def __repr__(self) -> str:
-        return f"StringVector('{self.value}')"
-
-
 class Converter(Protocol):
     @overload
     def __call__(self, value: str | None) -> str | None: ...
@@ -450,10 +434,10 @@ class Converter(Protocol):
 
 
 def vector_from_csv(value: str | None, converter: Converter):
-    return StringVector(converter(value))
+    return converter(value, vector=True)
 
 
-def string_vector_from_csv(value: str | None) -> StringVector:
+def string_vector_from_csv(value: str | None):
     """
     This method is a pass-through for `string(value, vector=True)`.
 
@@ -528,7 +512,7 @@ def string_vector_from_csv(value: str | None) -> StringVector:
     return vector_from_csv(value, partial(string, vector=True))  # pyright: ignore[reportArgumentType]
 
 
-def number_vector_from_csv(value: str | None) -> StringVector:
+def number_vector_from_csv(value: str | None):
     """
     This method is a pass-through for `number(value, vector=True)`.
 
@@ -598,7 +582,7 @@ def number_vector_from_csv(value: str | None) -> StringVector:
     return vector_from_csv(value, partial(number, vector=True))  # pyright: ignore[reportArgumentType]
 
 
-def boolean(value: str | bool | None) -> str:
+def boolean(value: str | bool | None) -> Boolean:
     """
     Returns the R string `"TRUE"` or `"FALSE"` from the Python
     strings `"True"`, `"T"`, `"False`", or `"F"` (lowercased),
@@ -653,37 +637,40 @@ def boolean(value: str | bool | None) -> str:
        >>> boolean(None)
        'FALSE'
     """
-    return (
-        TRUE if (value is not None and str(value).lower() in ["true", "t"]) else FALSE
-    )
+    return Boolean(value)
+    # return String(
+    #    TRUE if (value is not None and str(value).lower() in ["true", "t"]) else FALSE
+    # )
 
 
-def serialize(value: Any):
+def convert(
+    value: str | bool | int | float | SerializedType | None, make_vector: bool = False
+) -> SerializedType:
+    if isinstance(value, SerializedType):
+        return value
+
     if value is None:
-        value = f"'{NULL}'"
+        return String(None)
 
     if isinstance(value, bool):
-        value = f"'{boolean(value)}'"
+        return boolean(value)
 
-    elif isinstance(value, NumberVector):
-        value = number(value.value, vector=True)
+    if isinstance(value, int) or isinstance(value, float):
+        return number(value, vector=make_vector)
 
-    elif isinstance(value, StringVector):
-        value = string(value.value, vector=True)
+    return string(value, vector=make_vector)
 
-    elif isinstance(value, str):
-        value = f"'{string(value)}'"
 
-    return str(value)
+# FIXME remove
+serialize = convert
 
 
 def composite_type_from_parts(
-    composite_type: CompositeType,
-    parts: dict[str, Any],
+    composite_type: type[Composite],
+    parts: dict[str, str | bool | int | float | SerializedType | None],
     new_part_key: str,
     existing_part_keys: list[str],
     default: Any = NULL,
-    _serialize: bool = True,
 ) -> None:
     """
     Add a new key to the `parts` dictionary named `new_part_key`.
@@ -814,40 +801,48 @@ def composite_type_from_parts(
             f"`parts` must be a dictionary. The value given is a `{type(parts)}`."
         )
 
-    part_values: list[Any] = []
+    part_values: list[SerializedType | None] = []
     for part in existing_part_keys:
-        part_values.append(parts.get(part))
+        part_values.append(convert(parts.get(part)))
         del parts[part]
 
-    if all([value is None or value == "" or value == NULL for value in part_values]):
+    if all([value is None or value.serialize() in {"", NULL} for value in part_values]):
         parts[new_part_key] = default
     else:
-        serialized_part_values = ",".join([
-            (serialize(part_value) if _serialize else part_value)
-            for part_value in part_values
-        ])
-        parts[new_part_key] = f"{composite_type.value}({serialized_part_values})"
+        parts[new_part_key] = composite_type(part_values).serialize() or NULL
 
 
 def vector_from_parts(
-    parts: dict[str, Any],
+    parts: dict[str, str | bool | int | float | SerializedType | None],
     new_part_key: str,
     existing_part_keys: list[str],
     default: Any = NULL,
 ) -> None:
+    if not isinstance(parts, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise TypeError()
+
+    for k, v in {k: parts[k] for k in existing_part_keys}.items():
+        parts[k] = convert(v, make_vector=True)
+
     return composite_type_from_parts(
-        CompositeType.VECTOR, parts, new_part_key, existing_part_keys, default
+        Vector, parts, new_part_key, existing_part_keys, default
     )
 
 
 def list_from_parts(
-    parts: dict[str, Any],
+    parts: dict[str, str | bool | int | float | SerializedType | None],
     new_part_key: str,
     existing_part_keys: list[str],
     default: Any = NULL,
 ) -> None:
+    if not isinstance(parts, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise TypeError()
+
+    for k, v in {k: parts[k] for k in existing_part_keys}.items():
+        parts[k] = convert(v, make_vector=True)
+
     return composite_type_from_parts(
-        CompositeType.LIST, parts, new_part_key, existing_part_keys, default
+        List, parts, new_part_key, existing_part_keys, default
     )
 
 
@@ -859,9 +854,9 @@ def number_list_from_parts(
 ) -> None:
     for key in existing_part_keys:
         if not isinstance(parts[key], bool):
-            parts[key] = NumberVector(parts[key])
+            parts[key] = number(parts[key], vector=True)
     return composite_type_from_parts(
-        CompositeType.LIST, parts, new_part_key, existing_part_keys, default
+        List, parts, new_part_key, existing_part_keys, default
     )
 
 
@@ -872,9 +867,9 @@ def string_list_from_parts(
     default: Any = NULL,
 ) -> None:
     for key in existing_part_keys:
-        parts[key] = StringVector(parts[key])
+        parts[key] = string(parts[key], vector=True)
     return composite_type_from_parts(
-        CompositeType.LIST, parts, new_part_key, existing_part_keys, default
+        List, parts, new_part_key, existing_part_keys, default
     )
 
 
@@ -886,7 +881,7 @@ def number_seq_from_parts(
 ) -> None:
     for key in existing_part_keys:
         if not isinstance(parts[key], bool):
-            parts[key] = NumberVector(parts[key])
+            parts[key] = number(parts[key], vector=True)
     return composite_type_from_parts(
-        CompositeType.SEQ, parts, new_part_key, existing_part_keys, default
+        Seq, parts, new_part_key, existing_part_keys, default
     )
