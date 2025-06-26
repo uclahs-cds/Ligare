@@ -2,11 +2,11 @@ from Ligare.programming.R.exception import RscriptProcessError, RscriptScriptErr
 from Ligare.programming.R.process import RProcessStepBuilder
 from Ligare.programming.R.type_conversion import (
     boolean,
+    convert,
     list_from_parts,
     number_from_csv,
     number_list_from_parts,
     number_vector_from_csv,
-    serialize,
     string,
     string_from_csv,
     string_list_from_parts,
@@ -22,7 +22,7 @@ __all__ = (
     "number_from_csv",
     "number_list_from_parts",
     "number_vector_from_csv",
-    "serialize",
+    "convert",
     "string",
     "string_from_csv",
     "string_list_from_parts",

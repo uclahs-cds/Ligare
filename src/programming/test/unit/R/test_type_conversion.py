@@ -6,10 +6,12 @@ from Ligare.programming.R.type_conversion import (
     FALSE,
     NULL,
     TRUE,
+    Boolean,
     Composite,
     List,
     Number,
     Seq,
+    SerializedType,
     String,
     Vector,
     boolean,
@@ -589,14 +591,6 @@ def test__string_list_from_parts__returns_expected_serialized_list(
     assert data.parts == data.expected_value
 
 
-def test__SerializedType():
-    pass
-
-
-def test__CompositeType():
-    pass
-
-
 @pytest.mark.parametrize(
     "input,expected",
     (
@@ -787,3 +781,32 @@ def test__Composite__serializes_composite_types(
 ):
     vector = composite_type(input)
     assert vector.serialize() == f"{composite_type_keyword}{expected}"
+
+
+@pytest.mark.parametrize("composite_type", (Composite, Vector, List, Seq))
+def test__Composite__serializes_None(composite_type: type[Composite]):
+    result = composite_type(None).serialize()
+    assert result == NULL
+
+
+@pytest.mark.parametrize(
+    "value",
+    (
+        None,
+        String("abc"),
+        String("a,b,c"),
+        Number(123),
+        String("None,None"),
+        Boolean(False),
+        Boolean(True),
+        Number(0),
+    ),
+)
+def test__Composite__generic_type_returns_noncomposite_value(
+    value: SerializedType | None,
+):
+    result = Composite([value]).serialize()
+    if value is None:
+        assert result is NULL
+    else:
+        assert result == value.serialize()

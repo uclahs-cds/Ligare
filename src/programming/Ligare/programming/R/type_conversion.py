@@ -77,12 +77,17 @@ class Composite(SerializedType):
         super().__init__(value)
 
     @override
-    def serialize(self) -> str | None:
+    def serialize(self) -> str:
         if self.value is None:
-            return None
+            return NULL
 
         serialized_values = ",".join([
-            ((value.serialize() or NULL) if value else NULL) for value in self.value
+            (
+                (value.serialize() or NULL)
+                if value is not None  # pyright: ignore[reportUnnecessaryComparison]
+                else NULL
+            )
+            for value in self.value
         ])
 
         if self.composite_type:
@@ -651,10 +656,6 @@ def convert(
         return number(value, vector=make_vector)
 
     return string(value, vector=make_vector)
-
-
-# FIXME remove
-serialize = convert
 
 
 def composite_type_from_parts(
