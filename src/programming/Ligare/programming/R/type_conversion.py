@@ -805,11 +805,12 @@ def composite_type_from_parts(
         parts[new_part_key] = composite_type(part_values).serialize() or NULL
 
 
-def vector_from_parts(
+def from_parts(
     parts: dict[str, str | bool | int | float | SerializedType | None],
     new_part_key: str,
     existing_part_keys: list[str],
     default: Any = NULL,
+    composite_type: type[Composite] = Vector,
 ) -> None:
     if not isinstance(parts, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
         raise TypeError()
@@ -818,63 +819,34 @@ def vector_from_parts(
         parts[k] = convert(v, make_vector=True)
 
     return composite_type_from_parts(
-        Vector, parts, new_part_key, existing_part_keys, default
+        composite_type, parts, new_part_key, existing_part_keys, default
     )
 
 
-def list_from_parts(
-    parts: dict[str, str | bool | int | float | SerializedType | None],
-    new_part_key: str,
-    existing_part_keys: list[str],
-    default: Any = NULL,
-) -> None:
-    if not isinstance(parts, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-        raise TypeError()
-
-    for k, v in {k: parts[k] for k in existing_part_keys}.items():
-        parts[k] = convert(v, make_vector=True)
-
-    return composite_type_from_parts(
-        List, parts, new_part_key, existing_part_keys, default
-    )
-
-
-def number_list_from_parts(
+def number_from_parts(
     parts: dict[str, Any],
     new_part_key: str,
     existing_part_keys: list[str],
     default: Any = NULL,
+    composite_type: type[Composite] = Vector,
 ) -> None:
     for key in existing_part_keys:
         if not isinstance(parts[key], bool):
             parts[key] = number(parts[key], vector=True)
     return composite_type_from_parts(
-        List, parts, new_part_key, existing_part_keys, default
+        composite_type, parts, new_part_key, existing_part_keys, default
     )
 
 
-def string_list_from_parts(
+def string_from_parts(
     parts: dict[str, Any],
     new_part_key: str,
     existing_part_keys: list[str],
     default: Any = NULL,
+    composite_type: type[Composite] = Vector,
 ) -> None:
     for key in existing_part_keys:
         parts[key] = string(parts[key], vector=True)
     return composite_type_from_parts(
-        List, parts, new_part_key, existing_part_keys, default
-    )
-
-
-def number_seq_from_parts(
-    parts: dict[str, Any],
-    new_part_key: str,
-    existing_part_keys: list[str],
-    default: Any = NULL,
-) -> None:
-    for key in existing_part_keys:
-        if not isinstance(parts[key], bool):
-            parts[key] = number(parts[key], vector=True)
-    return composite_type_from_parts(
-        Seq, parts, new_part_key, existing_part_keys, default
+        composite_type, parts, new_part_key, existing_part_keys, default
     )

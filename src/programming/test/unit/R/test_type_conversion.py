@@ -15,14 +15,15 @@ from Ligare.programming.R.type_conversion import (
     String,
     Vector,
     boolean,
-    list_from_parts,
-    number_list_from_parts,
+    from_parts,
+    number,
+    number_from_csv,
+    number_from_parts,
     number_vector_from_csv,
     string,
     string_from_csv,
-    string_list_from_parts,
+    string_from_parts,
     string_vector_from_csv,
-    vector_from_parts,
 )
 
 
@@ -105,6 +106,75 @@ def test__string__csv__raises_when_input_is_not_a_str_or_None(
 @pytest.mark.parametrize(
     "input_value,expected_value",
     [
+        ("123", "123"),
+        ("1,2,3", "123"),
+        ("", NULL),
+        ("!!!", NULL),
+        (None, NULL),
+    ],
+)
+def test__number__returns_sanitized_number(input_value: Any, expected_value: str):
+    result = number(input_value)
+    assert result.serialize() == expected_value
+
+
+@pytest.mark.parametrize(
+    "input_value,expected_value",
+    [
+        (False, ValueError),
+        (True, ValueError),
+        (" ", ValueError),
+        ("a,b,c", ValueError),
+        ("c(1,2,3)", ValueError),
+    ],
+)
+def test__number__raises_when_input_is_not_a_str_or_None(
+    input_value: Any | None, expected_value: type[Exception]
+):
+    with pytest.raises(expected_value):
+        _ = number(input_value)
+
+
+@pytest.mark.parametrize(
+    "input_value,expected_value",
+    [
+        ("1,2,3", "1,2,3"),
+        ("'1,2,3'", "1,2,3"),
+        ("1,", "1"),
+        ("1,2,", f"1,2"),
+        ("", NULL),
+        ("!!!", NULL),
+        (",", ""),
+        (None, NULL),
+    ],
+)
+def test__number__csv__returns_sanitized_csv_number(
+    input_value: Any, expected_value: str
+):
+    result = number(input_value, comma_separated=True).serialize()
+    assert result == expected_value
+
+
+@pytest.mark.parametrize(
+    "input_value,expected_value",
+    [
+        (False, ValueError),
+        (True, ValueError),
+        (" ", ValueError),
+        ("a,b,c", ValueError),
+        ("c(1,2,3)", ValueError),
+    ],
+)
+def test__number__csv__raises_when_input_is_not_a_str_or_None(
+    input_value: Any | None, expected_value: type[Exception]
+):
+    with pytest.raises(expected_value):
+        _ = number(input_value, comma_separated=True)
+
+
+@pytest.mark.parametrize(
+    "input_value,expected_value",
+    [
         ("a,b,c", "'a','b','c'"),
         ("c('a','b','c')", "'ca','b','c'"),
         ("1,2,3", "'1','2','3'"),
@@ -141,6 +211,43 @@ def test__string_from_csv__raises_when_input_is_not_a_str_or_None(
 ):
     with pytest.raises(expected_value):
         _ = string_from_csv(input_value)
+
+
+@pytest.mark.parametrize(
+    "input_value,expected_value",
+    [
+        ("1,2,3", "1,2,3"),
+        ("'1,2,3'", "1,2,3"),
+        ("1,", "1"),
+        ("1,2,", f"1,2"),
+        ("", NULL),
+        ("!!!", NULL),
+        (",", ""),
+        (None, NULL),
+    ],
+)
+def test__number_from_csv__returns_sanitized_csv_string(
+    input_value: Any, expected_value: str
+):
+    result = number_from_csv(input_value).serialize()
+    assert result == expected_value
+
+
+@pytest.mark.parametrize(
+    "input_value,expected_value",
+    [
+        (False, ValueError),
+        (True, ValueError),
+        (" ", ValueError),
+        ("a,b,c", ValueError),
+        ("c(1,2,3)", ValueError),
+    ],
+)
+def test__number_from_csv__raises_when_input_is_not_a_str_or_None(
+    input_value: Any | None, expected_value: type[Exception]
+):
+    with pytest.raises(expected_value):
+        _ = number_from_csv(input_value)
 
 
 @pytest.mark.parametrize(
@@ -348,7 +455,9 @@ class FromPartsTestData:
 def test__vector_from_parts__returns_expected_serialized_vector(
     data: FromPartsTestData,
 ):
-    vector_from_parts(data.parts, data.new_part_key, data.existing_part_keys)
+    from_parts(
+        data.parts, data.new_part_key, data.existing_part_keys, composite_type=Vector
+    )
     assert data.parts == data.expected_value
 
 
@@ -401,7 +510,12 @@ def test__vector_from_parts__returns_expected_serialized_vector(
 )
 def test__vector_from_parts__raises_when_parts_is_not_a_dict(data: FromPartsTestData):
     with pytest.raises(data.expected_value):  # pyright: ignore[reportArgumentType]
-        vector_from_parts(data.parts, data.new_part_key, data.existing_part_keys)
+        from_parts(
+            data.parts,
+            data.new_part_key,
+            data.existing_part_keys,
+            composite_type=Vector,
+        )
 
 
 @pytest.mark.parametrize(
@@ -458,7 +572,9 @@ def test__vector_from_parts__raises_when_parts_is_not_a_dict(data: FromPartsTest
     ],
 )
 def test__list_from_parts__returns_expected_serialized_list(data: FromPartsTestData):
-    list_from_parts(data.parts, data.new_part_key, data.existing_part_keys)
+    from_parts(
+        data.parts, data.new_part_key, data.existing_part_keys, composite_type=List
+    )
     assert data.parts == data.expected_value
 
 
@@ -518,7 +634,9 @@ def test__list_from_parts__returns_expected_serialized_list(data: FromPartsTestD
 def test__number_list_from_parts__returns_expected_serialized_list(
     data: FromPartsTestData,
 ):
-    number_list_from_parts(data.parts, data.new_part_key, data.existing_part_keys)
+    number_from_parts(
+        data.parts, data.new_part_key, data.existing_part_keys, composite_type=List
+    )
     assert data.parts == data.expected_value
 
 
@@ -587,7 +705,9 @@ def test__number_list_from_parts__returns_expected_serialized_list(
 def test__string_list_from_parts__returns_expected_serialized_list(
     data: FromPartsTestData,
 ):
-    string_list_from_parts(data.parts, data.new_part_key, data.existing_part_keys)
+    string_from_parts(
+        data.parts, data.new_part_key, data.existing_part_keys, composite_type=List
+    )
     assert data.parts == data.expected_value
 
 
