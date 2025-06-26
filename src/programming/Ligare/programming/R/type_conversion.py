@@ -3,7 +3,7 @@ from enum import Enum
 from functools import partial
 from typing import Any, Protocol
 
-from typing_extensions import overload
+from typing_extensions import overload, override
 
 SAFE_STRING_PATTERN = r"[^a-zA-Z0-9_.\s-]"
 safe_string_regex = re.compile(SAFE_STRING_PATTERN)
@@ -18,6 +18,7 @@ TRUE = "TRUE"
 
 class SerializedType:
     def __init__(self, value: Any) -> None:
+        super().__init__()
         self.value = value
 
     def serialize(self) -> str | None:
@@ -39,12 +40,13 @@ class Number(SerializedType):
             super().__init__(None)
         else:
             try:
-                super().__init__(int(value))  # pyright: ignore[reportArgumentType]
+                super().__init__(int(value))
             except:
-                super().__init__(float(value))  # pyright: ignore[reportArgumentType]
+                super().__init__(float(value))
 
 
 class Boolean(SerializedType):
+    @override
     def serialize(self) -> str | None:
         return (
             TRUE
@@ -54,6 +56,7 @@ class Boolean(SerializedType):
 
 
 class String(SerializedType):
+    @override
     def serialize(self) -> str | None:
         if self.value is None:
             return NULL
@@ -66,13 +69,14 @@ class CompositeType(Enum):
     SEQ = "seq"
 
 
-class Composite(SerializedType):  # , ABC):
+class Composite(SerializedType):
     composite_type: CompositeType | None = None
     value: list[SerializedType] | None
 
     def __init__(self, value: list[SerializedType | None] | None) -> None:
         super().__init__(value)
 
+    @override
     def serialize(self) -> str | None:
         if self.value is None:
             return None
@@ -140,7 +144,9 @@ def string(value: str | None) -> String:
 
 
 @overload
-def string(value: str | None, *, comma_separated: bool) -> String:  # str | None:
+def string(
+    value: str | None, *, comma_separated: bool
+) -> Composite | String:  # str | None:
     """
     Remove all characters from a string that are not
     whitelisted in the `SAFE_COMMA_SEPARATED_STRING_PATTERN` regex.
@@ -184,7 +190,7 @@ def string(value: str | None, *, comma_separated: bool) -> String:  # str | None
 
 
 @overload
-def string(value: str | None, *, vector: bool) -> Vector | String:  # str | None:
+def string(value: str | None, *, vector: bool) -> Vector | String:
     """
     Remove all characters from a string that are not
     whitelisted in the `SAFE_COMMA_SEPARATED_STRING_PATTERN` regex.
@@ -229,8 +235,10 @@ def string(value: str | None, *, vector: bool) -> Vector | String:  # str | None
 
 def string(
     value: str | None, *, comma_separated: bool = False, vector: bool = False
-) -> Vector | String | Composite:  # str | None:
+) -> Vector | Composite | String:  # str | None:
     if value == "" or value is None:
+        if comma_separated:
+            return Composite([String(value)])
         if vector:
             return Vector([])
         return String(value)
@@ -243,20 +251,12 @@ def string(
                 # supplied value is not "safe." Return None
                 # because this is invalid.
                 return String(None)
-            # new_csv_string = ("'" + "','".join(items) + "'") if items else None
 
-            # if new_csv_string is None:
-            #    return String(None)
-
-            items = (item for item in safe_str.split(","))  # if item)  # is not None)
+            items = (item for item in safe_str.split(","))
             if vector:
                 return Vector([String(item) for item in items])
-                # return f"{composite_type.value}({new_csv_string})"
             else:
                 return Composite([String(item) for item in items])
-                # return SerializedType(
-                #    ",".join([String(item).serialize() for item in items])
-                # )
         else:
             if not (safe_str := safe_string_regex.sub("", value)):
                 return String(None)
@@ -269,15 +269,15 @@ def string(
 
 
 @overload
-def number(value: str | int | float | complex | None) -> Vector | Number: ...
+def number(value: str | int | float | complex | None) -> Number: ...
 @overload
 def number(
     value: str | int | float | complex | None, *, comma_separated: bool
-) -> String: ...
+) -> Composite | Number: ...
 @overload
 def number(
     value: str | int | float | complex | None, *, vector: bool
-) -> Vector | Number: ...
+) -> Vector | Composite | Number: ...
 
 
 def number(
@@ -285,9 +285,7 @@ def number(
     *,
     comma_separated: bool = False,
     vector: bool = False,
-    composite_type: CompositeType = CompositeType.VECTOR,
-    # String is for comma_separated
-) -> Vector | Number | String:
+) -> Vector | Number | Composite:
     if isinstance(value, bool):
         raise ValueError("Disallowed type `bool` for 'number' serialization.")
 
@@ -296,8 +294,6 @@ def number(
 
     if value == "" or value is None or value == NULL:
         return Number(value)
-        # return Number(value if not vector else NULL)
-        # return value if not vector else NULL
 
     try:
         if comma_separated or vector:
@@ -313,16 +309,11 @@ def number(
                 for item in filter(lambda element: element, safe_str.split(","))
                 if float(item) or float(item) == 0
             )
-            # new_csv_string = ",".join(items) if items else None
-
-            # if new_csv_string is None:
-            #    return Number(None)
 
             if vector:
                 return Vector([Number(item) for item in items])
-                # return f"{composite_type.value}({new_csv_string})"
             else:
-                return String(",".join(items) if items else None)  # new_csv_string
+                return Composite([Number(item) for item in items])
         else:
             if not (safe_str := safe_string_regex.sub("", str(value))):
                 return Number(None)
@@ -334,7 +325,7 @@ def number(
         ) from e
 
 
-def string_from_csv(value: str | None) -> String:  # str | None:
+def string_from_csv(value: str | None) -> Composite | String:
     """
     This method is a pass-through for `string(value, comma_separated=True)`.
 
@@ -378,7 +369,7 @@ def string_from_csv(value: str | None) -> String:  # str | None:
     return string(value, comma_separated=True)
 
 
-def number_from_csv(value: str | None) -> String:  # str | None:
+def number_from_csv(value: str | None) -> Composite | Number:
     """
     This method is a pass-through for `number(value, comma_separated=True)`.
 
@@ -425,20 +416,20 @@ class Converter(Protocol):
     @overload
     def __call__(
         self, value: str | None, *, comma_separated: bool
-    ) -> SerializedType: ...
+    ) -> String | Composite: ...
     @overload
-    def __call__(self, value: str | None, *, vector: bool) -> SerializedType: ...
+    def __call__(self, value: str | None, *, vector: bool) -> Vector: ...
 
     def __call__(
         self, value: str | None, *, comma_separated: bool = False, vector: bool = False
     ) -> SerializedType: ...
 
 
-def vector_from_csv(value: str | None, converter: Converter):
+def vector_from_csv(value: str | None, converter: Converter) -> Vector:
     return converter(value, vector=True)
 
 
-def string_vector_from_csv(value: str | None):
+def string_vector_from_csv(value: str | None) -> SerializedType:
     """
     This method is a pass-through for `string(value, vector=True)`.
 
@@ -513,7 +504,7 @@ def string_vector_from_csv(value: str | None):
     return vector_from_csv(value, partial(string, vector=True))  # pyright: ignore[reportArgumentType]
 
 
-def number_vector_from_csv(value: str | None):
+def number_vector_from_csv(value: str | None) -> SerializedType:
     """
     This method is a pass-through for `number(value, vector=True)`.
 
@@ -639,9 +630,6 @@ def boolean(value: str | bool | None) -> Boolean:
        'FALSE'
     """
     return Boolean(value)
-    # return String(
-    #    TRUE if (value is not None and str(value).lower() in ["true", "t"]) else FALSE
-    # )
 
 
 def convert(
