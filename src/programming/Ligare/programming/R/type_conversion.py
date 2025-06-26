@@ -1,5 +1,4 @@
 import re
-from abc import ABC
 from enum import Enum
 from functools import partial
 from typing import Any, Protocol
@@ -422,15 +421,17 @@ def number_from_csv(value: str | None) -> String:  # str | None:
 
 class Converter(Protocol):
     @overload
-    def __call__(self, value: str | None) -> str | None: ...
+    def __call__(self, value: str | None) -> SerializedType: ...
     @overload
-    def __call__(self, value: str | None, *, comma_separated: bool) -> str | None: ...
+    def __call__(
+        self, value: str | None, *, comma_separated: bool
+    ) -> SerializedType: ...
     @overload
-    def __call__(self, value: str | None, *, vector: bool) -> str | None: ...
+    def __call__(self, value: str | None, *, vector: bool) -> SerializedType: ...
 
     def __call__(
         self, value: str | None, *, comma_separated: bool = False, vector: bool = False
-    ) -> str | None: ...
+    ) -> SerializedType: ...
 
 
 def vector_from_csv(value: str | None, converter: Converter):
