@@ -35,6 +35,7 @@ from Ligare.programming.R.type_conversion import (
         ("", "''"),
         (" ", "' '"),
         ("\t", "'\t'"),
+        ("!!!", NULL),
         (None, NULL),
     ],
 )
@@ -156,7 +157,8 @@ def test__string_from_csv__raises_when_input_is_not_a_str_or_None(
         (",", f"c('','')"),
         (" , ", "c(' ',' ')"),
         ("\t,\t", "c('\t','\t')"),
-        (None, "c()"),
+        ("!!!", NULL),
+        (None, NULL),
     ],
 )
 def test__string__vector__returns_sanitized_vector_string(
@@ -198,7 +200,7 @@ def test__string__vector__raises_when_input_is_not_a_str_or_None(
         (",", "c('','')"),
         (" , ", "c(' ',' ')"),
         ("\t,\t", "c('\t','\t')"),
-        (None, "c()"),
+        (None, NULL),
     ],
 )
 def test__string_vector_from_csv__returns_sanitized_vector_string(
@@ -561,7 +563,7 @@ def test__number_list_from_parts__returns_expected_serialized_list(
             parts={"a": None, "b": None},
             new_part_key="c",
             existing_part_keys=["a", "b"],
-            expected_value={"c": "list(c(),c())"},
+            expected_value={"c": NULL},
         ),
         FromPartsTestData(
             parts={
@@ -575,7 +577,7 @@ def test__number_list_from_parts__returns_expected_serialized_list(
             new_part_key="A",
             existing_part_keys=["x", "y", "z", "a", "b", "c"],
             expected_value={
-                "A": "list(c('0.5'),c('1.0'),c(),c('123'),c('True'),c('False'))"
+                "A": f"list(c('0.5'),c('1.0'),{NULL},c('123'),c('True'),c('False'))"
             },
         ),
     ],

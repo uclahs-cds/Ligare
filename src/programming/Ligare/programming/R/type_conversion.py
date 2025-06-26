@@ -236,7 +236,10 @@ def string(value: str | None, *, vector: bool) -> Vector | String:
 def string(
     value: str | None, *, comma_separated: bool = False, vector: bool = False
 ) -> Vector | Composite | String:  # str | None:
-    if value == "" or value is None:
+    if value is None:
+        return String(None)
+
+    if value == "":
         if comma_separated:
             return Composite([String(value)])
         if vector:
