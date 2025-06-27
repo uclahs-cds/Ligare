@@ -73,22 +73,32 @@ class Composite(SerializedType):
     composite_type: CompositeType | None = None
     value: list[SerializedType] | None
 
-    def __init__(self, value: list[SerializedType | None] | None) -> None:
-        super().__init__(value)
+    def __init__(self, value: "list[SerializedType | None] | Composite | None") -> None:
+        if value is not None and type(value) == Composite:
+            # because bare Composite types don't have a serialized
+            # type, if the value passed into the ctor is itself a
+            # `Composite`, then we just convert the type of the
+            # composite, basically "masking" the containing composite.
+            super().__init__(value.value)
+        else:
+            super().__init__(value)
 
     @override
     def serialize(self) -> str:
         if self.value is None:
             return NULL
 
-        serialized_values = ",".join([
-            (
-                (value.serialize() or NULL)
-                if value is not None  # pyright: ignore[reportUnnecessaryComparison]
-                else NULL
-            )
-            for value in self.value
-        ])
+        if not isinstance(self.value, Composite):
+            serialized_values = ",".join([
+                (
+                    (value.serialize() or NULL)
+                    if value is not None  # pyright: ignore[reportUnnecessaryComparison]
+                    else NULL
+                )
+                for value in self.value
+            ])
+        else:
+            serialized_values = self.value.serialize()
 
         if self.composite_type:
             return f"{self.composite_type.value}({serialized_values})"

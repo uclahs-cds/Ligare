@@ -452,3 +452,39 @@ def test__Composite__generic_type_returns_noncomposite_value(
         assert result is NULL
     else:
         assert result == value.serialize()
+
+
+@pytest.mark.parametrize(
+    "start,conversions,expected_serialization,expected_composite_type",
+    (
+        (Composite(None), [Composite], NULL, Composite),
+        (Composite(None), [Seq], NULL, Seq),
+        (Composite([Number(1), Number(2)]), [Composite, Seq], "seq(1,2)", Seq),
+        (Composite([Seq([Number(1), Number(2)])]), [List], "list(seq(1,2))", List),
+        (Composite([Number(1), Number(2)]), [List, Composite, Seq], "seq(1,2)", Seq),
+        (
+            Composite([Number(1), Number(2)]),
+            [List, Vector, Seq],
+            "seq(1,2)",
+            Seq,
+        ),
+        (
+            Seq([Number(1), Number(2)]),
+            [List, Seq, Vector],
+            "c(seq(1,2))",
+            Vector,
+        ),
+    ),
+)
+def test__Composite__converts_Composite_values(
+    start: Composite,
+    conversions: list[type[Composite]],
+    expected_serialization: str,
+    expected_composite_type: type[Composite],
+):
+    result = start
+    for conversion in conversions:
+        result = conversion(start)
+
+    assert result.serialize() == expected_serialization
+    assert type(result) == expected_composite_type
