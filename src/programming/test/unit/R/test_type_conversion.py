@@ -217,6 +217,7 @@ def test__string__vector__raises_when_input_is_not_a_str_or_None(
         ("", "FALSE"),
         (" ", "FALSE"),
         ("abc123", "FALSE"),
+        ("abc'123", "FALSE"),
         (None, "FALSE"),
     ],
 )
@@ -261,6 +262,7 @@ def test__Number__serializes_numeric_values(
         [-1, "'-1'"],
         ["abc", "'abc'"],
         [None, NULL],
+        ["a'b'c", r"'a\'b\'c'"],
     ),
 )
 def test__String__serializes_string_values(

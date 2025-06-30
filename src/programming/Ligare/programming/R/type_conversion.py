@@ -60,7 +60,11 @@ class String(SerializedType):
     def serialize(self) -> str | None:
         if self.value is None:
             return NULL
-        return f"'{self.value}'"
+        if getattr(self.value, "translate", None):
+            translated = self.value.translate(str.maketrans({"'": r"\'"}))
+            return f"'{translated}'"
+        else:
+            return f"'{self.value}'"
 
 
 class CompositeType(Enum):
