@@ -41,7 +41,7 @@ class Number(SerializedType):
         else:
             try:
                 super().__init__(int(value))
-            except:
+            except Exception:
                 super().__init__(float(value))
 
 
